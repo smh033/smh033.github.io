@@ -2050,7 +2050,9 @@ function upLive(dt){
   if(b&&f===M.primary){upChase(f,dt);continue;}
   followRoute(f,dt);
  }
- for(const f of M.D){tickF(f,dt);if(f.stun>0)continue;upDef(f,dt);}
+ for(const f of M.D){tickF(f,dt);if(f.stun>0)continue;
+  if(f.dive>0){if(stepDefDive(f,dt))return;continue;}
+  upDef(f,dt);maybeDefDive(f,dt);}
  separate(M.O);separate(M.D);
  for(const f of[...M.O,...M.D]){if(f!==M.carrier)f.y=clamp(f.y,-1,54.3);f.x=clamp(f.x,-2,121);}
  if(b){
@@ -2154,8 +2156,33 @@ function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.car
 function fairCatch(){if(M&&M.play==='ret'&&M.retKind==='punt'&&!M.caught){M.fair=true;banner('FAIR CATCH','','#fff',0.9);}}
 function contacts(){
  const c=M.carrier;
- if(c){if(c.dive>0)return;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,c)<0.8){tackleAttempt(d,c);if(M.phase!=='live')return;}}}
+ if(c){if(c.dive>0)return;for(const d of M.D){if(d.stun>0||d.eng||d.dive>0)continue;if(d2(d,c)<0.8){tackleAttempt(d,c);if(M.phase!=='live')return;}}}
  else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){M.aim=null;if(Math.random()<0.86){q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}
+}
+/* ---------- diving tackles ----------
+   A defender who is close but can't quite get his hands on a ball carrier
+   crossing in front of him launches at where the carrier is about to be.
+   One dive per defender per play; a whiff leaves him on the turf. */
+function maybeDefDive(f,dt){
+ const c=M.carrier;if(!c||M.phase!=='live'||f.dove||f.eng||f.shed>0||c.dive>0||c.down>0)return;
+ if(M.play==='run'&&M.pt<0.5)return;
+ const d=d2(f,c);if(d<1.2||d>3.2)return;
+ const lead=0.3,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y);
+ const sp=Math.hypot(c.vx,c.vy);if(sp<2.5)return;                 // only on a moving runner
+ const closing=((c.x-f.x)*(f.vx-c.vx)+(c.y-f.y)*(f.vy-c.vy))/(d||1); // > 0 means he's gaining
+ if(closing>2.2&&d<2)return;                                        // he'll get there on foot
+ if(Math.random()>dt*(2.2+A(f,'tkl')*0.15))return;                  // reaction / decision
+ const T=0.38,v=Math.min(dp/T,f.spd*1.9);
+ f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/(dp||1)*v;f.vy=(py-f.y)/(dp||1)*v;f.dtk=false;sfx('juke');
+}
+function stepDefDive(f,dt){
+ f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;const c=M.carrier;
+ if(c&&!f.dtk&&!(c.dive>0)&&!(c.down>0)&&d2(f,c)<1.05){f.dtk=true;
+  const pt=clamp(0.62+(A(f,'tkl')-A(c,'str'))*0.03+(c.jk>0?-0.25:0)+(c.role==='QB'&&!M.scramble?0.1:0),0.3,0.88);
+  if(Math.random()<pt){c.down=1;M.shake=4;sfx('hit');pop('DIVING TACKLE!',c.x,c.y,'#ff8a8a');endPlay('tackle',c.x+0.3,c.y);return true;}
+  pop('MISSED!',c.x,c.y,'#7fffd4');if(Math.random()<0.5){c.slow=0.35;c.vx*=0.7;}xpG(c.pl,2);}
+ if(f.dive<=0){f.dive=0;f.vx=f.vy=0;f.stun=1.0;f.down=1.0;}
+ return false;
 }
 function tackleAttempt(d,c){
  if(c.jk>0&&Math.random()<0.45+A(c,'spd')*0.035){d.stun=0.9;d.down=0.9;c.jk=0;pop('JUKE!',c.x,c.y,'#7fffd4');xpG(c.pl,2);M.shake=2;return;}
