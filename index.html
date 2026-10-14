@@ -115,7 +115,7 @@ input.txt{font:inherit;font-size:10px;background:var(--nv);border:2px solid #fff
 .bm div.w{color:var(--yl2)}.bm div.me{background:#3b6cf0}
 #fw{position:absolute;inset:0;width:640px;height:360px;image-rendering:pixelated;pointer-events:none}
 body.mobile .bt{padding:8px 9px 7px}body.mobile .chip{padding:6px 7px 5px}
-.ngc .chip{padding:4px 6px 3px}.ngc input.txt{padding-top:4px;padding-bottom:3px}
+.ngc .chip{padding:4px 7px 3px}.ngc input.txt{padding-top:3px;padding-bottom:2px}
 </style>
 </head>
 <body>
@@ -890,10 +890,13 @@ SCR.newgame=()=>{const s=UI.sub;if(!s.rosterMode)s.rosterMode='CUSTOM';const mod
  <div class="row" style="width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button><div class="grow">${ttl('NEW GAME')}</div><div style="width:32px"></div></div>
  <div class="col ngc" style="width:470px;gap:8px;margin-top:0">
   ${box('HEAD COACH NAME',`<input class="txt" maxlength="14" value="${esc(s.coach)}" oninput="UI.sub.coach=this.value" placeholder="YOUR NAME">`)}
-  ${box('ROSTER TYPE',`<div class="row ctr">${ch('rosterMode','CUSTOM','CUSTOM ROSTERS')}${ch('rosterMode','NFL','NFL ROSTERS')}</div><div class="s7 dim" style="text-align:center;margin-top:3px">${mode==='NFL'?'2026 REAL NFL ROSTERS · FIRST DRAFT AFTER SEASON 1':'GENERATED PLAYERS · DRAFT BEFORE SEASON 1'}</div>`)}
-  ${box('ROSTER SIZE',`<div class="row ctr">${ch('rmax',10,'10 PLAYERS')}${ch('rmax',12,'12 PLAYERS')}</div>`)}
+  <div class="row" style="gap:8px;align-items:stretch">
+  ${box('ROSTERS',`<div class="row ctr">${ch('rosterMode','CUSTOM','CUSTOM')}${ch('rosterMode','NFL','REAL NFL')}</div>`,'flex:1.4')}
+  ${box('ROSTER SIZE',`<div class="row ctr">${ch('rmax',10,'10')}${ch('rmax',12,'12')}</div>`,'flex:1')}
+  </div>
   ${box('FIELD DIRECTION',`<div class="row ctr">${ch('dir','R','LEFT TO RIGHT')}${ch('dir','L','RIGHT TO LEFT')}${ch('dir','S','SWITCH HALVES')}</div>`)}
-  ${box('DIFFICULTY',`<div class="row ctr">${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',3,'DYNAMIC')}</div><div class="s7 dim" style="text-align:center;margin-top:3px">${s.diff===3?'DYNAMIC GETS HARDER AS YOU WIN, EASIER AS YOU LOSE':'&nbsp;'}</div>`)}
+  ${box('DIFFICULTY',`<div class="row ctr">${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',3,'DYNAMIC')}</div>`)}
+  <div class="s7 dim" style="text-align:center">${mode==='NFL'?'REAL 2026 NFL ROSTERS · FIRST DRAFT AFTER SEASON 1':'GENERATED PLAYERS · DRAFT BEFORE SEASON 1'}${s.diff===3?'<br>DYNAMIC: HARDER AS YOU WIN, EASIER AS YOU LOSE':''}</div>
   <div class="row ctr" style="gap:10px;margin-top:2px"><button class="bt y" style="padding:7px 12px 6px" data-a="ngPick">CHOOSE YOUR TEAM</button><button class="bt" style="padding:7px 12px 6px" data-a="ngRand">${mode==='NFL'?'RANDOM NFL TEAM':'RANDOM TEAM'}</button></div>
  </div></div>`;};
 ACT.ng=d=>{UI.sub[d.k]=isNaN(+d.v)?d.v:+d.v;render();};
