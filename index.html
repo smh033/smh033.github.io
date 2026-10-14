@@ -1486,7 +1486,7 @@ function snap(type){
  sfx('whistle');
  if(type==='run'){for(const f of M.O)if(f.role==='WR'||f.role==='TE')f.route=null;M.rb.route=null;}
 }
-function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down)M.steer={y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
+function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
 function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier)return;M.scramble=true;setCarrier(M.qb);pop('QB KEEPER',M.qb.x,M.qb.y,'#ffe94a');}
 
 /* ---------- throwing ---------- */
@@ -1995,7 +1995,7 @@ cv.addEventListener('pointerdown',e=>{
  if(M.phase==='pre'){snap('pass');M.aim={sx:p.x,sy:p.y,cx:p.x,cy:p.y};M.input='aim';return;}
  if(M.phase==='live'){
   if(M.play==='pass'&&!M.thrown&&!M.carrier){M.aim={sx:p.x,sy:p.y,cx:p.x,cy:p.y};M.input='aim';return;}
-  if(M.carrier){const c=M.carrier;M.steer={y0:p.y,ty0:c.ty==null?c.y:c.ty,stepped:false,ly:p.y,lt:now};M.input='run';}return;}
+  if(M.carrier){const c=M.carrier;M.steer={x0:p.x,y0:p.y,ty0:c.ty==null?c.y:c.ty,stepped:false,ly:p.y,lt:now};M.input='run';}return;}
  if(M.phase==='kick'&&M.kick&&M.kick.st==='aim'){M.kick.sw={sx:p.x,sy:p.y,cx:p.x,cy:p.y};M.input='kick';}
 },{passive:false});
 cv.addEventListener('pointermove',e=>{
@@ -2007,8 +2007,13 @@ cv.addEventListener('pointermove',e=>{
  const c=M.carrier;
  if(c&&M.steer&&M.phase==='live'&&M.input==='run'){const st=M.steer,dy=p.y-st.y0;if(Math.abs(dy)>6)st.stepped=true;
   c.ty=clamp(st.ty0+dy/PYY*1.25,-1.5,54.8);
-  const vel=Math.abs(p.y-st.ly)/Math.max(1,now-st.lt);if(vel>0.55&&c.jk<=0)c.jk=0.25;st.ly=p.y;st.lt=now;}
+  const vel=Math.abs(p.y-st.ly)/Math.max(1,now-st.lt);if(vel>0.55&&c.jk<=0)c.jk=0.25;st.ly=p.y;st.lt=now;
+  if(swipeFwd(st,p)){st.stepped=true;dive(c);}}
 },{passive:false});
+/* forward swipe (toward the end zone you're attacking) = dive */
+function swipeFwd(st,p){const h=ptr.hist[0]||{x:st.x0,y:p.y};
+ const fT=(p.x-st.x0)*M.dir,dyT=Math.abs(p.y-st.y0),fR=(p.x-h.x)*M.dir,dyR=Math.abs(p.y-h.y);
+ return (fR>=20&&fR>dyR*1.2)||(fT>=34&&fT>dyT*1.1);}
 function ptrUp(e){
  if(!ptr.down||(e&&e.pointerId!==ptr.id))return;ptr.down=false;ptr.id=null;if(!M)return;
  const inp=M.input;M.input=null;
