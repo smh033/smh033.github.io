@@ -1770,8 +1770,8 @@ const PASS={
  G:20,                       // stylised gravity, yd/s^2
  REL_Z:2.0,                  // release height (yd)
  CATCH_Z:1.1,                // height of the aim point: the arc's target is chest height
- LOB:{v0:8,v1:15},          // horizontal ball speed (yd/s) at p=0 .. p=1
- BUL:{v0:18,v1:27},          // bullet: faster and therefore flatter
+ LOB:{v0:14,v1:25},          // horizontal ball speed (yd/s) at p=0 .. p=1
+ BUL:{v0:24,v1:35},          // bullet: faster and therefore flatter
  ARM_SPEED:0.03,             // +3% ball speed per strength point above 5
  ERR_BASE:0.35,ERR_PER_YD:0.035, // max placement error (yd) before modifiers
  PRESS_MUL:1.5,MOVE_MUL:1.18,BUL_ERR:1.12,
@@ -1842,10 +1842,12 @@ function throwBall(ai){
  M.thrown=true;M.aim=null;M.input=null;q.throwT=0.3;sfx('kick');
  // Who the throw was probably meant for: only used so that receiver keeps
  // working back to the ball late in flight (upChase). The ball is never steered.
+ // The receiver who can get to the ball's catch point soonest breaks off his
+ // route and comes back for it (short, wide or underthrown balls included).
  let best=null,bt=1e9;
- for(const f of M.O){if(!SKILL.includes(f.role)||f.stun>0)continue;
-  const dd=Math.hypot(f.x+f.vx*T-tx,f.y+f.vy*T-ty);if(dd<bt){bt=dd;best=f;}}
- M.primary=bt<2.4?best:null;if(M.primary)M.primary.dove=false;
+ for(const f of M.O){if(!SKILL.includes(f.role)||f.stun>0||f.down>0)continue;
+  const tt=Math.hypot(f.x-tx,f.y-ty)/Math.max(4,f.spd);if(tt<bt){bt=tt;best=f;}}
+ M.primary=best&&bt<=T+0.9?best:null;if(M.primary){M.primary.dove=false;M.primary.react=0.12+Math.random()*0.08;}
  for(const f of[...M.O,...M.D]){f.tried=false;f.hawk=false;}
 }
 function gaussR(){let u=0,v=0;while(!u)u=passRand();while(!v)v=passRand();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
@@ -2070,7 +2072,7 @@ function upBlocker(f,dt){
 function upChase(f,dt){
  const b=M.ball,rem=b.T-b.t,Lp={x:b.x1,y:b.y1},d=d2(f,Lp);
  if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.down=1.2;f.vx=f.vy=0;}return;}
- if(rem>0.5&&!f.dove){followRoute(f,dt);return;}
+ if(b.t<(f.react||0.12)&&!f.dove){followRoute(f,dt);return;}   // brief reaction, then break to the ball
  if(!f.dove&&rem<0.32&&d>1.0&&d<3.3){f.dove=true;f.dive=0.36;f.dv=0.36;const l=d||1;f.vx=(Lp.x-f.x)/l*f.spd*1.3;f.vy=(Lp.y-f.y)/l*f.spd*1.3;return;}
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
