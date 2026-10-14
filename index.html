@@ -358,8 +358,8 @@ function normalizeNFLRows(rows){
  if(totalTeams<28)throw new Error(`Only ${totalTeams}/32 NFL teams were found in the roster feed.`);
  return{season:CFG.startYear,week:maxWeek,updatedAt:new Date().toISOString(),source:'nflverse',teams,freeAgents};
 }
-async function fetchJson(url){
- const res=await fetch(url,{cache:'no-store',mode:'cors',headers:{'Accept':'application/json'},signal:AbortSignal.timeout(15000)});
+async function fetchJson(url,ms){
+ const res=await fetch(url,{cache:'no-store',mode:'cors',headers:{'Accept':'application/json'},signal:AbortSignal.timeout(ms||8000)});
  if(!res.ok)throw new Error('Roster API returned HTTP '+res.status);
  return res.json();
 }
@@ -394,10 +394,12 @@ async function loadESPNFreeAgents(){
  let items=Array.isArray(data.items)?data.items:[];
  // Core API list entries can be full records or reference links. Resolve references
  // in small batches and only mark a player as a free agent if ESPN listed them there.
- const refs=items.slice(0,160);
+ // Speed: resolve up to 120 references 40 at a time, and stop after a ~5 s budget
+ // (whatever resolved by then is kept; the rest just aren't in the FA pool).
+ const refs=items.slice(0,120),deadline=Date.now()+5000;
  const out=[];
- for(let i=0;i<refs.length;i+=12){
-  const batch=refs.slice(i,i+12);
+ for(let i=0;i<refs.length&&Date.now()<deadline;i+=40){
+  const batch=refs.slice(i,i+40);
   const resolved=await Promise.all(batch.map(async item=>{
    let obj=item;
    try{if(item?.['$ref'])obj=await fetchJson(item['$ref']);}catch(e){return null;}
@@ -414,12 +416,13 @@ async function loadESPNFreeAgents(){
  const unique=new Map();for(const r of out)unique.set(rowIdentity(r),r);return[...unique.values()];
 }
 async function loadESPNRosterData(){
+ const faP=loadESPNFreeAgents();      // free agents load in parallel with the team rosters
  const pairs=TEAMS.map(t=>({code:t.abbr,id:NFL_ESPN_IDS[t.abbr]}));
  const teams={};for(const t of TEAMS)teams[t.abbr]=[];
  let success=0;const errs=[];
- // Eight requests at a time keeps the public feed responsive and avoids a burst.
- for(let i=0;i<pairs.length;i+=8){
-  const batch=pairs.slice(i,i+8);
+ // All 32 small team requests go out together (one round trip instead of four).
+ for(let i=0;i<pairs.length;i+=32){
+  const batch=pairs.slice(i,i+32);
   const results=await Promise.all(batch.map(async pair=>{
    try{return{pair,payload:await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${pair.id}/roster`)}}catch(error){return{pair,error};}
   }));
@@ -427,36 +430,35 @@ async function loadESPNRosterData(){
  }
  const totalTeams=Object.values(teams).filter(a=>a.length>=6).length;
  if(totalTeams<28||success<28)throw new Error(`ESPN roster fallback only loaded ${totalTeams}/32 teams. ${errs.slice(0,3).join('; ')}`);
- const freeAgents=await loadESPNFreeAgents();
+ const freeAgents=await faP;
  return{season:CFG.startYear,week:0,updatedAt:new Date().toISOString(),source:'ESPN',teams,freeAgents};
 }
-async function loadNFLRosterData(){
- let cached=null;try{cached=JSON.parse(localStorage.getItem(NFL_CACHE_KEY)||'null');}catch(e){}
- if(cached&&cached.season===CFG.startYear&&cached.teams&&Date.now()-(Date.parse(cached.updatedAt)||0)<12*60*60*1000)return cached;
+async function fetchNFLRosterFresh(){
  let netErr=null;
- // nflverse includes explicit roster-status history and true UFA/RFA/release rows.
- // The allorigins raw proxy avoids the known CORS restriction on GitHub release assets.
+ // ESPN first: 32 small JSON requests in parallel are far faster than the multi-MB nflverse CSV.
+ try{const data=await loadESPNRosterData();try{localStorage.setItem(NFL_CACHE_KEY,JSON.stringify(data));}catch(e){}return data;}catch(e){netErr=e;}
+ // nflverse fallback (explicit roster-status history); the allorigins proxy avoids GitHub's CORS limit.
  const proxiedURL='https://api.allorigins.win/raw?url='+encodeURIComponent(NFL_ROSTER_URL);
- for(const url of [proxiedURL,NFL_ROSTER_URL]){
+ for(const url of [NFL_ROSTER_URL,proxiedURL]){
   try{
-   const res=await fetch(url,{cache:'no-store',mode:'cors',signal:AbortSignal.timeout(20000)});if(!res.ok)throw new Error('Roster download returned HTTP '+res.status);
+   const res=await fetch(url,{cache:'no-store',mode:'cors',signal:AbortSignal.timeout(15000)});if(!res.ok)throw new Error('Roster download returned HTTP '+res.status);
    const raw=await res.text();if(!raw||raw.length<1000)throw new Error('The roster download was empty.');
    const data=normalizeNFLRows(parseCSV(raw));
    try{localStorage.setItem(NFL_CACHE_KEY,JSON.stringify(data));}catch(e){}
    return data;
   }catch(e){netErr=e;}
  }
- // ESPN is the browser-accessible fallback for all current team rosters. Its core
- // free-agent endpoint is included when populated; we never invent FAs by taking
- // signed players off their real NFL teams.
- try{
-  const data=await loadESPNRosterData();
-  try{localStorage.setItem(NFL_CACHE_KEY,JSON.stringify(data));}catch(e){}
-  return data;
- }catch(espnErr){
-  if(cached&&cached.season===CFG.startYear&&cached.teams&&Object.keys(cached.teams).length>=28)return cached;
-  throw new Error('Could not load the current NFL roster feed. Check the host/network and retry. '+(netErr&&netErr.message||'')+' '+(espnErr&&espnErr.message||''));
+ throw new Error('Could not load the current NFL roster feed. Check your connection and retry. '+(netErr&&netErr.message||''));
+}
+async function loadNFLRosterData(){
+ let cached=null;try{cached=JSON.parse(localStorage.getItem(NFL_CACHE_KEY)||'null');}catch(e){}
+ const usable=cached&&cached.season===CFG.startYear&&cached.teams&&Object.keys(cached.teams).length>=28;
+ if(usable){
+  // Instant start from the saved copy; if it's over 12 h old, refresh quietly for next time.
+  if(Date.now()-(Date.parse(cached.updatedAt)||0)>12*60*60*1000)fetchNFLRosterFresh().catch(()=>{});
+  return cached;
  }
+ return fetchNFLRosterFresh();
 }
 function nflQuality(r,pos){
  const key=nflNameKey(r.full_name||`${r.first_name} ${r.last_name}`),override=NFL_STAR_RATING_INDEX[key];if(override)return override;
@@ -899,7 +901,10 @@ SCR.newgame=()=>{const s=UI.sub;if(!s.rosterMode)s.rosterMode='CUSTOM';const mod
   <div class="s7 dim" style="text-align:center">${mode==='NFL'?'REAL 2026 NFL ROSTERS · FIRST DRAFT AFTER SEASON 1':'GENERATED PLAYERS · DRAFT BEFORE SEASON 1'}${s.diff===3?'<br>DYNAMIC: HARDER AS YOU WIN, EASIER AS YOU LOSE':''}</div>
   <div class="row ctr" style="gap:10px;margin-top:2px"><button class="bt y" style="padding:7px 12px 6px" data-a="ngPick">CHOOSE YOUR TEAM</button><button class="bt" style="padding:7px 12px 6px" data-a="ngRand">${mode==='NFL'?'RANDOM NFL TEAM':'RANDOM TEAM'}</button></div>
  </div></div>`;};
-ACT.ng=d=>{UI.sub[d.k]=isNaN(+d.v)?d.v:+d.v;render();};
+ACT.ng=d=>{UI.sub[d.k]=isNaN(+d.v)?d.v:+d.v;
+ /* Start downloading NFL rosters as soon as NFL is picked, while the player chooses a team. */
+ if(d.k==='rosterMode'&&d.v==='NFL'&&!window.__nflPrefetch){window.__nflPrefetch=loadNFLRosterData();window.__nflPrefetch.catch(()=>{window.__nflPrefetch=null;});}
+ render();};
 ACT.ngBack=()=>{go('newgame',UI.sub);};
 ACT.ngPick=()=>{const s=UI.sub;go('pickteam',{coach:s.coach,rmax:s.rmax,diff:s.diff,dir:s.dir||'S',rosterMode:s.rosterMode||'CUSTOM',c:'AFC'});};
 ACT.ngRand=()=>{const s=Object.assign({},UI.sub);if((s.rosterMode||'CUSTOM')==='NFL')return beginNFLFranchise(ri(0,31),s);startFranchise(ri(0,31),s,'CUSTOM');};
@@ -910,7 +915,7 @@ function startFranchise(t,s,rosterMode='CUSTOM',nflData=null){
 }
 async function beginNFLFranchise(t,s){
  modal(`<div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('NFL ROSTERS',true)}<div>LOADING CURRENT ${CFG.startYear} PLAYER AND FREE-AGENT DATA...</div><div class="s7 dim">SOURCE: NFLVERSE LIVE DATA · ESPN FALLBACK</div></div>`);
- try{const data=await loadNFLRosterData();startFranchise(t,s,'NFL',data);}
+ try{const data=await (window.__nflPrefetch||loadNFLRosterData());window.__nflPrefetch=null;startFranchise(t,s,'NFL',data);}
  catch(err){console.error(err);modal(`<div class="mp" style="width:390px;align-items:center;text-align:center">${ttl('NFL DATA UNAVAILABLE',true)}<div style="line-height:1.9">Could not download the live NFL roster feed from this browser/host. No fake players were substituted for NFL rosters or free agents.</div><div class="s7 dim">${esc(String(err.message||err).slice(0,180))}</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt" data-a="nflRetry" data-t="${t}">RETRY</button><button class="bt y" data-a="nflUseCustom" data-t="${t}">USE CUSTOM</button></div></div>`);}
 }
 ACT.nflRetry=d=>beginNFLFranchise(+d.t,Object.assign({},UI.sub,{rosterMode:'NFL'}));
@@ -922,10 +927,10 @@ function teamGrid(c,offer,act){
 }
 SCR.pickteam=()=>{const s=UI.sub;
  return`<div class="screen"><div class="row"><button class="bt ico" data-a="ngBack">${ICON.back}</button><div class="grow">${ttl(s.rosterMode==='NFL'?'CHOOSE NFL TEAM':'CHOOSE TEAM')}</div><div style="width:32px"></div></div>
- <div class="row ctr" style="gap:10px"><button class="bt ${s.c==='AFC'?'y':''}" style="width:150px" data-a="pc2" data-c="AFC">AFC</button><button class="bt ${s.c==='NFC'?'y':''}" style="width:150px" data-a="pc2" data-c="NFC">NFC</button></div>
+ <div class="row ctr" style="gap:10px"><button class="bt ${s.c==='AFC'?'y':''}" style="width:120px;padding:5px 0 4px" data-a="pc2" data-c="AFC">AFC</button><button class="bt ${s.c==='NFC'?'y':''}" style="width:120px;padding:5px 0 4px" data-a="pc2" data-c="NFC">NFC</button></div>
  ${teamGridPlain(s.c)}</div>`;};
 function teamGridPlain(c){const base=c==='AFC'?0:16,ids=[];for(let i=0;i<16;i++)ids.push(base+i);ids.sort((a,b)=>T(a).name.localeCompare(T(b).name));
- return`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px 9px" class="grow">${ids.map(t=>`<button class="tile" data-a="pickT" data-t="${t}" style="flex-direction:row;justify-content:center;gap:6px"><span style="width:10px;height:10px;background:${T(t).c1};border:1px solid #fff;flex:none"></span><span class="tn">${esc(T(t).name.toUpperCase())}</span></button>`).join('')}</div>`;}
+ return`<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:6px 8px;min-height:0" class="grow">${ids.map(t=>`<button class="tile" data-a="pickT" data-t="${t}" style="flex-direction:row;justify-content:flex-start;gap:6px;min-width:0;padding:4px 6px"><span style="width:10px;height:10px;background:${T(t).c1};border:1px solid #fff;flex:none"></span><span class="tn" style="text-align:left;line-height:1.5;text-overflow:ellipsis">${esc(T(t).city.toUpperCase())}${T(t).nickname?'<br>'+esc(T(t).nickname.toUpperCase()):''}</span></button>`).join('')}</div>`;}
 ACT.pc2=d=>{UI.sub.c=d.c;render();};
 ACT.pickT=d=>{const t=+d.t,s=UI.sub,isNFL=s.rosterMode==='NFL';modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl(esc(T(t).name.toUpperCase()),true)}<div class="row ctr" style="gap:14px">${avatarT(t,4,false)}${avatarT(t,4,true)}</div><div>${T(t).conf} ${T(t).div}</div><div class="s7 dim">${isNFL?'START WITH THIS TEAM’S CURRENT NFL PLAYERS. NO DRAFT UNTIL AFTER SEASON 1.':'START WITH GENERATED PLAYERS, THEN DRAFT 5 MORE.'}</div><div class="row"><button class="bt" data-a="close">BACK</button><button class="bt y" data-a="pickT2" data-t="${t}">TAKE THE JOB</button></div></div>`);};
 ACT.pickT2=d=>{const t=+d.t,s=Object.assign({},UI.sub);if(s.rosterMode==='NFL')return beginNFLFranchise(t,s);startFranchise(t,s,'CUSTOM');};
@@ -948,17 +953,17 @@ function tlNodes(){
 SCR.hub=()=>{
  const t=L.user,R=teamRatings(t),nodes=tlNodes();
  const nh=(n,x,cur)=>n?`<div class="nd" style="left:${x}%"><div class="a">${n.a}</div><div class="b">${esc(n.b)}</div><div class="dot ${cur?'c':n.res?n.res.c:''}"></div><div class="r">${n.res?n.res.txt:''}</div></div>`:'';
- const div=divStand(T(t).di).map(x=>{const r=L.teams[x];return`<tr class="${x===t?'me':''}"><td>${esc(teamName(x).toUpperCase())}</td><td class="c">${r.w}</td><td class="c">${r.l}</td><td class="c">${r.t}</td></tr>`;}).join('');
+ const div=divStand(T(t).di).map(x=>{const r=L.teams[x];return`<tr class="${x===t?'me':''}"><td style="overflow:hidden;text-overflow:ellipsis">${esc(teamName(x).toUpperCase())}</td><td class="c">${r.w}</td><td class="c">${r.l}</td><td class="c">${r.t}</td></tr>`;}).join('');
  const mor=teamMor(t);
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl(CFG.game)}</div><div class="coin">Y${L.season}</div></div>
  <div class="tl" data-a="go" data-s="${L.phase==='PO'?'bracket':'schedule'}"><div class="ln"><i style="width:50%"></i></div>${nh(nodes[0],16)}${nh(nodes[1],50,true)}${nh(nodes[2],84)}</div>
  <div class="row grow stretch" style="gap:10px;margin-top:4px">
-  <div class="box" style="flex:1.15;cursor:pointer;padding:9px 8px 4px" data-a="go" data-s="standings"><span class="lbl">STANDINGS</span><table class="tbl"><tr><th>${T(t).conf} ${T(t).div}</th><th class="c">W</th><th class="c">L</th><th class="c">T</th></tr>${div}</table></div>
-  <div class="col" style="flex:1;gap:12px">
+  <div class="box" style="flex:1.15;min-width:0;cursor:pointer;padding:9px 8px 4px" data-a="go" data-s="standings"><span class="lbl">STANDINGS</span><table class="tbl" style="table-layout:fixed"><colgroup><col><col style="width:16px"><col style="width:16px"><col style="width:16px"></colgroup><tr><th>${T(t).conf} ${T(t).div}</th><th class="c">W</th><th class="c">L</th><th class="c">T</th></tr>${div}</table></div>
+  <div class="col" style="flex:1;min-width:0;gap:12px">
    ${box('FANS '+Math.round(L.fan)+'%',`<div class="bar"><i style="width:${L.fan}%"></i></div>`,'padding:10px 8px 7px')}
-   <div class="row stretch" style="gap:8px">${box('MORALE',`${mor}% ${face(mor)}`,'flex:1','c')}${box('OFFENSE',stars(R.offS,'o'),'flex:1','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1','c')}</div>
-   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${L.news.slice(0,4).map(n=>`<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0')}
+   <div class="row stretch" style="gap:8px">${box('MORALE',`${mor}% ${face(mor)}`,'flex:1;min-width:0','c')}${box('OFFENSE',stars(R.offS,'o'),'flex:1;min-width:0','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1;min-width:0','c')}</div>
+   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${L.news.slice(0,4).map(n=>`<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0')}
   </div>
  </div>
  <div class="row" style="gap:7px">
