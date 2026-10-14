@@ -491,7 +491,9 @@ function makeNFLPlayer(r,team){
  const q=nflQuality(r,pos),p=genPlayer(pos,q,nflAge(r));p.fn=fn;p.ln=ln;p.team=team;p.num=Number(r.jersey_number)||0;
  for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+rnd(-0.65,0.65)),1,10);
  p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+rnd(0.3,1.1),1,10);p.peak=q;p.seasons=Math.max(0,Number(r.years_exp)||0);p.yrs=clamp(ri(1,4),1,4);p.sal=Math.round(salFor(starsOf(p),p.age)*0.82*10)/10;p.mor=String(r.status||'ACT').toUpperCase()==='ACT'?78:65;
- applySavedLook(p);
+ // look estimated from the player's official headshot by the weekly roster job
+ if(Array.isArray(r.look)&&r.look.length===4){[p.skin,p.hair,p.hc,p.beard]=r.look.map(Number);}
+ applySavedLook(p);                       // your own EDIT LOOK changes always win
  const st=String(r.status||'').toUpperCase();if(['RES','PUP','RSN','INA'].includes(st))p.inj=ri(1,3);p.nfl=true;p.nflStatus=st;p.nflTeam=String(r.team||'');
  addPlayer(p);return p;
 }

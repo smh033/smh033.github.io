@@ -7,12 +7,14 @@ just the columns the game uses, so the file stays small.
 
 Usage:  python3 scripts/build_rosters.py [season]
 """
-import csv, io, json, sys, urllib.request, datetime
+import csv, io, json, os, sys, urllib.request, datetime
 
-SEASON = int(sys.argv[1]) if len(sys.argv) > 1 else 2026
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+SEASON = int(ARGS[0]) if ARGS else 2026
+LOOKS = "--looks" in sys.argv
 URL = f"https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_{SEASON}.csv"
 KEEP = ["season", "week", "team", "status", "full_name", "first_name", "last_name", "position",
-        "years_exp", "jersey_number", "birth_date", "gsis_id", "espn_id"]
+        "years_exp", "jersey_number", "birth_date", "gsis_id", "espn_id", "headshot_url"]
 
 def ident(r):
     return r.get("gsis_id") or r.get("espn_id") or (r.get("full_name") or "").lower()
@@ -32,6 +34,19 @@ def main():
     rows.sort(key=lambda r: (r["team"], r["position"], r["full_name"]))
     out = {"season": SEASON, "builtAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0, tzinfo=None).isoformat() + "Z",
            "source": "nflverse weekly_rosters", "rows": rows}
+    # attach the estimated look for each player's headshot (see build_looks.py)
+    if LOOKS:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import build_looks
+        build_looks.update(rows)
+    try:
+        looks = json.load(open("nfl-looks.json"))
+        for r in rows:
+            lk = looks.get(r.get("headshot_url"))
+            if lk: r["look"] = lk
+    except FileNotFoundError:
+        pass
+    for r in rows: r.pop("headshot_url", None)
     with open("nfl-rosters.json", "w") as f:
         json.dump(out, f, separators=(",", ":"))
     teams = len({r["team"] for r in rows if r["team"]})
