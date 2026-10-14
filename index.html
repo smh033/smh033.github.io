@@ -437,6 +437,15 @@ async function loadESPNRosterData(){
 }
 async function fetchNFLRosterFresh(){
  let netErr=null;
+ // 1) The roster file published with the site (nfl-rosters.json, refreshed weekly by a
+ //    GitHub Action). Same origin = no CORS and one small download.
+ try{
+  const res=await fetch('nfl-rosters.json',{cache:'no-cache',signal:AbortSignal.timeout(10000)});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const j=await res.json();const data=normalizeNFLRows(j.rows||[]);data.source='site file';data.builtAt=j.builtAt;
+  try{localStorage.setItem(NFL_CACHE_KEY,JSON.stringify(data));}catch(e){}
+  return data;
+ }catch(e){netErr=e;}
  // ESPN first: 32 small JSON requests in parallel are far faster than the multi-MB nflverse CSV.
  try{const data=await loadESPNRosterData();try{localStorage.setItem(NFL_CACHE_KEY,JSON.stringify(data));}catch(e){}return data;}catch(e){netErr=e;}
  // nflverse fallback (explicit roster-status history); the allorigins proxy avoids GitHub's CORS limit.
