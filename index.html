@@ -482,6 +482,7 @@ function makeNFLPlayer(r,team){
  const q=nflQuality(r,pos),p=genPlayer(pos,q,nflAge(r));p.fn=fn;p.ln=ln;p.team=team;p.num=Number(r.jersey_number)||0;
  for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+rnd(-0.65,0.65)),1,10);
  p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+rnd(0.3,1.1),1,10);p.peak=q;p.seasons=Math.max(0,Number(r.years_exp)||0);p.yrs=clamp(ri(1,4),1,4);p.sal=Math.round(salFor(starsOf(p),p.age)*0.82*10)/10;p.mor=String(r.status||'ACT').toUpperCase()==='ACT'?78:65;
+ applySavedLook(p);
  const st=String(r.status||'').toUpperCase();if(['RES','PUP','RSN','INA'].includes(st))p.inj=ri(1,3);p.nfl=true;p.nflStatus=st;p.nflTeam=String(r.team||'');
  addPlayer(p);return p;
 }
@@ -791,7 +792,7 @@ function drawPortrait(g,p,c1,c2,u,coach){
  R(p.beard===2?shade(hc,40):mouth,10,14,4,1);
 }
 const PRC=new Map();
-function portrait(p,t,u,coach){u=u||2;const c=teamCol(t);const key=(p.id||p.fn)+'|'+c.c1+c.c2+'|'+u+'|'+p.num+'|'+(coach?1:0);let v=PRC.get(key);if(v)return v;const cv2=document.createElement('canvas');cv2.width=24*u;cv2.height=24*u;drawPortrait(cv2.getContext('2d'),p,c.c1,c.c2,u,coach);v=cv2.toDataURL();if(PRC.size>600)PRC.clear();PRC.set(key,v);return v;}
+function portrait(p,t,u,coach){u=u||2;const c=teamCol(t);const key=(p.id||p.fn)+'|'+c.c1+c.c2+'|'+u+'|'+p.num+'|'+(coach?1:0)+'|'+p.skin+'.'+p.hair+'.'+p.hc+'.'+p.beard;let v=PRC.get(key);if(v)return v;const cv2=document.createElement('canvas');cv2.width=24*u;cv2.height=24*u;drawPortrait(cv2.getContext('2d'),p,c.c1,c.c2,u,coach);v=cv2.toDataURL();if(PRC.size>600)PRC.clear();PRC.set(key,v);return v;}
 const FACEC={};
 function faceURL(m){
  const k=m>=80?4:m>=60?3:m>=40?2:m>=20?1:0;if(FACEC[k])return FACEC[k];
@@ -1066,6 +1067,26 @@ const VALW=p=>{const r=tradeValue(p);return r?'RND '+r+' PICK':'NONE';};
 const potStars=p=>clamp(Math.round(p.pot)/2,0.5,5);
 const PENCIL='<svg width="14" height="14" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#fff" d="M6 0h1v1h1v1h-1v1h-1v1h-1v1h-1v1h-1v1h-2v-2h1v-1h1v-1h1v-1h1v-1h1z"/></svg>';
 function plist(t){return rosterOf(t).sort((a,b)=>POSL.indexOf(a.pos)-POSL.indexOf(b.pos)||ovr(b)-ovr(a));}
+/* Player appearance. Edits are stored on the player and, by name, in a small
+   local table so a fixed-up NFL player keeps his look in every new game. */
+const LOOKS_KEY='rf_looks_v1';
+function lookTable(){try{return JSON.parse(localStorage.getItem(LOOKS_KEY)||'{}')||{};}catch(e){return{};}}
+function lookKey(p){return(String(p.fn||'')+' '+String(p.ln||'')).toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();}
+function applySavedLook(p){const v=lookTable()[lookKey(p)];if(v){p.skin=v.skin;p.hair=v.hair;p.hc=v.hc;p.beard=v.beard;}}
+const HAIRN=['BALD','BUZZ','SHORT','AFRO','DREADS','MOHAWK','HEADBAND'],BEARDN=['NONE','STUBBLE','BEARD'];
+ACT.pLook=()=>{const p=P(UI.sub.id);if(!p)return;UI.look={skin:p.skin||0,hair:p.hair||0,hc:p.hc||0,beard:p.beard||0};lookModal();};
+function lookModal(){const p=P(UI.sub.id),v=UI.look,prev=Object.assign({},p,v,{id:'prev'+Math.random()});
+ const sw=(k,i,col,lbl)=>`<span class="chip ${v[k]===i?'on':''}" data-a="lkSet" data-k="${k}" data-v="${i}" style="${col?`background:${col};min-width:18px;height:16px;padding:0;${v[k]===i?'border-color:#ffe600;outline:2px solid #ffe600':''}`:''}">${lbl||''}</span>`;
+ modal(`<div class="mp" style="width:430px;align-items:center;gap:7px">${ttl('APPEARANCE',true)}
+ <img class="ava" src="${portrait(prev,p.team>=0?p.team:L.user,3)}" width="72" height="72" style="border:2px solid #fff">
+ <div class="row ctr" style="gap:5px;flex-wrap:wrap"><span class="s7" style="width:60px">SKIN</span>${SKIN.map((c,i)=>sw('skin',i,c)).join('')}</div>
+ <div class="row ctr" style="gap:4px;flex-wrap:wrap"><span class="s7" style="width:60px">HAIR</span>${HAIRN.map((n,i)=>sw('hair',i,null,n)).join('')}</div>
+ <div class="row ctr" style="gap:5px;flex-wrap:wrap"><span class="s7" style="width:60px">COLOR</span>${HAIRC.map((c,i)=>sw('hc',i,c)).join('')}</div>
+ <div class="row ctr" style="gap:5px"><span class="s7" style="width:60px">FACE</span>${BEARDN.map((n,i)=>sw('beard',i,null,n)).join('')}</div>
+ <div class="row ctr" style="gap:10px;margin-top:3px"><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="lkSave">SAVE</button></div></div>`);}
+ACT.lkSet=d=>{UI.look[d.k]=+d.v;lookModal();};
+ACT.lkSave=()=>{const p=P(UI.sub.id),v=UI.look;Object.assign(p,v);const tb=lookTable();tb[lookKey(p)]=v;try{localStorage.setItem(LOOKS_KEY,JSON.stringify(tb));}catch(e){}
+ PRC.clear();for(const k in AVC)delete AVC[k];if(typeof SPC!=='undefined')SPC.clear();save();closeModal();render();toast('LOOK SAVED');};
 SCR.player=()=>{
  const p=P(UI.sub.id);if(!p)return SCR.roster();
  const t=p.team>=0?p.team:L.user,mine=p.team===L.user,need=xpNeed(p.lvl);
@@ -1079,7 +1100,7 @@ SCR.player=()=>{
   <div class="box col" style="flex:1;gap:7px;padding:12px 10px 0"><span class="lbl">${POSNAME[p.pos]}</span>
    <div class="row stretch" style="gap:6px"><div class="col" style="gap:7px;flex:1">
     ${ln('AGE',p.age)}${ln('CONTRACT','$'+Math.round(p.sal)+'M ('+p.yrs+'Y)')}${ln('MORALE',MORW(p.mor)+' '+face(p.mor))}${ln('CONDITION',CNDW(p))}${ln('VALUE',VALW(p))}${p.bench?'<span class="yl">BENCHED</span>':''}
-   </div><div class="col" style="align-items:center;gap:4px"><img class="ava" src="${portrait(p,t,2)}" width="48" height="48" style="border:2px solid #fff;background:${sideOf(p.pos)==='D'?'#e88686':sideOf(p.pos)==='K'?'#d6a067':'#8cc8f5'}"><span>#${p.num}</span></div></div>
+   </div><div class="col" style="align-items:center;gap:4px"><img class="ava" data-a="pLook" title="EDIT LOOK" src="${portrait(p,t,2)}" width="48" height="48" style="cursor:pointer;border:2px solid #fff;background:${sideOf(p.pos)==='D'?'#e88686':sideOf(p.pos)==='K'?'#d6a067':'#8cc8f5'}"><span>#${p.num}</span><span class="s7 dim" data-a="pLook" style="cursor:pointer">EDIT LOOK</span></div></div>
    <div class="row ctr" style="gap:26px;margin-top:4px"><div class="col" style="align-items:center;gap:4px"><span>RATING</span>${stars(starsOf(p),'lg')}</div><div class="col" style="align-items:center;gap:4px"><span>POTENTIAL</span>${stars(potStars(p),'lg')}</div></div>
    <div class="sp"></div>
    <div class="box" style="margin:0 -10px;border-width:2px 0 0 0;padding:10px 8px 8px"><span class="lbl">XP LEVEL ${p.lvl}</span><div class="bar" style="height:14px"><i style="width:${clamp(p.xp/need*100,0,100)}%"></i></div>${mine&&p.sp>0?`<div class="yl blink s7" style="text-align:center;margin-top:4px">${p.sp} SKILL POINT${p.sp>1?'S':''}: TAP + TO UPGRADE</div>`:''}</div>
@@ -1775,7 +1796,7 @@ const PASS={
  POW_EXP:1.2,                // distance = MIN_D + p^POW_EXP*(max-MIN_D): fine control on short throws
  G:20,                       // stylised gravity, yd/s^2
  REL_Z:2.0,                  // release height (yd)
- CATCH_Z:1.1,                // height of the aim point: the arc's target is chest height
+ CATCH_Z:0,                  // the arc lands exactly on the target circle (receivers catch it on the way down)
  LOB:{v0:14,v1:25},          // horizontal ball speed (yd/s) at p=0 .. p=1
  BUL:{v0:24,v1:35},          // bullet: faster and therefore flatter
  ARM_SPEED:0.03,             // +3% ball speed per strength point above 5
@@ -1824,7 +1845,7 @@ function aimInfo(a){
  const bullet=!!M.passBullet,tm=throwModel(pull,str,bullet);
  const x0=q.x+0.25,y0=q.y-0.05;
  const tx=x0+fx*tm.d,ty=y0+fy*tm.d;
- const run=pull>=PASS.PULL_MIN&&fx<-0.55;                  // pulling toward the end zone = QB keeps it
+ const run=pull>=PASS.PULL_MIN&&fx<-0.85;                  // pulling toward the end zone = QB keeps it
  let press=1;for(const f of M.D)if(!f.eng&&f.stun<=0&&d2(f,q)<2.6){press=PASS.PRESS_MUL;break;}
  const moving=Math.hypot(q.vx,q.vy)>1.5?PASS.MOVE_MUL:1;
  // Max placement error (yd). The ring drawn in the preview is exactly this radius,
@@ -1954,7 +1975,7 @@ function catchCheck(b,bp,a){
  if(o&&oh.h===2)o.jump=0.45;if(d&&dh.h===2)d.jump=0.45;     // start the leap as the ball arrives
  const at=bp.t+Math.min(o?oh.tb:9,d?dh.tb:9);              // whoever gets the ball squarely first
  b.pend={o,oh,d,dh,at};
- if(at<=bp.t+1e-6){b.pend=null;resolveContact(b,bp,{o,oh,d,dh});}
+ if(at<=bp.t+1e-6||at>=b.F.Tg-1e-6){b.pend=null;resolveContact(b,bp,{o,oh,d,dh});}
 }
 /* Outcome rules (all spatial first, ratings second):
    - only a receiver reaches it  -> catch; a drop is rare and more likely
