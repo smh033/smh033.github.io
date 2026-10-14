@@ -1547,7 +1547,7 @@ function upLive(dt){
      setCarrier(kr);if(M.fair)return endPlay('fair',kr.x,kr.y);if(b.x1<10&&M.retKind==='ko'){M.tbOK=true;M.caughtInEZ=true;}sfx('catch');}
     else{b.T+=0.25;b.x1=kr.x;b.y1=kr.y;}}
   }else{
-   if(bp.z<3.9&&bp.u>0.12&&!b.done)catchCheck(b,bp);
+   if(!b.done){const pv=ballPos({...b,t:Math.max(0,b.t-dt*0.5)});if(pv.u>0.12)catchCheck(b,pv);if(M.phase==='live'&&M.ball===b&&bp.u>0.12)catchCheck(b,bp);}
    if(M.phase!=='live')return;
    if(M.ball&&M.ball.t>=M.ball.T){const bb=M.ball;M.ball=null;const oob=bb.y1<0||bb.y1>53.33||bb.x1>120;return endPlay('inc',M.los,M.ballY,bb.tip?'TIPPED · INCOMPLETE':oob?'OUT OF BOUNDS':'INCOMPLETE');}
   }
@@ -1609,26 +1609,44 @@ function upDef(f,dt){
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5);if(f.beat>0){f.beat-=dt;steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}steer(f,Math.min(m.x+m.vx*0.1+cush,119.5),m.y+m.vy*0.1,f.spd*0.97,f.acc,dt);return;}
  steer(f,f.x,f.y,0,10,dt);
 }
+/* ---------- Retro Bowl-style catching: if the ball touches a player's sprite, he plays it ----------
+   Hit test is done in SCREEN space against the drawn sprite box (feet .. top of helmet, + jump reach),
+   with the ball's shadow required to be near the player's feet so depth still makes sense. */
+const HB={half:12,top:36,foot:5,jump:10,depth:2.6};
+function curJy(f){if(f.dive>0&&f.dv)return Math.round(Math.sin((1-f.dive/f.dv)*Math.PI)*9)+3;return f.jump>0?Math.round(Math.sin((0.45-f.jump)/0.45*Math.PI)*12):0;}
+function spriteHit(f,bp,def){
+ const dy=bp.y-f.y;if(Math.abs(dy)>(def?1.4:HB.depth))return 0;
+ const dxp=(bp.x-f.x)*PXY,rel=dy*PYY-bp.z*PZ+curJy(f);
+ if(f.dive>0){const fw=(f.vx>=0?1:-1),a=dxp*fw;return(a>-14&&a<32&&rel>-30&&rel<HB.foot+2)?1:0;}
+ const half=def?HB.half-1:HB.half;if(Math.abs(dxp)>half)return 0;
+ if(rel>HB.foot)return 0;if(rel>=-HB.top)return 1;
+ if(!(f.jump>0)&&!(f.down>0)&&rel>=-HB.top-(def?5:HB.jump))return 2;return 0;
+}
 function catchCheck(b,bp){
- const high=bp.z>=2.7;let best=null,bd=99,isO=false;
- for(const f of M.O){if(!SKILL.includes(f.role)||f.tried||f.stun>0||(f.down>0&&!(f.dive>0)))continue;if(high&&(bp.u<0.4||f.dive>0))continue;const r=(0.72+A(f,'cat')*0.03+(f.dive>0?0.9:0))*(high?0.85:1),d=Math.hypot(f.x-bp.x,f.y-bp.y);if(d<r&&d<bd){bd=d;best=f;isO=true;}}
- if(!best&&bp.u>0.3)for(const f of M.D){if(f.role==='DL'||f.tried||f.stun>0||f.eng)continue;const r=(0.55+A(f,'cov')*0.025)*(high?0.85:1),d=Math.hypot(f.x-bp.x,f.y-bp.y);if(d<r&&d<bd){bd=d;best=f;isO=false;}}
- if(!best)return;
- best.tried=true;if(high){best.jump=0.45;}
- if(isO){
-  const cat=A(best,'cat');let p=0.93+cat*0.006,cd=99,cov=5;
-  for(const d of M.D){if(d.role==='DL'||d.stun>0)continue;const dd=d2(d,best);if(dd<cd){cd=dd;cov=A(d,'cov');}}
-  if(cd<1.2)p-=0.2+(cov-cat)*0.025;else if(cd<2)p-=0.05;
-  if(best.dive>0)p-=0.08;if(high)p-=0.16-A(best,'str')*0.008;if(b.tip)p-=0.1;
-  p=clamp(p,0.25,0.99);
-  if(Math.random()<p){if(high)pop('LEAPING CATCH!',best.x,best.y,'#ffe94a');return doCatch(best,bp);}
-  if(!b.tip&&Math.random()<0.45)return tipBall(b,bp,best);
-  b.done=true;M.ball=null;return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':cd<1.2?'BROKEN UP!':'DROPPED!');
+ let o=null,oh=0,od=99,d=null,dh=0,dd=99;
+ for(const f of M.O){if(!SKILL.includes(f.role)||f.tried||f.stun>0||(f.down>0&&!(f.dive>0)))continue;
+  const h=spriteHit(f,bp,false);if(!h)continue;const q=Math.hypot(f.x-bp.x,f.y-bp.y);if(q<od){od=q;o=f;oh=h;}}
+ if(bp.u>0.18)for(const f of M.D){if(f.role==='DL'||f.tried||f.stun>0||f.eng||f.down>0)continue;
+  const h=spriteHit(f,bp,true);if(!h)continue;const q=Math.hypot(f.x-bp.x,f.y-bp.y);if(q<dd){dd=q;d=f;dh=h;}}
+ if(!o&&!d)return;
+ if(o){
+  if(oh===2)o.jump=0.45;
+  /* a defender draped on the receiver contests it too */
+  if(!d){for(const f of M.D){if(f.role==='DL'||f.tried||f.stun>0||f.eng||f.down>0)continue;if(d2(f,o)<0.75){d=f;break;}}}
+  if(!d){if(oh===2)pop('LEAPING CATCH!',o.x,o.y,'#ffe94a');return doCatch(o,bp);}
+  const cat=A(o,'cat'),cov=A(d,'cov');let pc=clamp(0.58+(cat-cov)*0.06+(o===M.primary?0.04:0)-(b.tip?0.08:0),0.3,0.88);
+  const x=Math.random();d.tried=true;if(dh===2)d.jump=0.45;
+  if(x<pc){pop(oh===2?'LEAPING CATCH!':'CONTESTED CATCH!',o.x,o.y,'#ffe94a');return doCatch(o,bp);}
+  if(x<pc+(1-pc)*0.3){b.done=true;M.ball=null;M.intBy=d.pl;d.ball=true;return endPlay('int',d.x,d.y);}
+  if(!b.tip&&Math.random()<0.5){tipBall(b,bp,d);o.tried=true;return;}
+  b.done=true;M.ball=null;return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':'BROKEN UP!');
  }
- const r=M.primary,rd=r?Math.hypot(r.x-bp.x,r.y-bp.y):9,cov=A(best,'cov');
- let pi=b.tip?0.4+cov*0.03:0.16+cov*0.028+(rd>2?0.22:0);if(high)pi*=0.7;const x=Math.random();
- if(x<pi){b.done=true;M.ball=null;M.intBy=best.pl;best.ball=true;return endPlay('int',bp.x,bp.y);}
- if(x<pi+0.5){if(!b.tip&&Math.random()<0.45)return tipBall(b,bp,best);b.done=true;M.ball=null;return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':'BROKEN UP!');}
+ /* only a defender touched it: he never lets it pass through */
+ d.tried=true;if(dh===2)d.jump=0.45;const cov=A(d,'cov');
+ const pi=clamp((b.tip?0.45:0.28)+cov*0.03-(dh===2?0.08:0),0.2,0.7),x=Math.random();
+ if(x<pi){b.done=true;M.ball=null;M.intBy=d.pl;d.ball=true;return endPlay('int',d.x,d.y);}
+ if(!b.tip&&Math.random()<0.55)return tipBall(b,bp,d);
+ b.done=true;M.ball=null;return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':'BROKEN UP!');
 }
 function tipBall(b,bp,who){
  const a=Math.random()*Math.PI*2,d=rnd(1.5,5);
@@ -1640,10 +1658,10 @@ function tipBall(b,bp,who){
 }
 function doCatch(f,bp){
  M.ball=null;
- if(bp.y<0.2||bp.y>53.13||bp.x>120)return endPlay('inc',M.los,M.ballY,'OUT OF BOUNDS');
- M.comp={rec:f.pl};f.x=bp.x;f.y=bp.y;setCarrier(f);sfx('catch');
- if(bp.x>=110)return endPlay('td',bp.x,bp.y);
- if(f.dive>0||f.dove){f.down=1;return endPlay('tackle',bp.x,bp.y,'DIVING CATCH!');}
+ if(f.y<0.2||f.y>53.13||f.x>120)return endPlay('inc',M.los,M.ballY,'OUT OF BOUNDS');
+ M.comp={rec:f.pl};setCarrier(f);sfx('catch');
+ if(f.x>=110)return endPlay('td',f.x,f.y);
+ if(f.dive>0||f.dove){f.down=1;return endPlay('tackle',f.x,f.y,'DIVING CATCH!');}
  pop('CATCH!',f.x,f.y,'#ffe94a');
  if(f.vx<1)f.vx=f.spd*0.5;
 }
