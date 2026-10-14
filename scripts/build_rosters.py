@@ -35,16 +35,15 @@ def main():
     out = {"season": SEASON, "builtAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0, tzinfo=None).isoformat() + "Z",
            "source": "nflverse weekly_rosters", "rows": rows}
     # attach the estimated look for each player's headshot (see build_looks.py)
-    if LOOKS:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import build_looks
-        build_looks.update(rows)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     try:
+        import build_looks
+        if LOOKS: build_looks.update(rows)
         looks = json.load(open("nfl-looks.json"))
         for r in rows:
-            lk = looks.get(r.get("headshot_url"))
-            if lk: r["look"] = lk
-    except FileNotFoundError:
+            raw = looks.get(r.get("headshot_url"))
+            if isinstance(raw, dict) and raw.get("v") == 2: r["look"] = build_looks.finalize(raw)
+    except (FileNotFoundError, ImportError):
         pass
     for r in rows: r.pop("headshot_url", None)
     with open("nfl-rosters.json", "w") as f:

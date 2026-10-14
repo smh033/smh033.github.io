@@ -87,16 +87,23 @@ def analyse(img):
     elif hair_h < 0.06: hair = 1                                         # very close-cropped
     else: hair = 2                                                       # short (safe default; afro etc. via EDIT LOOK)
     hc = nearest(np.median(hair_px, 0), HAIR_RGB) if len(hair_px) > 10 else (0 if sL < 150 else 1)
-    chin, _ = reg(cx-hw*.18, fy+hw*.38, cx+hw*.18, fy+hw*.55)
-    beard = 0
-    if len(chin) > 10:
-        cpx = chin[nonskin(chin)]; frac = len(cpx)/len(chin)
-        if frac > 0.55: beard = 2
-        elif frac > 0.25: beard = 1
-    return [skin_i, hair, hc, beard]
+    chin, _ = reg(cx-hw*.16, fy+hw*.30, cx+hw*.16, fy+hw*.46)
+    frac = (np.mean(nonskin(chin) & (np.array([lum(c) for c in chin]) < sL*0.85)) if len(chin) > 10 else 0)
+    # raw measurements; final palette indices are chosen in finalize() so thresholds can be tuned
+    return {'v': 2, 'skin': [int(round(v)) for v in skin], 'hair': hair, 'hc': hc, 'chin': round(float(frac), 3)}
+
+# Luminance cut points between the 6 skin tones (light -> dark). Photo lighting makes raw
+# medians read darker than the sprite palette, so these were tuned on the whole roster.
+SKIN_CUTS = [200, 175, 150, 120, 90]
+def finalize(raw):
+    L = lum(np.array(raw['skin'], float))
+    skin = sum(L < c for c in SKIN_CUTS)
+    beard = 2 if raw['chin'] > 0.6 else 1 if raw['chin'] > 0.35 else 0
+    return [int(skin), int(raw['hair']), int(raw['hc']), int(beard)]
 
 def update(rows):
     cache = json.load(open('nfl-looks.json')) if os.path.exists('nfl-looks.json') else {}
+    cache = {k: v for k, v in cache.items() if isinstance(v, dict) and v.get('v') == 2}   # drop old-format entries
     urls = sorted({r['headshot_url'] for r in rows if r.get('headshot_url') and r['headshot_url'] not in cache})
     print(f'{len(urls)} new headshots to analyse ({len(cache)} cached); face detector: {"on" if FACE is not None else "off"}')
     def work(u):
