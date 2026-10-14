@@ -275,6 +275,8 @@ function createLeague(ut,coach,opt){
    const pos=mapNFLPosition(r.position);if(!pos)continue;
    const p=makeNFLPlayer(r,-1);if(p){p.nflFreeAgent=true;p.yrs=ri(1,2);}
   }
+  // If the live feed had few/no free agents, fill the market with generated players.
+  {let n=L.players.filter(p=>p.team===-1).length;while(n<34){addFA();n++;}}
  }else{
   for(const t of L.teams){if(t.id===ut)continue;fillAIRoster(t.id);}
   const n=rmax()-5,pool=['QB',...shuffle(['RB','WR','WR','TE','OL','DL','LB','DB','K','OL','DB'])].slice(0,n);
@@ -1181,7 +1183,8 @@ SCR.fo=()=>{
 ACT.fup=d=>{const lv=L.fac[d.k],c=facCost(lv);if(lv>=10||L.cc<c)return;L.cc-=c;L.fac[d.k]++;sfx('coin');save();render();};
 ACT.finfo=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl(FAC[d.k][0],true)}<div style="line-height:2">${FAC[d.k][1]}</div><div>LEVEL ${L.fac[d.k]}/10</div><button class="bt" data-a="close">OK</button></div>`);
 ACT.capUp=()=>{if(L.cc<CFG.capCost||L.cap>=CFG.capMax)return;L.cc-=CFG.capCost;L.cap+=CFG.capStep;sfx('coin');save();render();toast('SALARY CAP IS NOW '+L.cap+'M');};
-SCR.fa=()=>{
+function ensureFA(){if(!L)return;let n=faList().length,k=0;if(n>=24)return;while(n<34&&k<60){addFA();n=faList().length;k++;}save();}
+SCR.fa=()=>{ensureFA();
  const f=UI.sub.f||'ALL',pg=UI.sub.pg||0;let r=faList();if(f!=='ALL')r=r.filter(p=>p.pos===f);
  const per=rmax()===12?6:5,n=per*2,pages=Math.max(1,Math.ceil(r.length/n)),pr=r.slice(pg*n,pg*n+n);
  return`<div class="screen">
@@ -1400,8 +1403,11 @@ ACT.off5=()=>{if(rosterOf(L.user).length>rmax())return toast('TOO MANY PLAYERS: 
 let AC=null,NOISE=null;
 const TONES={tick:[[620,.022]],whistle:[[2100,.06],[1700,.14]],catch:[[700,.04],[1050,.07]],td:[[523,.09],[659,.09],[784,.09],[1047,.3]],bad:[[230,.1],[150,.2]],hit:[[95,.08]],kick:[[170,.04],[400,.05]],coin:[[988,.05],[1319,.1]],first:[[784,.07],[1047,.11]],juke:[[500,.03],[900,.04]]};
 const sndOn=()=>!L||!L.settings||L.settings.sound!==false;
+function unlockAudio(){const ac=audio();if(!ac)return;try{const b=ac.createBuffer(1,1,22050),s=ac.createBufferSource();s.buffer=b;s.connect(ac.destination);s.start(0);}catch(e){}}
+['pointerup','touchend','click','keydown'].forEach(ev=>document.addEventListener(ev,unlockAudio,{capture:true,passive:true}));
+try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
 function audio(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}if(AC.state==='suspended')AC.resume();return AC;}
-function sfx(n){if(!sndOn())return;const ac=audio();if(!ac||!TONES[n])return;let t=ac.currentTime;for(const[f,d]of TONES[n]){const o=ac.createOscillator(),g=ac.createGain();o.type=n==='hit'?'triangle':'square';o.frequency.value=f;g.gain.setValueAtTime(.045,t);g.gain.exponentialRampToValueAtTime(.0005,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d+.02);t+=d;}}
+function sfx(n){if(!sndOn())return;const ac=audio();if(!ac||!TONES[n])return;let t=ac.currentTime;for(const[f,d]of TONES[n]){const o=ac.createOscillator(),g=ac.createGain();o.type=n==='hit'?'triangle':'square';o.frequency.value=f;g.gain.setValueAtTime(.08,t);g.gain.exponentialRampToValueAtTime(.0005,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d+.02);t+=d;}}
 function crowd(dur,vol){if(!sndOn())return;const ac=audio();if(!ac)return;if(!NOISE){const n=ac.sampleRate*2;NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
  const s=ac.createBufferSource();s.buffer=NOISE;s.loop=true;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=1000;f.Q.value=.5;const g=ac.createGain(),t=ac.currentTime;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||.1,t+.2);g.gain.linearRampToValueAtTime(0,t+dur);s.connect(f).connect(g).connect(ac.destination);s.start(t);s.stop(t+dur+.05);}
 
@@ -2009,7 +2015,11 @@ function upLive(dt){
  const b=M.ball;
  if(M.play==='run'&&!M.carrier&&!M.handed&&M.pt>0.32&&d2(M.rb,M.qb)<1.7){M.handed=true;setCarrier(M.rb);}
  for(const f of M.O){
-  tickF(f,dt);if(f.stun>0||(f.down>0&&f!==M.carrier&&!f.dive))continue;
+  tickF(f,dt);
+  // Any diving player who isn't being driven by upCarrier/upChase finishes his dive here,
+  // so nobody can be left "running" in the dive pose (e.g. after a tip or a catch by someone else).
+  if(f.dive>0&&f!==M.carrier&&!(b&&f===M.primary)){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=1.0;f.vx=f.vy=0;}continue;}
+  if(f.stun>0||(f.down>0&&f!==M.carrier&&!f.dive))continue;
   if(f===M.carrier){upCarrier(f,dt);if(M.phase!=='live')return;continue;}
   if(f.role==='QB'){if(M.play==='pass'&&!M.thrown&&!M.carrier){upQB(f,dt);if(M.phase!=='live')return;}else steer(f,f.x,f.y,0,18,dt);continue;}
   if(f.role==='OL'){upOL(f,dt);continue;}
@@ -2071,9 +2081,10 @@ function upBlocker(f,dt){
 }
 function upChase(f,dt){
  const b=M.ball,rem=b.T-b.t,Lp={x:b.x1,y:b.y1},d=d2(f,Lp);
- if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.down=1.2;f.vx=f.vy=0;}return;}
+ if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=1.2;f.vx=f.vy=0;}return;}
  if(b.t<(f.react||0.12)&&!f.dove){followRoute(f,dt);return;}   // brief reaction, then break to the ball
- if(!f.dove&&rem<0.32&&d>1.0&&d<3.3){f.dove=true;f.dive=0.36;f.dv=0.36;const l=d||1;f.vx=(Lp.x-f.x)/l*f.spd*1.3;f.vy=(Lp.y-f.y)/l*f.spd*1.3;return;}
+ // Dive only when he can't reach the catch point by running before the ball does.
+ if(!f.dove&&rem<0.32&&d-1.3>f.spd*rem&&d<f.spd*rem+2.8){f.dove=true;f.dive=0.36;f.dv=0.36;const l=d||1;f.vx=(Lp.x-f.x)/l*f.spd*1.3;f.vy=(Lp.y-f.y)/l*f.spd*1.3;return;}
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
@@ -2095,7 +2106,8 @@ function doCatch(f,bp){
  if(f.y<0.2||f.y>53.13||f.x>120)return endPlay('inc',M.los,M.ballY,'OUT OF BOUNDS');
  M.comp={rec:f.pl};setCarrier(f);sfx('catch');
  if(f.x>=110)return endPlay('td',f.x,f.y);
- if(f.dive>0||f.dove){f.down=1;return endPlay('tackle',f.x,f.y,'DIVING CATCH!');}
+ if(f.dive>0){f.dive=0;f.down=1;f.vx=f.vy=0;return endPlay('tackle',f.x,f.y,'DIVING CATCH!');}
+ f.dove=false;
  pop('CATCH!',f.x,f.y,'#ffe94a');
  if(f.vx<1)f.vx=f.spd*0.5;
 }
@@ -2211,7 +2223,7 @@ function resolve(){
  clockCheck(toPre);
 }
 function upDead(dt){
- for(const f of[...M.O,...M.D]){tickF(f,dt);if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;continue;}steer(f,f.x,f.y,0,f===M.carrier?12:7,dt);}
+ for(const f of[...M.O,...M.D]){tickF(f,dt);if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=Math.max(f.down||0,0.8);f.vx=f.vy=0;}continue;}steer(f,f.x,f.y,0,f===M.carrier?12:7,dt);}
  if(M.ball){M.ball.t+=dt;if(M.ball.t>M.ball.T+0.4)M.ball=null;}
  M.deadT-=dt;if(M.deadT<=0)resolve();
 }
