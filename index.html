@@ -304,7 +304,7 @@ const faList=()=>L.players.filter(p=>p.team===-1).sort((a,b)=>ovr(b)-ovr(a));
    when NFL Rosters is selected; the custom/generated mode remains offline-safe.
    Ratings below are Pixel Gridiron conversions, not official NFL grades. */
 const NFL_ROSTER_URL=`https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_${CFG.startYear}.csv`;
-const NFL_CACHE_KEY='pixelGridiron_nflRosterCache_v2';
+const NFL_CACHE_KEY='pixelGridiron_nflRosterCache_v3';
 // ESPN's public Site API is used as a fallback because GitHub release assets do not
 // reliably permit cross-origin fetches from static game hosts. IDs are ESPN's team IDs.
 const NFL_ESPN_IDS={ATL:1,BUF:2,CHI:3,CIN:4,CLE:5,DAL:6,DEN:7,DET:8,GB:9,TEN:10,IND:11,KC:12,LV:13,LA:14,MIA:15,MIN:16,NE:17,NO:18,NYG:19,NYJ:20,PHI:21,ARI:22,PIT:23,LAC:24,SF:25,SEA:26,TB:27,WAS:28,CAR:29,JAX:30,BAL:33,HOU:34};
@@ -964,7 +964,16 @@ function tlNodes(){
   nodes.push(r>0?nd(pr,r-1):{a:'WEEK 18',b:'',res:null},nd(g,r),r<3?{a:lbl(r+1),b:'',res:null}:null);}
  return nodes;
 }
-SCR.hub=()=>{
+/* Existing NFL saves: pull the headshot-based looks from the site's roster file once. */
+function syncNFLLooks(){
+ if(!L||L.rosterMode!=='NFL'||L.looksV===1||window.__lookSync)return;window.__lookSync=true;
+ fetch('nfl-rosters.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
+  if(!j||!L)return;const by=new Map();for(const r of j.rows||[])if(r.look)by.set(String(r.full_name||'').toUpperCase(),r.look);
+  for(const p of L.players){if(!p.nfl)continue;const lk=by.get((p.fn+' '+p.ln).toUpperCase());if(lk){[p.skin,p.hair,p.hc,p.beard]=lk.map(Number);}applySavedLook(p);}
+  L.looksV=1;PRC.clear();for(const k in AVC)delete AVC[k];SPC.clear();save();if(UI.scr!=='game')render();
+ }).catch(()=>{}).finally(()=>{window.__lookSync=false;});
+}
+SCR.hub=()=>{syncNFLLooks();
  const t=L.user,R=teamRatings(t),nodes=tlNodes();
  const nh=(n,x,cur)=>n?`<div class="nd" style="left:${x}%"><div class="a">${n.a}</div><div class="b">${esc(n.b)}</div><div class="dot ${cur?'c':n.res?n.res.c:''}"></div><div class="r">${n.res?n.res.txt:''}</div></div>`:'';
  const div=divStand(T(t).di).map(x=>{const r=L.teams[x];return`<tr class="${x===t?'me':''}"><td style="overflow:hidden;text-overflow:ellipsis">${esc(teamName(x).toUpperCase())}</td><td class="c">${r.w}</td><td class="c">${r.l}</td><td class="c">${r.t}</td></tr>`;}).join('');

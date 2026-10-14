@@ -94,11 +94,12 @@ def analyse(img):
 
 # Luminance cut points between the 6 skin tones (light -> dark). Photo lighting makes raw
 # medians read darker than the sprite palette, so these were tuned on the whole roster.
-SKIN_CUTS = [200, 175, 150, 120, 90]
+# score = 0.6*red + 0.4*luminance (red copes better with warm studio lighting)
+SKIN_CUTS = [195, 172, 150, 125, 95]
 def finalize(raw):
-    L = lum(np.array(raw['skin'], float))
-    skin = sum(L < c for c in SKIN_CUTS)
-    beard = 2 if raw['chin'] > 0.6 else 1 if raw['chin'] > 0.35 else 0
+    c = np.array(raw['skin'], float); score = 0.6*c[0] + 0.4*lum(c)
+    skin = sum(score < x for x in SKIN_CUTS)
+    beard = 2 if raw['chin'] > 0.55 else 1 if raw['chin'] > 0.38 else 0
     return [int(skin), int(raw['hair']), int(raw['hc']), int(beard)]
 
 def update(rows):
