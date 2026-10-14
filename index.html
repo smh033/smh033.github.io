@@ -1794,7 +1794,7 @@ const PASS={
  MIN_D:3,                    // shortest throw, yards
  RANGE_BASE:22,RANGE_ARM:3.2,// max air yards = BASE + ARM*(strength-1)
  POW_EXP:1.2,                // distance = MIN_D + p^POW_EXP*(max-MIN_D): fine control on short throws
- G:20,                       // stylised gravity, yd/s^2
+ G:20,G_LOB:30,               // lobs use a stronger gravity => taller arc for the same flight time                       // stylised gravity, yd/s^2
  REL_Z:2.0,                  // release height (yd)
  CATCH_Z:0,                  // the arc lands exactly on the target circle (receivers catch it on the way down)
  LOB:{v0:14,v1:25},          // horizontal ball speed (yd/s) at p=0 .. p=1
@@ -1818,15 +1818,15 @@ window.__pass={seed(n){passRand=n==null?Math.random:mulberry32(n);},noError:fals
    Constant horizontal speed v along (ux,uy); vertical z = z0 + vz*t - G*t^2/2,
    with vz chosen so the ball is at height z1 at time T. After T the ball keeps
    following the same parabola down to the ground (time Tg). */
-function makeFlight(x0,y0,z0,x1,y1,z1,T){
+function makeFlight(x0,y0,z0,x1,y1,z1,T,g){g=g||PASS.G;
  const dx=x1-x0,dy=y1-y0,d=Math.hypot(dx,dy)||1e-6;
- const vz=(z1-z0+0.5*PASS.G*T*T)/T;
- const Tg=(vz+Math.sqrt(vz*vz+2*PASS.G*Math.max(z0,0)))/PASS.G;
- return{x0,y0,z0,ux:dx/d,uy:dy/d,v:d/T,vz,T,Tg:Math.max(Tg,T),x1,y1,z1,d};
+ const vz=(z1-z0+0.5*g*T*T)/T;
+ const Tg=(vz+Math.sqrt(vz*vz+2*g*Math.max(z0,0)))/g;
+ return{x0,y0,z0,g,ux:dx/d,uy:dy/d,v:d/T,vz,T,Tg:Math.max(Tg,T),x1,y1,z1,d};
 }
 function flightAt(F,t){
  t=clamp(t,0,F.Tg);const s=F.v*t;
- return{x:F.x0+F.ux*s,y:F.y0+F.uy*s,z:Math.max(0,F.z0+F.vz*t-0.5*PASS.G*t*t),t,u:t/F.T,from:s};
+ return{x:F.x0+F.ux*s,y:F.y0+F.uy*s,z:Math.max(0,F.z0+F.vz*t-0.5*(F.g||PASS.G)*t*t),t,u:t/F.T,from:s};
 }
 function throwModel(pull,str,bullet=false){
  const p=clamp((pull-PASS.PULL_MIN)/(PASS.PULL_MAX-PASS.PULL_MIN),0,1);
@@ -1852,7 +1852,7 @@ function aimInfo(a){
  // and the real throw can never land outside it.
  const accMul=1.5-0.09*(clamp(acc,1,11)-1);               // acc 1 -> 1.5x, acc 11 -> 0.6x
  const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1);
- const F=makeFlight(x0,y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,tm.T);
+ const F=makeFlight(x0,y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,tm.T,bullet?PASS.G:PASS.G_LOB);
  return{tx,ty,x0,y0,d:tm.d,v:tm.v,T:tm.T,p:tm.p,maxR:tm.maxR,run,err,press,moving,pull,str,acc,bullet,F};
 }
 /* Commit the throw. Error is applied to the target point only, bounded by ai.err. */
@@ -1863,7 +1863,7 @@ function throwBall(ai){
   tx+=Math.cos(ang)*r;ty+=Math.sin(ang)*r;
  }
  const d=Math.hypot(tx-ai.x0,ty-ai.y0),T=Math.max(0.12,d/ai.v);
- const F=makeFlight(ai.x0,ai.y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,T);
+ const F=makeFlight(ai.x0,ai.y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,T,ai.bullet?PASS.G:PASS.G_LOB);
  M.ball={F,t:0,T:F.T,Tg:F.Tg,x0:F.x0,y0:F.y0,x1:tx,y1:ty,bullet:ai.bullet};
  window.__pass.last={plan:ai.F,actual:F,err:ai.err};
  M.thrown=true;M.aim=null;M.input=null;q.throwT=0.3;sfx('kick');
@@ -1895,7 +1895,9 @@ function passFlightStep(b,t0,t1){
   const tt=t0+(t1-t0)*i/n,bp=flightAt(b.F,tt);
   b.t=tt;
   if(b.pend){if(tt>=b.pend.at||tt>=b.F.Tg){const p=b.pend;b.pend=null;resolveContact(b,bp,p);}}
-  else if(bp.from>=PASS.SAFE_D||b.tip)catchCheck(b,bp,i/n);
+  // A lob can't be touched while it is still climbing: it goes OVER the line.
+  // Bullets are flat and can be batted or picked anywhere past the QB.
+  else if(b.tip||(bp.from>=PASS.SAFE_D&&(b.bullet||b.F.vz-b.F.g*tt<=0)))catchCheck(b,bp,i/n);
   if(M.phase!=='live'||M.ball!==b)return true;
   if(bp.z<=0||tt>=b.F.Tg){b.done=true;M.ball=null;const oob=bp.y<0||bp.y>53.33||bp.x>120;
    endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':oob?'OUT OF BOUNDS':'INCOMPLETE');return true;}
