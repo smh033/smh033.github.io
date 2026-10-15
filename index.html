@@ -1147,7 +1147,7 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
  <div class="row">${coinBox()}<div class="grow">${ttl(CFG.game)}</div><div class="coin">Y${L.season}</div></div>
  <div class="tl" data-a="go" data-s="${L.phase==='PO'?'bracket':'schedule'}"><div class="ln"><i style="width:50%"></i></div>${nh(nodes[0],16)}${nh(nodes[1],50,true)}${nh(nodes[2],84)}</div>
  <div class="row grow stretch" style="gap:10px;margin-top:4px">
-  <div class="box" style="flex:1.15;min-width:0;cursor:pointer;padding:9px 8px 4px" data-a="go" data-s="standings"><span class="lbl">STANDINGS</span><table class="tbl" style="table-layout:fixed"><colgroup><col><col style="width:16px"><col style="width:16px"><col style="width:16px"></colgroup><tr><th>${T(t).conf} ${T(t).div}</th><th class="c">W</th><th class="c">L</th><th class="c">T</th></tr>${div}</table></div>
+  <div class="box" style="flex:1.15;min-width:0;cursor:pointer;padding:9px 8px 4px" data-a="go" data-s="standings"><span class="lbl">STANDINGS</span><table class="tbl" style="table-layout:fixed"><colgroup><col><col style="width:30px"><col style="width:30px"><col style="width:30px"></colgroup><tr><th>${T(t).conf} ${T(t).div}</th><th class="c">W</th><th class="c">L</th><th class="c">T</th></tr>${div}</table></div>
   <div class="col" style="flex:1;min-width:0;gap:12px">
    ${box('FANS '+Math.round(L.fan)+'%',`<div class="bar"><i style="width:${L.fan}%"></i></div>`,'padding:10px 8px 7px')}
    <div class="row stretch" style="gap:8px">${box('MORALE',`${mor}% ${face(mor)}`,'flex:1;min-width:0','c')}${box('OFFENSE',stars(R.offS,'o'),'flex:1;min-width:0','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1;min-width:0','c')}</div>
