@@ -102,6 +102,7 @@ input.txt{font:inherit;font-size:10px;background:var(--nv);border:2px solid #fff
 .sb{position:relative;display:flex;align-items:stretch;height:36px;background:linear-gradient(#262c44,#0f1324);border:1px solid rgba(255,255,255,.55);box-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap}
 .sb .tm{display:flex;align-items:center;gap:5px;padding:0 7px}
 .sb .bdg{width:26px;height:26px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:6px;line-height:1;font-style:normal;letter-spacing:-0.5px;text-shadow:none;box-shadow:0 1px 0 rgba(0,0,0,.5)}
+.sb .nflsb-logo{display:block;flex:none;width:30px;height:27px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 1px 1px rgba(0,0,0,.55))}
 .sb .sc{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:30px}
 .sb .sc b{font-weight:normal;font-size:16px;line-height:1;text-shadow:2px 2px 0 #000}
 .sb .to{display:flex;gap:2px}.sb .to i{width:7px;height:3px;background:#5a5f78}.sb .to i.on{background:#f0f0f0}
@@ -188,10 +189,15 @@ function loadFieldLogo(teamId){
  img.onload=()=>{
   NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGOS[teamId]=img;
   if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[buildField(false),buildField(true)];
+  // Refresh the TV scoreboard too, so badges that were showing abbreviations
+  // switch to the same official NFL logo assets used at midfield.
+  if(UI&&UI.scr==='game'&&M&&M.hc)hud();
  };
  img.onerror=()=>{
   NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGO_FAILED.add(teamId);
   if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[buildField(false),buildField(true)];
+  // Keep the scoreboard's abbreviation fallback when a logo cannot be loaded.
+  if(UI&&UI.scr==='game'&&M&&M.hc)hud();
  };
  const slug=NFL_LOGO_ESPN_SLUGS[team.abbr]||team.abbr.toLowerCase();
  img.src='https://a.espncdn.com/i/teamlogos/nfl/500/'+slug+'.png';
@@ -3369,7 +3375,7 @@ function draw(){
 function hud(){
  const offense=!(M.ov&&M.ov.type==='drive');
  const dn=(M.phase==='pre'||M.phase==='live'||M.phase==='dead')&&M.play!=='ret'?downTxt():M.play==='ret'&&M.phase!=='ov'?(M.retKind==='ko'?'Kick Return':'Punt Return'):offense?'':abbr(M.op)+' Ball';
- {const bd=t=>{const c=teamCol(t);return`<i class="bdg" style="background:${c.c1};border-color:${c.c2};color:${txtCol(c.c1,c.c2)}">${esc(abbr(t))}</i>`;},
+ {const bd=t=>{const c=teamCol(t),logo=loadFieldLogo(t);return logo?`<img class="nflsb-logo" src="${esc(logo.src)}" alt="${esc(abbr(t))}" title="${esc(teamName(t))}">`:`<i class="bdg" style="background:${c.c1};border-color:${c.c2};color:${txtCol(c.c1,c.c2)}">${esc(abbr(t))}</i>`;},
   pips=n=>`<span class="to">${[0,1,2].map(i=>`<i class="${i<n?'on':''}"></i>`).join('')}</span>`,ours=offense&&M.play!=='kickoff';
   const q=M.qtr<=4?['1ST','2ND','3RD','4TH'][M.qtr-1]:M.qtr===5?'OT':(M.qtr-4)+'OT';
   const pc=M.phase==='pre'&&M.pc!=null&&!M.ov?Math.max(0,Math.ceil(M.pc)):null;
