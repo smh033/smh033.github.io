@@ -333,7 +333,10 @@ function fillAIRoster(t){
   const fa=faList().find(p=>p.pos===pos&&Math.abs(ovr(p)-tq)<1.6&&!(p.rel&&p.rel.t===t&&p.rel.y===L.year)&&Math.random()<0.6);
   if(fa){fa.team=t;fa.yrs=ri(1,3);}else{const p=genPlayer(pos,clamp(tq+rnd(-1.3,1.3),1.5,9.5));p.team=t;addPlayer(p);}r=rosterOf(t);}
  while(rosterOf(t).length<rmax()){const p=genPlayer(pick(AI_T),clamp(tq+rnd(-1.5,1),1.5,9));p.team=t;addPlayer(p);}
- r=rosterOf(t);if(r.length>rmax()){const st=starterSet(t);const cut=r.filter(p=>!st.has(p.id)).sort((a,b)=>ovr(a)-ovr(b));for(let i=0;i<r.length-rmax()&&i<cut.length;i++){cut[i].team=-1;cut[i].yrs=1;cut[i].rel={t,y:L.year,w:L.week||0};}}
+ r=rosterOf(t);if(r.length>rmax()){const st=starterSet(t);
+  // cut backups first, then the weakest starters if that still isn't enough
+  const cut=r.slice().sort((a,b)=>(st.has(a.id)?1:0)-(st.has(b.id)?1:0)||ovr(a)-ovr(b));
+  for(let i=0;i<r.length-rmax()&&i<cut.length;i++){cut[i].team=-1;cut[i].yrs=1;cut[i].bench=false;cut[i].rel={t,y:L.year,w:L.week||0};}}
 }
 function addFA(q){const pos=pick(['QB','RB','WR','WR','TE','OL','OL','K','DL','DL','LB','DB','DB']);let qq=q;if(qq==null){qq=rnd(2.6,5.8);if(Math.random()<.12)qq=rnd(6,7.6);}const p=genPlayer(pos,qq,ri(23,33));p.team=-1;p.yrs=ri(1,3);return addPlayer(p);}
 const faList=()=>L.players.filter(p=>p.team===-1).sort((a,b)=>ovr(b)-ovr(a));
@@ -2870,6 +2873,7 @@ function resolve(){
   if(k==='pick6'){const xp=Math.random()<0.95;M.sc[1]+=xp?7:6;if(M.qtr>=5)return gameOver();M.O=[];M.D=[];M.carrier=null;
    return ovMsg('PICK SIX','<span class="rdt">'+(M.intBy?nm(M.intBy):abbr(M.op))+' RETURNS IT FOR A TOUCHDOWN.</span><br>'+abbr(L.user)+' '+M.sc[0]+' - '+M.sc[1]+' '+abbr(M.op),[['CONTINUE',()=>clockCheck(()=>kickoffTo('us')),'y']]);}
   const ret=Math.max(0,Math.round(M.intX-r.x));
+  if(r.x>=110)return clockCheck(()=>oppDrive(20,['INTERCEPTED BY '+(M.intBy?nm(M.intBy):abbr(M.op))+' IN THE END ZONE · TOUCHBACK']));
   return clockCheck(()=>oppDrive(clamp(Math.round(110-r.x),1,99),['INTERCEPTED BY '+(M.intBy?nm(M.intBy):abbr(M.op))+(ret?' · RETURNED '+ret+' YDS':'')]));}
  if(M.play==='ret'){
   const kr=M.kr.pl,x=r.x;
@@ -2917,10 +2921,10 @@ function bigPlayOf(kind,x,label){
  if(kind==='td')return M.play==='ret'?'RETURN TOUCHDOWN':M.comp?'TOUCHDOWN CATCH':'TOUCHDOWN RUN';
  if(kind==='pick6')return'PICK SIX';
  if(kind==='intdown'&&M.intX-x>=20)return'INTERCEPTION RETURN';
- if(M.play==='ret'&&M.land&&x-M.land.x>=35)return'BIG RETURN';
+ if(M.play==='ret'&&M.land&&x-M.land.x>=45)return'BIG RETURN';
  if(label==='DIVING CATCH!')return'DIVING CATCH';
  if(M.leap&&kind!=='inc'&&kind!=='int')return'LEAPING CATCH';
- if((kind==='tackle'||kind==='oob')&&M.play!=='ret'&&M.play!=='intret'&&x-M.los>=25)return'BIG PLAY';
+ if((kind==='tackle'||kind==='oob')&&M.play!=='ret'&&M.play!=='intret'&&x-M.los>=30)return'BIG PLAY';
  return null;}
 function wantReplay(){return L.settings.replay!==false&&M.big&&M.rec&&M.rec.f.length>15&&!M.rp;}
 function startReplay(){M.phase='replay';M.rp={t:0,cam0:M.cam,lab:M.big};M.banT=0;M.pops=[];}
