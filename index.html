@@ -232,6 +232,12 @@ let L=null;
 const attr=(p,k)=>{if(!p)return FILL;const v=p.a[k];return v==null?DEF_ATTR[k]:v;};
 function covOf(p){if(!p)return FILL;if(p.pos==='DB')return(p.a.spd+p.a.stm)/2+0.5;if(p.pos==='LB')return(p.a.spd+p.a.tkl)/2-0.5;if(p.pos==='DL')return 2.5;return 3;}
 function eff(p,k){const b=k==='cov'?covOf(p):attr(p,k);if(!p)return b;return b*(0.82+0.18*p.cond/100)*(0.96+p.mor/100*0.06);}
+/* Potential caps: no single attribute can go past (potential + 1), and the overall can't go past
+   potential + 0.5. Only true 5-star-potential players can max everything out. A player who
+   has hit his ceiling stops earning skill points. */
+function attrCap(p){return clamp(Math.round(p.pot||0)+1,3,10);}
+function canRaise(p,k){if(p.a[k]>=attrCap(p))return false;const ks=POSDEF[p.pos];return Math.round((ovr(p)*ks.length+1)/ks.length)<=Math.round(p.pot||0);}   /* rating stars never pass potential stars */
+function isMaxed(p){return!POSDEF[p.pos].some(k=>canRaise(p,k));}
 function ovr(p){const ks=POSDEF[p.pos];let s=0;for(const k of ks)s+=p.a[k];return s/ks.length;}
 const starsOf=p=>clamp(Math.round(ovr(p))/2,0.5,5);
 function salFor(st,age){let s=1+st*st*1.25;if(age>=31)s*=0.85;return Math.round(s*10)/10;}
@@ -563,7 +569,8 @@ function makeNFLPlayer(r,team){
  let fn=parts.shift()||'NFL',ln=parts.join(' ')||'PLAYER';
  const q=nflQuality(r,pos),p=genPlayer(pos,q,nflAge(r));p.nflQ=q;p.fn=fn;p.ln=ln;p.team=team;p.num=Number(r.jersey_number)||0;
  for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+rnd(-0.65,0.65)),1,10);
- p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+rnd(0.3,1.1),1,10);p.peak=q;p.seasons=Math.max(0,Number(r.years_exp)||0);p.yrs=clamp(ri(1,4),1,4);p.sal=Math.round(salFor(starsOf(p),p.age)*0.82*10)/10;p.mor=String(r.status||'ACT').toUpperCase()==='ACT'?78:65;
+ p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+(p.age<=24?rnd(0.4,1.6):p.age<=27?rnd(0.1,0.7):rnd(0,0.3)),1,10);   /* only young players have much room to grow */
+ p.peak=q;p.seasons=Math.max(0,Number(r.years_exp)||0);p.yrs=clamp(ri(1,4),1,4);p.sal=Math.round(salFor(starsOf(p),p.age)*0.82*10)/10;p.mor=String(r.status||'ACT').toUpperCase()==='ACT'?78:65;
  // look estimated from the player's official headshot by the weekly roster job
  if(Array.isArray(r.look)&&r.look.length===4){[p.skin,p.hair,p.hc,p.beard]=r.look.map(Number);}
  applySavedLook(p);                       // your own EDIT LOOK changes always win
@@ -735,7 +742,7 @@ function giveAwards(){
  const list=[['MVP','MOST VALUABLE PLAYER',mvp],['OPOY','OFFENSIVE PLAYER OF THE YEAR',opoy],['DPOY','DEFENSIVE PLAYER OF THE YEAR',dpoy],['ROTY','ROOKIE OF THE YEAR',roty]].filter(x=>x[2]);
  const out={year:L.year,list:list.map(([a,full,p])=>({a,full,id:p.id,name:fullname(p),pos:p.pos,team:p.team,line:statLine(p)+(p.team===L.user&&uf>1.15?' · ≈'+statLine({pos:p.pos,s:S(p)}).split(' · ')[0].replace(/\d+(\.\d+)?/,m=>Math.round(+m))+' FULL GAMES':'')}))};
  for(const [a,,p] of list){p.awards=(p.awards||[]);p.awards.push(a+' '+L.year);
-  if(p.team===L.user){p.sp=(p.sp||0)+1;p.mor=clamp(p.mor+20,0,100);L.cc+=10;L.fan=clamp(L.fan+3,0,100);news(fullname(p)+' WINS '+a+'! (+1 SKILL POINT, +10 COINS)');}
+  if(p.team===L.user){if(!isMaxed(p))p.sp=(p.sp||0)+1;p.mor=clamp(p.mor+20,0,100);L.cc+=10;L.fan=clamp(L.fan+3,0,100);news(fullname(p)+' WINS '+a+'! (+1 SKILL POINT, +10 COINS)');}
   else news(abbr(p.team)+' '+p.pos+' '+fullname(p)+' named '+a+'.');}
  L.awards=L.awards||[];L.awards.unshift(out);L.awardsShow=true;
 }
@@ -781,7 +788,7 @@ function endSeason(){
 function progressPlayer(p){
  const ch={},ks=POSDEF[p.pos];
  let n=p.age<=24?ri(1,3):p.age<=27?ri(0,2):p.age<=29?ri(0,1):p.age<=31?-ri(0,1):-ri(1,3);
- for(let i=0;i<Math.abs(n);i++){const k=pick(ks),b=p.a[k];if(n>0){if(ovr(p)<p.pot+0.4)p.a[k]=Math.min(10,p.a[k]+1);}else p.a[k]=Math.max(1,p.a[k]-1);if(p.a[k]!==b)ch[k]=(ch[k]||0)+(p.a[k]-b);}
+ for(let i=0;i<Math.abs(n);i++){const k=pick(ks),b=p.a[k];if(n>0){if(canRaise(p,k))p.a[k]=Math.min(10,p.a[k]+1);}else p.a[k]=Math.max(1,p.a[k]-1);if(p.a[k]!==b)ch[k]=(ch[k]||0)+(p.a[k]-b);}
  p.peak=Math.max(p.peak||0,ovr(p));return ch;
 }
 /* ---------- retirement ----------
@@ -1327,7 +1334,7 @@ function syncNFLRatings(){
    // because only the change in the real rating is applied (first time: measured from his current overall).
    const base=p.nflQ!=null?p.nflQ:ovr(p);const d=clamp(q-base,-3,3);p.nflQ=q;if(Math.abs(d)<0.01)continue;
    p.nflAcc=(p.nflAcc||0)+d;const st=Math.round(p.nflAcc);if(!st)continue;p.nflAcc-=st;
-   for(const k of POSDEF[p.pos])p.a[k]=clamp(p.a[k]+st,1,10);p.peak=Math.max(p.peak||0,ovr(p));if(st>0)up++;else down++;}
+   for(const k of POSDEF[p.pos])p.a[k]=clamp(p.a[k]+st,1,10);p.peak=Math.max(p.peak||0,ovr(p));if(ovr(p)>p.pot)p.pot=Math.min(10,ovr(p)+0.2);   /* real-life breakout raises his ceiling */if(st>0)up++;else down++;}
   L.ratingsAt=j.builtAt;
   if(up||down)news('NFL ratings updated from this week\'s real stats: '+up+' up, '+down+' down.');
   save();if(UI.scr!=='game')render();
@@ -1523,7 +1530,8 @@ SCR.player=()=>{
  const p=P(UI.sub.id);if(!p)return SCR.roster();
  const t=p.team>=0?p.team:L.user,mine=p.team===L.user,need=xpNeed(p.lvl);
  const ln=(k,v)=>`<div class="row" style="gap:6px"><span>${k}:</span><span>${v}</span></div>`;
- const attrs=POSDEF[p.pos].map(k=>`<div class="col" style="gap:3px"><div class="row"><span>${ATTR[k]}</span><div class="sp"></div>${mine&&p.sp>0?`<button class="bt" style="padding:2px 6px 1px" data-a="pSp" data-k="${k}" ${p.a[k]<10?'':'disabled'}>+</button>`:''}</div><div class="bar" style="height:16px"><i style="width:${p.a[k]*10}%"></i></div></div>`).join('');
+ if(isMaxed(p)&&p.sp)p.sp=0;
+ const attrs=POSDEF[p.pos].map(k=>`<div class="col" style="gap:3px"><div class="row"><span>${ATTR[k]}</span><div class="sp"></div>${mine&&p.sp>0?(canRaise(p,k)?`<button class="bt" style="padding:2px 6px 1px" data-a="pSp" data-k="${k}">+</button>`:'<span class="s7 dim">MAX</span>'):''}</div><div class="bar" style="height:16px;position:relative"><i style="width:${p.a[k]*10}%"></i>${attrCap(p)<10?`<b style="position:absolute;left:${attrCap(p)*10}%;top:-2px;bottom:-2px;width:2px;background:#ff5c5c" title="POTENTIAL CAP"></b>`:''}</div></div>`).join('');
  const met=p.met===L.season*100+L.week;
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl(p.pos+' - '+esc(fullname(p).toUpperCase()),true)}</div>${mine?`<button class="bt ico" data-a="pRename">${PENCIL}</button>`:'<div style="width:32px"></div>'}</div>
@@ -1535,7 +1543,7 @@ SCR.player=()=>{
    </div><div class="col" style="align-items:center;gap:4px"><img class="ava" data-a="pLook" title="EDIT LOOK" src="${portrait(p,t,2)}" width="48" height="48" style="cursor:pointer;border:2px solid #fff;background:${sideOf(p.pos)==='D'?'#e88686':sideOf(p.pos)==='K'?'#d6a067':'#8cc8f5'}"><span>#${p.num}</span><span class="s7 dim" data-a="pLook" style="cursor:pointer">EDIT LOOK</span></div></div>
    <div class="row ctr" style="gap:26px;margin-top:4px"><div class="col" style="align-items:center;gap:4px"><span>RATING</span>${stars(starsOf(p),'lg')}</div><div class="col" style="align-items:center;gap:4px"><span>POTENTIAL</span>${stars(potStars(p),'lg')}</div></div>
    <div class="sp"></div>
-   <div class="box" style="margin:0 -10px;border-width:2px 0 0 0;padding:10px 8px 8px"><span class="lbl">XP LEVEL ${p.lvl}</span><div class="bar" style="height:14px"><i style="width:${clamp(p.xp/need*100,0,100)}%"></i></div>${mine&&p.sp>0?`<div class="yl blink s7" style="text-align:center;margin-top:4px">${p.sp} SKILL POINT${p.sp>1?'S':''}: TAP + TO UPGRADE</div>`:''}</div>
+   <div class="box" style="margin:0 -10px;border-width:2px 0 0 0;padding:10px 8px 8px"><span class="lbl">XP LEVEL ${p.lvl}</span><div class="bar" style="height:14px"><i style="width:${clamp(p.xp/need*100,0,100)}%"></i></div>${mine&&p.sp>0?`<div class="yl blink s7" style="text-align:center;margin-top:4px">${p.sp} SKILL POINT${p.sp>1?'S':''}: TAP + TO UPGRADE</div>`:mine&&isMaxed(p)?'<div class="s7 dim" style="text-align:center;margin-top:4px">MAXED OUT · REACHED HIS POTENTIAL</div>':''}</div>
   </div>
   <div class="box col" style="flex:1;gap:9px;padding:12px 10px 8px"><span class="lbl">ATTRIBUTES</span>${attrs}<div class="sp"></div><div class="s7 dim">${p.pos==='QB'?'QB STRENGTH = HOW FAR HE CAN THROW':p.pos==='K'?'K STRENGTH = HOW FAR HE CAN KICK':'&nbsp;'}</div></div>
   <button class="bt ico" style="align-self:center" data-a="pnav" data-d="1">&gt;</button>
@@ -1549,7 +1557,7 @@ SCR.player=()=>{
 ACT.pc=d=>{const back=UI.scr==='player'?UI.sub.back:UI.scr,bs=UI.scr==='player'?UI.sub.bs:Object.assign({},UI.sub);UI.modal=null;go('player',{id:+d.id,back,bs});};
 ACT.pBack=()=>go(UI.sub.back||'roster',UI.sub.bs||{});
 ACT.pnav=d=>{const p=P(UI.sub.id),l=plist(p.team>=0?p.team:L.user),i=l.indexOf(p);if(i<0||!l.length)return;UI.sub.id=l[(i+ +d.d+l.length)%l.length].id;render();};
-ACT.pSp=d=>{const p=P(UI.sub.id);if(p.sp>0&&p.a[d.k]<10){p.a[d.k]++;p.sp--;p.peak=Math.max(p.peak||0,ovr(p));sfx('coin');save();render();}};
+ACT.pSp=d=>{const p=P(UI.sub.id);if(p.sp>0&&canRaise(p,d.k)){p.a[d.k]++;p.sp--;p.peak=Math.max(p.peak||0,ovr(p));sfx('coin');save();render();}};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
 ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+L.week;const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
 ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`;
@@ -1848,7 +1856,7 @@ const PRESS=[
 ];
 const teamMorAdd=v=>{for(const p of rosterOf(L.user))p.mor=clamp(p.mor+v,0,100);};
 const fanAdd=v=>{L.fan=clamp(L.fan+v,2,100);};
-function gainXP(p,x){const side=sideOf(p.pos),co=side==='O'?L.oc:side==='D'?L.dc:null;const mult=1+0.12*(L.fac.train-1)+(co?co.stars*0.08:0);p.xp+=Math.round(x*mult);let up=0;while(p.xp>=xpNeed(p.lvl)&&p.lvl<30){p.xp-=xpNeed(p.lvl);p.lvl++;p.sp++;up++;}return up;}
+function gainXP(p,x){const side=sideOf(p.pos),co=side==='O'?L.oc:side==='D'?L.dc:null;const mult=1+0.12*(L.fac.train-1)+(co?co.stars*0.08:0);p.xp+=Math.round(x*mult);let up=0;while(p.xp>=xpNeed(p.lvl)&&p.lvl<30){p.xp-=xpNeed(p.lvl);p.lvl++;if(!isMaxed(p)){p.sp++;up++;}}if(isMaxed(p))p.sp=0;return up;}
 function gameRating(p,s,res){
  const pos=p.pos;let r=5;
  if(pos==='QB')r=3+(s.pyd||0)/70+(s.ptd||0)*1.1-(s.pint||0)*1.4+(s.ryd||0)/40;
