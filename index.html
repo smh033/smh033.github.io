@@ -1059,10 +1059,9 @@ function drawMan(c,x,y,lk,o){
  /* far arm (behind the body, darker): pumps opposite to the near arm */
  const Jd=shade(J,-38);
  if(o.pose)armP(-1,o.pose.la);
- else if(fr===0&&!o.ball){r(Jd,8,6,2,1);r(skD,10,5,1,2);}
- else if(fr===2&&!o.ball){r(Jd,1,7,2,1);r(skD,0,8,1,1);}
- else if(fr===0&&o.ball){r(Jd,1,7,2,1);r(skD,0,8,1,1);}
- else if(fr===2&&o.ball){r(Jd,1,6,1,2);r(skD,0,7,1,1);}
+ /* far arm (behind the body, darker): swings opposite to the near arm, out past the body so it reads */
+ else if(fr===0){r(Jd,9,6,2,2);r(skD,11,4,1,3);}          // far arm pumped forward
+ else if(fr===2){r(Jd,1,6,2,2);r(skD,0,8,1,2);}            // far arm swung back
  else if(fr===-1)r(skD,2,7,1,2);
  r(PN,4,10,5,2);r(shade(PN,-55),4,10,5,1);
  r(J,3,6,6,4);r(J,2,6,8,2);r(TR,2,6,2,1);r(TR,8,6,2,1);r(TR,4,8,3,1);
@@ -1075,9 +1074,9 @@ function drawMan(c,x,y,lk,o){
  else if(o.reach){/* both hands up for the ball */r(J,2,3,1,3);r(J,9,3,1,3);r(sk,2,-1,1,4);r(sk,9,-1,1,4);r(sk,1,-1,1,1);r(sk,10,-1,1,1);}
  else if(o.throw){r(J,3,5,1,2);r(sk,2,3,1,2);r('#7a3d12',1,1,3,2);r('#fff',2,1,1,1);}
  else if(o.ball){r(J,7,6,2,2);r('#7a3d12',8,7,3,2);r('#fff',9,7,1,1);r(sk,8,8,2,1);}
- else if(fr===0){r(J,2,6,1,2);r(sk,1,8,1,1);r(sk,0,9,1,1);}     // near arm swung back
- else if(fr===2){r(J,8,6,2,1);r(J,9,7,1,1);r(sk,10,6,1,2);}       // near arm pumped forward
- else if(fr===1||fr===3){r(J,7,7,1,2);r(sk,7,9,1,1);}
+ else if(fr===0){r(TR,1,6,2,1);r(J,1,7,2,1);r(sk,0,8,1,2);}            // near arm swung back
+ else if(fr===2){r(TR,9,6,2,1);r(J,9,7,2,1);r(sk,11,5,1,3);}           // near arm pumped forward
+ else if(fr===1||fr===3){r(J,8,7,2,2);r(sk,9,9,1,1);}
  else{r(J,7,6,1,2);r(sk,7,8,1,2);}
  c.restore();
 }
@@ -2539,7 +2538,9 @@ function aimInfo(a){
  const bullet=!!M.passBullet,tm=throwModel(pull,str,bullet);
  const x0=q.x+0.25,y0=q.y-0.05;
  const tx=x0+fx*tm.d,ty=y0+fy*tm.d;
- const run=pull>=PASS.PULL_MIN&&fx<0;                     // aiming anywhere backwards = QB keeps it and runs
+ let run=pull>=PASS.PULL_MIN&&fx<0;                       // aiming backwards = QB keeps it and runs...
+ // ...unless you're aiming at a receiver (e.g. the RB still level with the QB right after the snap)
+ if(run&&fx>-0.55)for(const f of M.O){if(SKILL.includes(f.role)&&!(f.down>0)&&Math.hypot(f.x-tx,f.y-ty)<3){run=false;break;}}
  let press=1;for(const f of M.D)if(!f.eng&&f.stun<=0&&d2(f,q)<2.6){press=PASS.PRESS_MUL;break;}
  const moving=Math.hypot(q.vx,q.vy)>1.5?PASS.MOVE_MUL:1;
  // Max placement error (yd). The ring drawn in the preview is exactly this radius,
