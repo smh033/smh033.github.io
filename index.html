@@ -2116,7 +2116,7 @@ function mkF(pl,side,role,x,y){
  const f={pl,side,role,x:clamp(x,-1,120),y:clamp(y,0.8,52.5),vx:0,vy:0,face:side==='O'?1:-1,t:Math.random()*2,lk:lookFor(pl,team,away,side==='D'&&M.oalt),route:null,ri:0,rlen:0,eng:null,engT:0,blk:null,stun:0,down:0,shed:0,jk:0,jkc:0,slow:0,dive:0,tried:false,mv:false};
  f.star=side==='O'&&!!pl&&pl.team===L.user;
  const adj=side==='D'?M.dAdj:0;
- f.spd=(5.4+clamp(eff(pl,'spd')+adj,1,11)*0.44)*(role==='OL'||role==='DL'?0.85:1)*(side==='D'?1+0.05*diffLvl():1);
+ f.spd=(5.4+clamp(eff(pl,'spd')+adj,1,11)*0.44)*(role==='OL'||role==='DL'?0.85:role==='TE'?0.88:role==='DB'||role==='S'?1.06:role==='LB'?0.97:1)*(side==='D'?1+0.05*diffLvl():1);
  f.acc=22+eff(pl,'spd')*1.2;
  return f;
 }
@@ -2441,7 +2441,7 @@ function setupPlay(){
  const ol=[mkF(d.OL[0],'O','OL',los-0.7,by-1.7),mkF(null,'O','OL',los-0.7,by),mkF(d.OL[1],'O','OL',los-0.7,by+1.7)];
  const dl=[mkF(od.DL[0],'D','DL',los+0.9,by-1),mkF(od.DL[1],'D','DL',los+0.9,by+1)];
  const lb=[mkF(od.LB[0],'D','LB',los+4.6,by-3.6),mkF(od.LB[1],'D','LB',los+4.6,by+3.8)];
- const c1=mkF(od.DB[0],'D','DB',los+rnd(1.6,6),w1.y),c2=mkF(od.DB[1],'D','DB',los+rnd(1.6,6),w2.y),sf=mkF(od.DB[2],'D','S',Math.min(119,los+rnd(11,15)),by+rnd(-4,4));
+ const c1=mkF(od.DB[0],'D','DB',los+rnd(1.6,6),w1.y),c2=mkF(od.DB[1],'D','DB',los+rnd(1.6,6),w2.y),sf=mkF(od.DB[2],'D','S',Math.min(119,los+rnd(13,17)),by+rnd(-4,4));
  c1.man=w1;c2.man=w2;lb[1].man=te;lb[0].man=rb;
  if(Math.random()<0.10+diffLvl()*0.08)lb[0].blitz=true;
  for(const f of[c1,c2,lb[0],lb[1],sf])f.acc=10+A(f,'cov')*1.3;
@@ -2575,6 +2575,9 @@ function throwBall(ai){
  const lv=diffLvl();
  if(lv>-0.5)M.D.filter(f=>f.role!=='DL'&&!f.eng&&!(f.stun>0)).sort((a,c)=>Math.hypot(a.x-tx,a.y-ty)-Math.hypot(c.x-tx,c.y-ty)).slice(0,lv>0.5?2:1)
   .forEach((f,i)=>{if(Math.hypot(f.x-tx,f.y-ty)<13){f.hawk=true;f.react=clamp(0.5-0.22*lv,0.2,0.75)+i*0.15;}});
+ // Deep shots: a safety (or anyone) already running stride-for-stride with the target reads it and
+ // goes for the ball on every difficulty - so a streaking TE with a safety on him isn't a free completion.
+ {const tgt=M.primary;if(tgt&&Math.hypot(tx-ai.x0,ty-ai.y0)>=14)for(const f of M.D){if(f.eng||f.stun>0)continue;if((f.role==='S'||f.role==='DB')&&Math.hypot(f.x-tgt.x,f.y-tgt.y)<4&&f.x>tgt.x-3.5){f.hawk=true;f.react=0.32;}}}
 }
 /* ---- loose ball ----
    A missed, dropped or batted pass and a fumble leave the ball bouncing around:
@@ -2853,7 +2856,12 @@ function upQB(f,dt){
  f.face=1;f.y=clamp(f.y,1,52.3);
  if(f.x>M.los-0.2)tuck();
 }
-function routeBreak(f){if(f.ri>=f.rlen)return;for(const d of M.D){if(d.man!==f)continue;const pb=0.32+(A(f,'spd')+A(f,'cat')*0.5-A(d,'cov')*1.5)*0.045;if(Math.random()<clamp(pb,0.1,0.75))d.beat=0.4+Math.random()*0.35;}}
+function routeBreak(f){if(f.ri>=f.rlen)return;
+ // Curls / hitches / comebacks (the receiver stops and turns back) are where defenders get caught
+ // running deep: much better odds to win, and the defender overruns instead of just slowing down.
+ const stop=!!(f.route&&f.route[f.ri]&&f.route[f.route.length-1].stop&&f.ri>=f.route.length-1);
+ for(const d of M.D){if(d.man!==f)continue;const pb=0.32+(stop?0.18:0)+(A(f,'spd')+A(f,'cat')*0.5-A(d,'cov')*1.5)*0.045;
+  if(Math.random()<clamp(pb,stop?0.35:0.1,stop?0.8:0.75)){d.beat=(stop?0.45:0.4)+Math.random()*0.3;d.overrun=stop;}}}
 function followRoute(f,dt){
  if(f.route&&f.ri<f.route.length){const w=f.route[f.ri];if(Math.hypot(w.x-f.x,w.y-f.y)<0.7){f.ri++;routeBreak(f);}
   if(f.ri<f.route.length){const w2=f.route[f.ri];steer(f,w2.x,w2.y,f.spd,f.acc*1.25,dt);return;}}
@@ -2901,8 +2909,20 @@ function upDef(f,dt){
  const b=M.ball;
  if(b&&f.hawk&&b.t>f.react){steer(f,b.x1,b.y1,f.spd,f.acc+4,dt);return;}
  if(f.role==='DL'||f.blitz){if(M.qb)steer(f,M.qb.x,M.qb.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
- if(f.role==='S'){let r=null;for(const o of M.O)if((o.role==='WR'||o.role==='TE')&&(!r||o.x>r.x))r=o;const tx=r?Math.max(r.x+5,M.los+11):M.los+12,ty=r?lerp(26.67,r.y,0.6):26.67;steer(f,Math.min(tx,119),ty,f.spd*0.95,16,dt);return;}
- if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,1));if(f.beat>0){f.beat-=dt;steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}steer(f,Math.min(m.x+m.vx*0.1+cush,119.5),m.y+m.vy*0.1,f.spd*0.97,f.acc,dt);return;}
+ if(f.role==='S'){
+  // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
+  // running vertically against a slower linebacker - instead of just floating in the middle.
+  let r=null,best=-1;for(const o of M.O){if(o.role!=='WR'&&o.role!=='TE')continue;const dfd=M.D.find(d=>d.man===o);
+   const open=!dfd||dfd.role==='LB'||d2(dfd,o)>2.2;const sc=(o.x-M.los)+(open?8:0)+(o.role==='TE'&&o.x>M.los+8?6:0);if(o.x>M.los+6&&sc>best){best=sc;r=o;}}
+  if(!r){for(const o of M.O)if((o.role==='WR'||o.role==='TE')&&(!r||o.x>r.x))r=o;}
+  const lock=r&&r.x>M.los+8;const tx=r?(lock?Math.max(r.x+3+r.vx*0.3,M.los+9):Math.max(r.x+6,M.los+13,f.x-0.5)):M.los+13,   /* never let a vertical get behind him */ty=r?(lock?r.y+r.vy*0.25:lerp(26.67,r.y,0.6)):26.67;
+  steer(f,Math.min(tx,119),ty,f.spd*(lock?1:0.95),lock?f.acc:16,dt);return;}
+ if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,1));
+  if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
+  const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
+  // receiver sitting down in a curl: defender recovers to a spot behind him, he doesn't teleport onto his hip
+  if(parked){steer(f,Math.min(m.x+1.1,119.5),m.y,f.spd*0.75,f.acc*0.7,dt);return;}
+  steer(f,Math.min(m.x+m.vx*0.1+cush,119.5),m.y+m.vy*0.1,f.spd*0.97,f.acc,dt);return;}
  steer(f,f.x,f.y,0,10,dt);
 }
 function doCatch(f,bp){
