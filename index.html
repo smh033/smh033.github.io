@@ -3324,7 +3324,7 @@ function stadiumBeat(dt){
    chain poles marking the start of the series and the first-down line. They walk to their
    new spots after every play. */
 const CREW_LK=(()=>{const lk={helm:'#111111',stripe:'#111111',jersey:'#ff8a1a',trim:'#111111',pants:'#1c1c1c',socks:'#1c1c1c',skin:SKIN[2]};lk.key='crew';return lk;})();
-function upChain(dt){if(!M||!M.O||!M.O.length)return;const goal=M.fdX>=110;
+function upChain(dt){if(!M||!M.O||!M.O.length)return;if(M.conv){if(M.chain){M.chain.mv={};M.chain.t+=dt;}return;} /* NFL: chain crew stays put during PAT/2pt tries */const goal=M.fdX>=110;
  const T={box:M.los,a:goal?M.los:M.fdX-10,b:goal?M.los:M.fdX};M.chain=M.chain||{box:T.box,a:T.a,b:T.b,t:0};const C=M.chain;C.t+=dt;C.mv={};
  for(const k of['box','a','b']){const d=T[k]-C[k];if(Math.abs(d)>0.05){C[k]+=Math.sign(d)*Math.min(Math.abs(d),6*dt);C.mv[k]=true;}}}
 function drawChain(){const C=M.chain;if(!C||M.play==='ret'||M.phase==='kick')return;const y=FB+13,goal=M.fdX>=110;
