@@ -1310,15 +1310,16 @@ function tlNodes(){
 function syncNFLRatings(){
  if(!L||L.rosterMode!=='NFL'||L.year!==CFG.startYear||window.__rateSync||window.__rateDone)return;window.__rateSync=true;
  fetch('nfl-rosters.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
-  if(!j||!L||!j.builtAt||j.builtAt===L.ratingsAt)return;
+  if(!j||!L)return;   // runs on every page load: ratings follow the latest real stats, rosters never move
   if(j.teamPower){NFL_POWER=j.teamPower;L.nflPower=NFL_POWER;}
   const by=new Map();for(const r of j.rows||[]){const k=nflNameKey(r.full_name||'');if(k&&!by.has(k))by.set(k,r);}
   let up=0,down=0;
   for(const p of L.players){if(!p.nfl)continue;const r=by.get(nflNameKey(p.fn+' '+p.ln));if(!r)continue;
    const pos=mapNFLPosition(r.position)||p.pos,q=nflQuality(r,pos);
-   if(p.nflQ==null){p.nflQ=q;continue;}            // first time we see him: just remember his real rating
-   const d=clamp(q-p.nflQ,-1.5,1.5);p.nflQ=q;if(Math.abs(d)<0.01)continue;
-   p.nflAcc=(p.nflAcc||0)+d;const st=Math.trunc(p.nflAcc);if(!st)continue;p.nflAcc-=st;
+   // Shift his attributes by how much his real rating changed. Skill points you spent stay on top,
+   // because only the change in the real rating is applied (first time: measured from his current overall).
+   const base=p.nflQ!=null?p.nflQ:ovr(p);const d=clamp(q-base,-3,3);p.nflQ=q;if(Math.abs(d)<0.01)continue;
+   p.nflAcc=(p.nflAcc||0)+d;const st=Math.round(p.nflAcc);if(!st)continue;p.nflAcc-=st;
    for(const k of POSDEF[p.pos])p.a[k]=clamp(p.a[k]+st,1,10);p.peak=Math.max(p.peak||0,ovr(p));if(st>0)up++;else down++;}
   L.ratingsAt=j.builtAt;
   if(up||down)news('NFL ratings updated from this week\'s real stats: '+up+' up, '+down+' down.');
