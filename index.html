@@ -157,6 +157,40 @@ const TEAM_DATA=[
  ['Arizona','Cardinals','ARI','#97233F','#000000'],['Los Angeles','Rams','LA','#003594','#FFA300'],['San Francisco','49ers','SF','#AA0000','#B3995D'],['Seattle','Seahawks','SEA','#002244','#69BE28'],
 ];
 const TEAMS=TEAM_DATA.map((d,i)=>({id:i,city:d[0],nickname:d[1],name:d[0]+' '+d[1],abbr:d[2],c1:d[3],c2:d[4],conf:i<16?'AFC':'NFC',div:DIVS[Math.floor(i/4)%4],di:Math.floor(i/4)}));
+
+/* ---------- NFL midfield stadium logos ----------
+   The midfield badge is always the home franchise's logo: the user's team for
+   home games, and the opponent's team for away games. Logos load on demand from
+   ESPN's public logo CDN, and the local abbreviation mark is used as a fallback.
+*/
+const NFL_LOGO_ESPN_SLUGS={LA:'lar',WAS:'wsh'};
+const NFL_FIELD_LOGOS=Object.create(null);
+const NFL_FIELD_LOGO_PENDING=new Set();
+const NFL_FIELD_LOGO_FAILED=new Set();
+function loadFieldLogo(teamId){
+ if(NFL_FIELD_LOGOS[teamId]&&NFL_FIELD_LOGOS[teamId].complete&&NFL_FIELD_LOGOS[teamId].naturalWidth)return NFL_FIELD_LOGOS[teamId];
+ if(NFL_FIELD_LOGO_PENDING.has(teamId)||NFL_FIELD_LOGO_FAILED.has(teamId))return null;
+ const team=TEAMS[teamId];if(!team)return null;
+ NFL_FIELD_LOGO_PENDING.add(teamId);
+ const img=new Image();
+ img.onload=()=>{
+  NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGOS[teamId]=img;
+  if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[buildField(false),buildField(true)];
+ };
+ img.onerror=()=>{
+  NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGO_FAILED.add(teamId);
+  if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[buildField(false),buildField(true)];
+ };
+ const slug=NFL_LOGO_ESPN_SLUGS[team.abbr]||team.abbr.toLowerCase();
+ img.src='https://a.espncdn.com/i/teamlogos/nfl/500/'+slug+'.png';
+ return null;
+}
+function drawLocalMidfieldMark(ctx,teamId,x,y){
+ const team=TEAMS[teamId];if(!team)return;
+ ctx.save();ctx.globalAlpha=0.9;ctx.font='bold 18px "Press Start 2P",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.lineJoin='round';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(team.abbr,x,y);
+ ctx.fillStyle=team.c1;ctx.fillText(team.abbr,x,y);ctx.restore();
+}
 const FN=['James','Michael','Chris','Marcus','Tyler','Jordan','Brandon','Derrick','Andre','Malik','Jalen','Darius','Trevor','Kyle','Ryan','Josh','Cody','Austin','Devin','Terrell','Isaiah','Elijah','Caleb','Mason','Logan','Hunter','Garrett','Cole','Blake','Drew','Shane','Trey','Dante','Xavier','Jamal','Rashad','Corey','Lamar','Deshawn','Tavon','Keenan','Quincy','Reggie','Victor','Omar','Luis','Nate','Sam','Ben','Luke','Jake','Zach','Connor','Brett','Grant','Mitch','Wes','Spencer','Tanner','Bryce','Chase','Colby','Dalton','Eli','Felix','Gavin','Hayden','Ian','Jace','Kendall','Lance','Miles','Noah','Owen','Preston','Quentin','Reid','Seth','Troy','Ty','Vince','Wade','Zane','Aaron','Brady','Carson','Damon','Emmett','Gus','Hank','Ivan','Jerome','Kareem','Leon','Mario','Nico','Otis','Percy','Roman','Tre','Jaylen','Cam','Desmond','Rico','Andy','Brock'];
 const LN=['Smith','Johnson','Williams','Brown','Jones','Miller','Davis','Garcia','Wilson','Moore','Taylor','Anderson','Thomas','Jackson','White','Harris','Martin','Thompson','Robinson','Clark','Lewis','Walker','Hall','Allen','Young','King','Wright','Scott','Green','Baker','Adams','Nelson','Hill','Campbell','Mitchell','Roberts','Carter','Phillips','Evans','Turner','Parker','Collins','Edwards','Stewart','Morris','Murphy','Cook','Rogers','Morgan','Cooper','Peterson','Reed','Bailey','Bell','Kelly','Howard','Ward','Cox','Richardson','Wood','Watson','Brooks','Bennett','Gray','Hughes','Price','Sanders','Myers','Long','Ross','Foster','Powell','Jenkins','Perry','Russell','Sullivan','Barnes','Fisher','Henderson','Coleman','Simmons','Patterson','Reynolds','Hamilton','Graham','Wallace','Woods','Cole','West','Owens','Marshall','Ellis','Hayes','Gibson','Bryant','Stone','Holmes','Burke','Fuller','Lane','Banks','Dixon','Pierce','Hunt','Webb','Tucker','Porter','Hicks','Crawford','Boyd','Mason','Warren','Dunn','Black','Rice','Wagner','Knight','Weaver','Holt','Cross','Shaw','Vaughn','Steele','Frost','Rhodes','Quinn','Blair','Nash','Barrett','Booker','Calloway','Darby','Ewing','Gaines','Hollins','Ivory','Kearse','Mabry','Newsome','Oakes','Pruitt','Sutton','Tatum','Upshaw','Vance','Whitfield','Yates'];
 const POSL=['QB','RB','WR','TE','OL','DL','LB','DB','K'];
@@ -1670,6 +1704,16 @@ function buildField(flip){
   x.fillText(n,px,H-Math.round(10*PYY));
   if(dir){const ax=px+dir*24;for(const yy of[Math.round(10*PYY),H-Math.round(10*PYY)]){x.beginPath();x.moveTo(ax+dir*4,yy);x.lineTo(ax,yy-3);x.lineTo(ax,yy+3);x.closePath();x.fill();}}}
  R('#fff',0,0,W,3);R('#fff',0,H-3,W,3);
+ // Paint the host franchise badge at midfield. It is underneath player sprites,
+ // with the center stripe/field markings drawn first so the logo sits naturally
+ // on the grass. The field is 120 yards long with midfield at yard 60.
+ const logoTeamId=M.fieldLogoTeam!=null?M.fieldLogoTeam:(M.home?L.user:M.op);
+ const logoImg=loadFieldLogo(logoTeamId),midX=FX(60),midY=H/2,maxLogo=96;
+ if(logoImg&&logoImg.complete&&logoImg.naturalWidth){
+  const sc=Math.min(maxLogo/logoImg.naturalWidth,maxLogo/logoImg.naturalHeight);
+  const dw=logoImg.naturalWidth*sc,dh=logoImg.naturalHeight*sc;
+  x.save();x.globalAlpha=0.94;x.drawImage(logoImg,midX-dw/2,midY-dh/2,dw,dh);x.restore();
+ }else drawLocalMidfieldMark(x,logoTeamId,midX,midY);
  x.translate(0,-TOP);
  // sideline life (top)
  const person=(px,lk,face)=>drawMan(x,px,TOP-1,lk,{u:1,shadow:false,face});
@@ -1764,7 +1808,7 @@ function startMatch(g,uAway){
   wx:wxr,wind:wxr==='dome'?0:clamp(Math.round(gauss()*7),-18,18),ballOn:35,ballY:26.67,down:1,fdX:45,los:35,conv:false};
  {const uc=teamCol(L.user),oc=teamCol(op),uJ=home?uc.c1:'#f0f0f0',oJ=home?'#f0f0f0':oc.c1;M.oalt=colDist(uc.c1,oc.c1)<120||(colDist(uJ,oJ)<90);}
  {const du=defaultUnis(g);M.uU=uAway&&uAway.uU!=null?uAway.uU:du.uU;M.uO=uAway&&uAway.uO!=null?uAway.uO:du.uO;}M.uAway=M.uU===1;M.oalt=false;
- M.dir=L.settings.dir==='L'?-1:1;M.fieldCvs=[buildField(false),buildField(true)];M.crowd=buildCrowd();SPC.clear();
+ M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[buildField(false),buildField(true)];M.crowd=buildCrowd();SPC.clear();
  if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
