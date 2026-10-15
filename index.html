@@ -2381,7 +2381,7 @@ function aimInfo(a){
  const bullet=!!M.passBullet,tm=throwModel(pull,str,bullet);
  const x0=q.x+0.25,y0=q.y-0.05;
  const tx=x0+fx*tm.d,ty=y0+fy*tm.d;
- const run=pull>=PASS.PULL_MIN&&fx<-0.85;                  // pulling toward the end zone = QB keeps it
+ const run=pull>=PASS.PULL_MIN&&fx<0;                     // aiming anywhere backwards = QB keeps it and runs
  let press=1;for(const f of M.D)if(!f.eng&&f.stun<=0&&d2(f,q)<2.6){press=PASS.PRESS_MUL;break;}
  const moving=Math.hypot(q.vx,q.vy)>1.5?PASS.MOVE_MUL:1;
  // Max placement error (yd). The ring drawn in the preview is exactly this radius,
@@ -2913,7 +2913,7 @@ function resolve(){
    a long gain or return, or a highlight catch, the play is shown again at half speed. */
 function recStart(){M.rec={f:[],acc:1,endAt:null};}
 function recFrame(dt){const R=M.rec;if(!R||R.f.length>=450)return;if(R.endAt!=null&&R.f.length-R.endAt>26)return;R.acc+=dt;if(R.acc<1/30)return;R.acc=0;
- const h=curHolder(),ps=[...M.O,...M.D].map(f=>plState(f,h)).sort((a,b)=>a.y-b.y),b=M.ball?ballPos(M.ball):null;
+ const h=curHolder(),ps=[...M.O,...M.D].map(f=>plState(f,h)),b=M.ball?ballPos(M.ball):null;   // same order every frame so replay can blend frames
  R.f.push({cam:M.cam,ps,b:b?{x:b.x,y:b.y,z:b.z}:null,lo:M.loose?{x:M.loose.x,y:M.loose.y,z:M.loose.z,sp:M.loose.sp}:null});}
 function bigPlayOf(kind,x,label){
  if(M.big)return M.big;
@@ -2933,9 +2933,15 @@ function upReplay(dt){const R=M.rec;M.rp.t+=dt*0.5;if(!R||M.rp.t*30>=R.f.length+
 function drawBallAt(x,y,z,spin){const sx=wx(x),sy=wy(y);cx.fillStyle='rgba(0,0,0,.3)';cx.beginPath();cx.ellipse(sx,sy,3+z*0.15,1.5,0,0,Math.PI*2);cx.fill();
  const hy=Math.round(sy-z*PZ),sp=Math.floor(spin)%2,w=sp?9:7,h=sp?5:7,B=curBall();rect(sx-w/2-1,hy-h/2-1,w+2,h+2,'#000');rect(sx-w/2,hy-h/2,w,h,B.b);rect(sx-w/2,hy-h/2,w,1,B.h);rect(sx-1,hy-1,3,1,B.l);}
 function drawReplay(){
- const R=M.rec,i=clamp(Math.floor(M.rp.t*30),0,R.f.length-1),fr=R.f[i];M.cam=fr.cam;
- drawField();for(const st of fr.ps)drawPS(st);
- if(fr.b)drawBallAt(fr.b.x,fr.b.y,fr.b.z,M.rp.t*28);if(fr.lo)drawBallAt(fr.lo.x,fr.lo.y,fr.lo.z,fr.lo.sp);
+ /* Frames are stored at 30 fps and shown at half speed, so blend between the two nearest
+    frames (positions, jump height, camera, ball) to keep the replay smooth. */
+ const R=M.rec,ft=clamp(M.rp.t*30,0,R.f.length-1),i=Math.floor(ft),u=ft-i,f0=R.f[i],f1=R.f[Math.min(i+1,R.f.length-1)];
+ const mix=(a,b)=>a+(b-a)*u;M.cam=mix(f0.cam,f1.cam);
+ drawField();
+ const same=f0.ps.length===f1.ps.length,list=f0.ps.map((a,k)=>{const b=same?f1.ps[k]:a;return{x:mix(a.x,b.x),y:mix(a.y,b.y),jy:Math.round(mix(a.jy,b.jy)),lk:a.lk,star:a.star,dn:u<0.5?a.dn:b.dn,o:u<0.5?a.o:b.o};}).sort((a,b)=>a.y-b.y);
+ for(const st of list)drawPS(st);
+ const bl=(a,b)=>a&&b?{x:mix(a.x,b.x),y:mix(a.y,b.y),z:mix(a.z,b.z)}:a;
+ const b=bl(f0.b,f1.b);if(b)drawBallAt(b.x,b.y,b.z,M.rp.t*28);const lo=bl(f0.lo,f1.lo);if(lo)drawBallAt(lo.x,lo.y,lo.z,(f0.lo||{}).sp||0);
  rect(0,ST,CW,22,'#000');rect(0,CH-18-20,CW,20,'#000');
  if(Math.floor(M.tt*2)%2===0){cx.fillStyle='#e8423a';cx.beginPath();cx.arc(16,ST+11,5,0,Math.PI*2);cx.fill();}
  ctext('REPLAY',26,ST+6,'#fff','left',10);ctext(M.rp.lab||'',CW/2,ST+6,'#ffe94a','center',10);ctext('HALF SPEED',CW-10,ST+7,'#b7c8ff','right',7);
@@ -3170,7 +3176,7 @@ function hud(){
    if(M.to>0&&M.runoff>0&&M.clock>0)b.push(`<button class="bt" data-a="gTO">TIMEOUT</button>`);
    hint=M.conv?'2-POINT TRY · '+(IS_MOBILE?'TOUCH THE FIELD TO SNAP':'CLICK THE FIELD TO SNAP'):(M.plays<4?(IS_MOBILE?'TOUCH &amp; PULL BACK TO SNAP AND THROW':'CLICK &amp; DRAG BACK TO SNAP AND THROW · SPACE PASS · R RUN'):'');
   }else if(M.phase==='live'){
-   if(M.play==='pass'&&!M.thrown&&!M.carrier){b.push(`<button class="bt" data-a="gTuck">QB RUN</button>`);if(M.plays<5)hint='PULL BACK &amp; RELEASE TO THROW · LONGER PULL = HARDER THROW · PULL FORWARD TO RUN';}
+   if(M.play==='pass'&&!M.thrown&&!M.carrier){b.push(`<button class="bt" data-a="gTuck">QB RUN</button>`);if(M.plays<5)hint='PULL BACK &amp; RELEASE TO THROW · LONGER PULL = HARDER THROW · AIM BACKWARD TO RUN';}
    else if(M.play==='ret'&&M.retKind==='punt'&&!M.caught&&!M.fair)b.push(`<button class="bt" data-a="gFair">FAIR CATCH</button>`);
    if(M.tbOK)b.push(`<button class="bt" data-a="gKnee">TAKE A KNEE</button>`);
    if(M.play==='intret')hint=IS_MOBILE?'TACKLE HIM! HOLD &amp; DRAG TO STEER YOUR CHASER · TAP TO DIVE':'TACKLE HIM! HOLD &amp; DRAG TO STEER THE CHASER · CLICK OR SPACE TO DIVE';
