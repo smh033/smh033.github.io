@@ -1188,6 +1188,10 @@ function toast(m){const d=document.createElement('div');d.className='toast';d.te
 document.addEventListener('click',e=>{
  const el=e.target.closest('[data-a]');if(!el||!$('#ui').contains(el))return;
  if(el.__pgPointerHandled){el.__pgPointerHandled=false;return;}
+ /* A tap's own click arrives after the pointerup already ran the action and the screen changed,
+    so it lands on whatever new button is now under the finger (Chromebooks/touchscreens:
+    CONTINUE opened the hub and the ghost click hit a hub tab). Ignore it; keyboard clicks have detail 0. */
+ if(e.detail!==0&&performance.now()-UI_PTR.t<700)return;
  const a=el.dataset.a;if(a==='mbg'&&e.target!==el)return;
  if(el.disabled||el.classList.contains('dk'))return;
  sfx('tick');
@@ -1197,12 +1201,18 @@ document.addEventListener('click',e=>{
    Pointer/touch activation is handled here first; the following click event is
    marked so the same action is not fired twice. Keyboard clicks still use the
    normal click handler above. */
+const UI_PTR={t:-1e9,down:null};
+document.addEventListener('pointerdown',e=>{UI_PTR.down=e.target.closest&&e.target.closest('[data-a]');},true);
 document.addEventListener('pointerup',e=>{
- const el=e.target.closest&&e.target.closest('[data-a]');
+ let el=e.target.closest&&e.target.closest('[data-a]');
+ /* pressed buttons shift down 2px; if the release lands just off the button it was pressed on, still count it */
+ const dn=UI_PTR.down;UI_PTR.down=null;
+ if(dn&&dn!==el&&dn.isConnected){const r=dn.getBoundingClientRect();if(e.clientX>=r.left-4&&e.clientX<=r.right+4&&e.clientY>=r.top-6&&e.clientY<=r.bottom+6)el=dn;}
  if(!el||!$('#ui').contains(el))return;
+ if(el!==dn&&!(dn&&!dn.isConnected&&dn.dataset.a===el.dataset.a))return;   /* press and release on the same button (or its re-rendered copy) */
  const a=el.dataset.a;if(a==='mbg'&&e.target!==el)return;
  if(el.disabled||el.classList.contains('dk'))return;
- el.__pgPointerHandled=true;
+ el.__pgPointerHandled=true;UI_PTR.t=performance.now();
  sfx('tick');
  if(ACT[a])ACT[a](el.dataset,el,e);
 },true);
