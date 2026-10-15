@@ -2364,10 +2364,10 @@ function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier)re
      directions and at any canvas size.
    ===================================================================== */
 const PASS={
- PULL_MIN:10,PULL_MAX:180,   // logical px of drag: no throw below MIN, full power at MAX
+ PULL_MIN:10,PULL_MAX:130,   // logical px of drag: no throw below MIN, full power at MAX (a comfortable drag)
  MIN_D:3,                    // shortest throw, yards
  RANGE_BASE:22,RANGE_ARM:3.2,// max air yards = BASE + ARM*(strength-1)
- POW_EXP:1.2,                // distance = MIN_D + p^POW_EXP*(max-MIN_D): fine control on short throws
+ POW_EXP:1.1,                // distance = MIN_D + p^POW_EXP*(max-MIN_D): fine control on short throws
  G:20,G_LOB:40,               // lobs use a stronger gravity => taller arc for the same flight time                       // stylised gravity, yd/s^2
  REL_Z:2.0,                  // release height (yd)
  CATCH_Z:0,                  // the arc lands exactly on the target circle (receivers catch it on the way down)
@@ -3031,7 +3031,7 @@ function upCam(dt){
  else if(M.phase==='pre')f=M.ballOn+12;
  else if(M.ball){const bp=ballPos(M.ball);f=bp.x+(M.play==='ret'?8:3);}
  else if(M.carrier)f=M.carrier.x+(M.play==='intret'?-6:7);
- else if(M.qb)f=M.qb.x+16;
+ else if(M.qb)f=M.qb.x+(M.aim?21:16);   // look further downfield while aiming
  else f=M.cam;
  f=clamp(f,HALFW,120-HALFW);M.cam+=(f-M.cam)*Math.min(1,dt*3.2);
 }
@@ -3126,7 +3126,7 @@ function drawAim(){
  /* Retro-style preview: evenly timed white dots (black outline) for the ball, small dark dots
     for its shadow on the grass. It only shows the first ~80% of the flight, so the exact
     landing spot is revealed (yellow crosshair) once the ball is thrown. */
- const F=ai.F,end=F.T*0.8,dt=1.45/Math.max(8,F.v),col=ai.bullet?'#ffdf5b':'#fff';
+ const F=ai.F,end=F.T*0.87,dt=1.45/Math.max(8,F.v),col=ai.bullet?'#ffdf5b':'#fff';
  const pts=[];for(let t=dt;t<=end+1e-6;t+=dt)pts.push(flightAt(F,t));
  for(const p of pts){const px=wx(p.x),py=wy(p.y);rect(px-1,py-1,2,2,'rgba(0,0,0,.4)');}
  for(const p of pts){const px=wx(p.x),py=Math.round(wy(p.y)-p.z*PZ);rect(px-2,py-2,5,5,'#000');rect(px-1,py-1,3,3,col);}
