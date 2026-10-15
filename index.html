@@ -974,11 +974,12 @@ function drawMan(c,x,y,lk,o){
  if(o.shadow!==false){c.fillStyle='rgba(0,0,0,.28)';c.fillRect(-5*u,-u,10*u,2*u);}
  if(o.down){c.translate(0,-5*u);c.rotate((o.face<0?-1:1)*Math.PI/2);}
  if(o.face<0)c.scale(-1,1);
- const fr=o.fr!=null?o.fr:(o.run?Math.floor((o.t||0)*9)%4:-1),bob=(fr===1||fr===3)?-u:0;
+ const fr=o.hurdle?-1:o.fr!=null?o.fr:(o.run?Math.floor((o.t||0)*9)%4:-1),bob=(fr===1||fr===3)?-u:0;
  c.translate(-6*u,-16*u+bob);
  const r=(col,X,Y,W,H)=>{c.fillStyle=col;c.fillRect(X*u,Y*u,W*u,H*u);};
  const sk=lk.skin,skD=shade(sk,-30),H=lk.helm,J=lk.jersey,TR=lk.trim,PN=lk.pants,PNd=shade(PN,-40),SO=lk.socks,SOd=shade(SO,-35),SH='#141418';
- if(fr===-1){r(PNd,4,12,2,1);r(SOd,4,13,2,2);r(SH,4,15,3,1);r(PN,6,12,2,1);r(SO,6,13,2,2);r(SH,6,15,3,1);}
+ if(o.hurdle){/* hurdle: lead leg straight out front, trail leg tucked up behind */r(PN,7,11,3,1);r(SO,9,11,2,1);r(SH,11,10,1,2);r(PNd,4,12,2,1);r(SOd,2,12,2,1);r(SH,1,11,2,1);}
+ else if(fr===-1){r(PNd,4,12,2,1);r(SOd,4,13,2,2);r(SH,4,15,3,1);r(PN,6,12,2,1);r(SO,6,13,2,2);r(SH,6,15,3,1);}
  else if(fr===0){r(PNd,4,12,2,1);r(SOd,3,13,2,1);r(SH,2,14,2,1);r(PN,7,12,2,1);r(SO,8,13,2,2);r(SH,8,15,3,1);}
  else if(fr===2){r(PNd,7,12,2,1);r(SOd,8,13,2,2);r(SH,8,15,3,1);r(PN,4,12,2,1);r(SO,3,13,2,1);r(SH,2,14,2,1);}
  else{r(PNd,5,12,2,1);r(SOd,5,13,2,2);r(SH,5,15,3,1);r(PN,6,12,2,1);r(SO,6,13,2,1);r(SH,6,14,3,1);}
@@ -1001,7 +1002,7 @@ function drawMan(c,x,y,lk,o){
 const SPC=new Map();
 function sprite(lk,o){
  const fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1,u=o.u||2;
- const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0);
+ const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0)+(o.hurdle?1:0);
  let out=SPC.get(key);if(out)return out;
  const W=36*u,H=22*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
  const a=mk(),g=a.getContext('2d');drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr}));
@@ -1997,6 +1998,7 @@ function queueWarm(){warmQ=[];const fr=[-1,0,1,2,3];
  for(const f of [...M.O,...M.D]){const skill=f.side==='O';
   for(const face of[1,-1])for(const r of fr){warmQ.push([f.lk,{u:2,face,run:r>=0,t:(r+0.5)/9,glow:f.star}]);
    if(skill)warmQ.push([f.lk,{u:2,face,run:r>=0,t:(r+0.5)/9,glow:f.star,ball:true}]);}
+  for(const face of[1,-1])warmQ.push([f.lk,{u:2,face,hurdle:true,ball:true,glow:f.star}],[f.lk,{u:2,face,reach:true,glow:f.star}]);
   for(const face of[1,-1]){warmQ.push([f.lk,{u:2,face,down:true,glow:f.star}],[f.lk,{u:2,face,down:true,dive:true,glow:f.star}],[f.lk,{u:2,face,down:true,dive:true,ball:true,glow:f.star}]);
    if(f.role==='QB')warmQ.push([f.lk,{u:2,face,throw:true,glow:f.star}],[f.lk,{u:2,face,throw:true,ball:true,glow:f.star}],[f.lk,{u:2,face,ball:true,glow:f.star}]);}}}
 function stepWarm(){const t0=performance.now();while(warmQ.length&&performance.now()-t0<3){const[lk,o]=warmQ.pop();sprite(lk,o);}}
@@ -2091,7 +2093,7 @@ function moveDir(f,dx,dy,spd,acc,dt){
 function tickF(f,dt){
  if(f.stun>0){f.stun-=dt;f.vx*=0.86;f.vy*=0.86;f.x+=f.vx*dt;f.y+=f.vy*dt;}
  if(f.down>0&&f!==M.carrier)f.down-=dt;
- if(f.jk>0)f.jk-=dt;if(f.jump>0)f.jump-=dt;if(f.reach>0)f.reach-=dt;if(f.oneh>0)f.oneh-=dt;if(f.jkc>0)f.jkc-=dt;if(f.shed>0)f.shed-=dt;if(f.slow>0)f.slow-=dt;if(f.throwT>0)f.throwT-=dt;
+ if(f.jk>0)f.jk-=dt;if(f.jump>0)f.jump-=dt;if(f.reach>0)f.reach-=dt;if(f.oneh>0)f.oneh-=dt;if(f.hurdle>0)f.hurdle-=dt;if(f.jkc>0)f.jkc-=dt;if(f.shed>0)f.shed-=dt;if(f.slow>0)f.slow-=dt;if(f.throwT>0)f.throwT-=dt;
  if(f.eng){f.engT-=dt;if(f.engT<=0||f.eng.stun>0){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=1.0;}}
  const sp=Math.hypot(f.vx,f.vy);f.t+=dt*(0.35+sp*0.17);f.mv=sp>0.6;
  if(Math.abs(f.vx)>0.35)f.face=f.vx>0?1:-1;
@@ -2133,7 +2135,7 @@ function banner(t,sub,col,dur){M.ban={t,sub:sub||'',col:col||'#fff'};M.banT=dur|
    "CATCH!" right after a fancier catch call is dropped. */
 function pop(t,x,y,col){
  const near=M.pops.filter(p=>Math.abs(p.x-x)<6&&Math.abs(p.y-y)<6&&p.a<1.1);
- if(t==='CATCH!'&&near.some(p=>p.a<0.4&&/CATCH/.test(p.t)))return;
+ if(t==='CAUGHT!'&&near.some(p=>p.a<0.4&&/CATCH/.test(p.t)))return;
  if(near.some(p=>p.t===t&&p.a<0.5))return;
  for(const p of near)p.a=Math.max(p.a,0.9);   // older text clears out fast
  const used=new Set(near.map(p=>p.row||0));let row=0;while(used.has(row))row++;
@@ -2369,8 +2371,8 @@ const PASS={
  G:20,G_LOB:30,               // lobs use a stronger gravity => taller arc for the same flight time                       // stylised gravity, yd/s^2
  REL_Z:2.0,                  // release height (yd)
  CATCH_Z:0,                  // the arc lands exactly on the target circle (receivers catch it on the way down)
- LOB:{v0:14,v1:25},          // horizontal ball speed (yd/s) at p=0 .. p=1
- BUL:{v0:24,v1:35},          // bullet: faster and therefore flatter
+ LOB:{v0:21,v1:18.5},        // ~20 yd/s whatever the distance (short throws were too floaty)          // horizontal ball speed (yd/s) at p=0 .. p=1
+ BUL:{v0:27,v1:31},          // bullet: faster and therefore flatter
  ARM_SPEED:0.03,             // +3% ball speed per strength point above 5
  ERR_BASE:0.35,ERR_PER_YD:0.035, // max placement error (yd) before modifiers
  PRESS_MUL:1.5,MOVE_MUL:1.18,BUL_ERR:1.12,
@@ -2634,7 +2636,7 @@ function chaserDive(){const f=M.chaser,c=M.carrier;if(!f||!c||f.dive>0||f.down>0
 function intTackle(f,c,diving){
  const p=clamp((diving?0.7:0.42)+0.03*(A(f,'str')-A(c,'str'))+0.02*(A(f,'spd')-5)+(f===M.chaser?0.1:0),0.2,0.88);
  if(Math.random()<p){c.down=1;M.shake=4;sfx('hit');pop(diving?'DIVING TACKLE!':'TACKLED!',c.x,c.y,'#7dff8a');xpG(f.pl,8);cr(f.pl,'tkl',1);return endPlay('intdown',c.x,c.y,nm(f.pl)?'STOPPED BY '+nm(f.pl):'');}
- f.stun=0.7;f.down=0.7;pop('MISSED!',c.x,c.y,'#ff8a8a');c.vx*=0.8;
+ f.stun=0.7;f.down=0.7;pop('MISSED!',c.x,c.y,'#ff8a8a');if(diving)hurdle(c);else c.vx*=0.8;
 }
 function upIntRet(dt){
  const c=M.carrier;M.pt+=dt;M.clock-=dt;M.intT+=dt;const react=M.intT<0.4;   // everyone needs a beat to realise it was picked
@@ -2788,7 +2790,7 @@ function doCatch(f,bp){
  if(f.x>=110)return endPlay('td',f.x,f.y);
  if(f.dive>0){f.dive=0;f.down=1;f.vx=f.vy=0;return endPlay('tackle',f.x,f.y,'DIVING CATCH!');}
  f.dove=false;
- pop('CATCH!',f.x,f.y,'#ffe94a');
+ pop('CAUGHT!',f.x,f.y,'#ffe94a');
  if(f.vx<1)f.vx=f.spd*0.5;
 }
 function upCarrier(c,dt){
@@ -2806,6 +2808,9 @@ function upCarrier(c,dt){
  if(c.y<0.15||c.y>53.18){c.y=clamp(c.y,0.15,53.18);return endPlay('oob',c.x,c.y);}
  if(c.x<-1.5)return endPlay('tackle',c.x,c.y);
 }
+/* Ball carrier leaps over a defender who dove at him and missed. */
+const HURDLE_T=0.42;
+function hurdle(c){if(!c||c.dive>0||c.down>0||c.hurdle>0)return;c.hurdle=HURDLE_T;c.jk=0;sfx('juke');}
 function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.42;c.dv=0.42;c.vx=Math.max(c.spd*1.25,(c.vx||0)*1.1);c.vy=(c.vy||0)*0.35;c.ty=null;sfx('juke');}
 const STEP=3.6;
 function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,0.6,52.7);c.jk=0.3;sfx('juke');}
@@ -2813,7 +2818,7 @@ function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.car
 function fairCatch(){if(M&&M.play==='ret'&&M.retKind==='punt'&&!M.caught){M.fair=true;banner('FAIR CATCH','','#fff',0.9);}}
 function contacts(dt){
  const c=M.carrier;
- if(c){if(c.dive>0)return;
+ if(c){if(c.dive>0||c.hurdle>0)return;
   // A defender held by a blocker who ends up right on (or behind) the runner sheds the block.
   for(const d of M.D){if(d.eng&&(d2(d,c)<1.0||d.x<c.x-0.6)){if(d.eng.blk===d)d.eng.blk=null;d.eng=null;d.shed=0;}}
   for(const d of M.D){if(d.stun>0||d.eng||d.dive>0)continue;const dd=d2(d,c);
@@ -2828,7 +2833,7 @@ function contacts(dt){
    crossing in front of him launches at where the carrier is about to be.
    One dive per defender per play; a whiff leaves him on the turf. */
 function maybeDefDive(f,dt){
- const c=M.carrier;if(!c||M.phase!=='live'||f.dove||f.eng||f.shed>0||c.dive>0||c.down>0)return;
+ const c=M.carrier;if(!c||M.phase!=='live'||f.dove||f.eng||f.shed>0||c.dive>0||c.down>0||c.hurdle>0)return;
  if(M.play==='run'&&M.pt<0.5)return;
  const d=d2(f,c);if(d<0.9||d>3.2)return;
  const lead=0.3,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y);
@@ -2841,10 +2846,10 @@ function maybeDefDive(f,dt){
 }
 function stepDefDive(f,dt){
  f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;const c=M.carrier;
- if(c&&!f.dtk&&!(c.dive>0)&&!(c.down>0)&&d2(f,c)<1.05){f.dtk=true;
+ if(c&&!f.dtk&&!(c.dive>0)&&!(c.hurdle>0)&&!(c.down>0)&&d2(f,c)<1.05){f.dtk=true;
   const pt=clamp(0.62+(A(f,'tkl')-A(c,'str'))*0.03+(c.jk>0?-0.25:0)+(c.role==='QB'&&!M.scramble?0.1:0),0.3,0.88);
   if(Math.random()<pt){c.down=1;M.shake=4;sfx('hit');pop('DIVING TACKLE!',c.x,c.y,'#ff8a8a');endPlay('tackle',c.x+0.3,c.y);return true;}
-  pop('MISSED!',c.x,c.y,'#7fffd4');if(Math.random()<0.5){c.slow=0.35;c.vx*=0.7;}xpG(c.pl,2);}
+  pop('MISSED!',c.x,c.y,'#7fffd4');hurdle(c);xpG(c.pl,2);}
  if(f.dive<=0){f.dive=0;f.vx=f.vy=0;f.stun=1.0;f.down=1.0;}
  return false;
 }
@@ -3081,7 +3086,7 @@ function drawRoutes(){
   const pts=[[wx(f.x),wy(f.y)-4]];for(let i=0;i<f.rlen;i++)pts.push([wx(f.route[i].x),wy(f.route[i].y)-4]);
   cx.strokeStyle=pass?col:'#071a07';cx.lineWidth=pass?3:6;cx.beginPath();cx.moveTo(pts[0][0],pts[0][1]);for(const q of pts.slice(1))cx.lineTo(q[0],q[1]);cx.stroke();
   const a=pts[pts.length-2],b=pts[pts.length-1],ang=Math.atan2(b[1]-a[1],b[0]-a[0]),sz=pass?6:8;cx.fillStyle=pass?col:'#071a07';cx.beginPath();cx.moveTo(b[0]+Math.cos(ang)*sz,b[1]+Math.sin(ang)*sz);cx.lineTo(b[0]+Math.cos(ang+2.3)*sz,b[1]+Math.sin(ang+2.3)*sz);cx.lineTo(b[0]+Math.cos(ang-2.3)*sz,b[1]+Math.sin(ang-2.3)*sz);cx.closePath();cx.fill();}
- if(M.qb){cx.strokeStyle='#3d8cff';cx.lineWidth=2;cx.beginPath();cx.ellipse(wx(M.qb.x),wy(M.qb.y),13,7,0,0,Math.PI*2);cx.stroke();}
+ 
  if(M.plays<3){const lab=[[M.w1,'1'],[M.w2,'2'],[M.te,'3'],[M.rb,'4']];for(const[f,n]of lab)if(f)ctext(n,wx(f.x)-14*M.dir,wy(f.y)-30,'#fff','center');}
 }
 function miniStar(x,y){cx.fillStyle='#000';cx.fillRect(x-3,y-1,7,3);cx.fillRect(x-1,y-3,3,7);cx.fillStyle='#ffe600';cx.fillRect(x-2,y,5,1);cx.fillRect(x,y-2,1,5);cx.fillRect(x-1,y-1,3,3);}
@@ -3089,9 +3094,10 @@ function curHolder(){return M.loose?null:M.carrier||((M.phase==='pre'||(M.phase=
 /* Everything needed to draw one player this frame (also what a replay frame stores). */
 function plState(f,holder){
  let jy=f.jump>0?Math.round(Math.sin((0.45-f.jump)/0.45*Math.PI)*12):0;if(f.dive>0&&f.dv)jy=Math.round(Math.sin((1-f.dive/f.dv)*Math.PI)*9)+3;
+ const hur=f.hurdle>0&&!(f.down>0)&&!(f.dive>0);if(hur)jy=Math.round(Math.sin((1-f.hurdle/HURDLE_T)*Math.PI)*13);
  const hasB=f===holder||(f.ball&&M.phase==='dead'),dn=f.down>0||f.dive>0;
- const oneh=f.oneh>0&&!dn,reach=!oneh&&!hasB&&!dn&&(jy>0||f.reach>0);
- return{x:f.x,y:f.y,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
+ const oneh=f.oneh>0&&!dn,reach=!oneh&&!hasB&&!dn&&!hur&&(jy>0||f.reach>0);
+ return{x:f.x,y:f.y,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
 }
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
@@ -3099,9 +3105,10 @@ function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.star&&!st.dn&&M.phase!=='kick')miniStar(sx,sy-40-st.jy);}
 function drawPlayers(){
  const all=[...M.O,...M.D].sort((a,b)=>a.y-b.y),holder=curHolder();
+ const ctl=M.play==='intret'||M.phase==='kick'?null:M.carrier&&M.carrier.side==='O'?M.carrier:(M.phase==='pre'||(M.phase==='live'&&M.play==='pass'&&!M.thrown))?M.qb:null;
  for(const f of all){
   const sx=wx(f.x),sy=wy(f.y);if(sx<-30||sx>CW+30)continue;
-  if(f===M.primary&&M.ball&&!M.ball.ret){cx.strokeStyle='rgba(255,233,74,.9)';cx.lineWidth=1;cx.beginPath();cx.ellipse(sx,sy,9,4,0,0,Math.PI*2);cx.stroke();}
+  if(f===ctl){cx.strokeStyle='rgba(255,255,255,.9)';cx.lineWidth=1;cx.beginPath();cx.ellipse(sx+0.5,sy+0.5,9,4,0,0,Math.PI*2);cx.stroke();}
   if(f===M.chaser&&M.play==='intret'&&M.phase==='live'){const pu=1+0.15*Math.sin(M.tt*12);cx.strokeStyle='#ffe94a';cx.lineWidth=2;cx.beginPath();cx.ellipse(sx,sy,12*pu,5*pu,0,0,Math.PI*2);cx.stroke();ctext('YOU',sx,sy-56,'#ffe94a');}
   const st=plState(f,holder);drawPS(st);
   if(f.star&&f.pl&&M.phase==='pre'&&f.side==='O'&&f.role!=='OL'){cx.font='8px "Press Start 2P",monospace';cx.textAlign='left';cx.textBaseline='top';cx.fillStyle='#111';cx.fillText(f.pl.fn[0]+'.'+f.pl.ln[0],sx+(M.dir>0?12:-28),sy-22);}
@@ -3116,18 +3123,20 @@ function drawBall(){
 function drawAim(){
  const a=M.aim;if(!a||!M.qb)return;const ai=aimInfo(a);if(ai.pull<PASS.PULL_MIN)return;const q=M.qb;
  if(ai.run){const sx=wx(q.x),sy=wy(q.y);ctext('RUN',sx-22*M.dir,sy-46,'#7fffd4');for(let i=0;i<3;i++)rect(sx-(16+i*8)*M.dir-2,sy-30,5,3,'#7fffd4');return;}
- /* The dots are sampled from flightAt() with the same flight object the
-    throw would use (minus the bounded placement error shown by the ring). */
- const F=ai.F,n=Math.max(14,Math.ceil(F.Tg/0.045)),col=ai.bullet?'#ffdf5b':'#fff';
- for(let i=1;i<=n;i++){const t=F.Tg*i/n,p=flightAt(F,t),px=wx(p.x),py=wy(p.y)-p.z*PZ,past=t>F.T;
-  if(i%2===0){rect(px-1,py,3,3,'rgba(0,0,0,.45)');rect(px-1,py-1,3,3,past?'rgba(255,255,255,.45)':col);}
-  if(i%5===0&&!past)rect(px,wy(p.y),2,1,'rgba(0,0,0,.35)');}
- const sx=wx(ai.tx),sy=wy(ai.ty),rx=Math.max(5,ai.err*PXY),ry=Math.max(3,ai.err*PYY);
- cx.strokeStyle='#000';cx.lineWidth=4;cx.beginPath();cx.ellipse(sx,sy,rx,ry,0,0,Math.PI*2);cx.stroke();
- cx.strokeStyle=col;cx.lineWidth=2;cx.beginPath();cx.ellipse(sx,sy,rx,ry,0,0,Math.PI*2);cx.stroke();
- rect(sx-1,sy-1,3,3,col);
- ctext(Math.round(ai.d)+' YD'+(ai.bullet?' BULLET':''),sx,sy+ry+4,col);
- const bx=wx(q.x)-18*M.dir-3,by=wy(q.y)-34,bh=26;rect(bx-1,by-1,7,bh+2,'#000');const fh=Math.round(bh*ai.p);rect(bx,by+bh-fh,5,fh,ai.p>0.85?'#ff5c5c':ai.p>0.45?'#ffe94a':'#7dff8a');
+ /* Retro-style preview: evenly timed white dots (black outline) for the ball, small dark dots
+    for its shadow on the grass. It only shows the first ~80% of the flight, so the exact
+    landing spot is revealed (yellow crosshair) once the ball is thrown. */
+ const F=ai.F,end=F.T*0.8,dt=1.45/Math.max(8,F.v),col=ai.bullet?'#ffdf5b':'#fff';
+ const pts=[];for(let t=dt;t<=end+1e-6;t+=dt)pts.push(flightAt(F,t));
+ for(const p of pts){const px=wx(p.x),py=wy(p.y);rect(px-1,py-1,2,2,'rgba(0,0,0,.4)');}
+ for(const p of pts){const px=wx(p.x),py=Math.round(wy(p.y)-p.z*PZ);rect(px-2,py-2,5,5,'#000');rect(px-1,py-1,3,3,col);}
+}
+/* Landing crosshair shown on the grass while a pass is in the air. */
+function drawTarget(){
+ const b=M.ball;if(!b||!b.F||b.done||b.tip||M.phase!=='live')return;
+ const sx=wx(b.x1),sy=wy(b.y1),Y='#ffe94a',K='rgba(0,0,0,.55)';
+ for(const[x,y,w,h]of[[-7,-1,4,2],[4,-1,4,2],[-1,-5,2,3],[-1,3,2,3]]){rect(sx+x-1,sy+y-1,w+2,h+2,K);}
+ for(const[x,y,w,h]of[[-7,-1,4,2],[4,-1,4,2],[-1,-5,2,3],[-1,3,2,3]])rect(sx+x,sy+y,w,h,Y);
 }
 function drawFX(){
  for(const p of M.pops){const sx=clamp(wx(p.x),70,CW-70),sy=wy(p.y)-52-p.a*26-(p.row||0)*13;cx.globalAlpha=clamp(1.4-p.a,0,1);ctext(p.t,sx,sy,p.col);cx.globalAlpha=1;}
@@ -3184,7 +3193,7 @@ function draw(){
  cx.save();cx.translate(Math.round(sh),Math.round(sh*0.6));
  drawField();
  if(M.phase==='pre')drawRoutes();
- drawPlayers();drawBall();if(M.loose)drawLoose();
+ drawTarget();drawPlayers();drawBall();if(M.loose)drawLoose();
  if(M.ov&&M.ov.type==='drive')drawDriveBall();
  if(M.aim)drawAim();
  cx.restore();
