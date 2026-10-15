@@ -2861,11 +2861,19 @@ function routeBreak(f){if(f.ri>=f.rlen)return;
  // Curls / hitches / comebacks (the receiver stops and turns back) are where defenders get caught
  // running deep: much better odds to win, and the defender overruns instead of just slowing down.
  const stop=!!(f.route&&f.route[f.ri]&&f.route[f.route.length-1].stop&&f.ri>=f.route.length-1);
- for(const d of M.D){if(d.man!==f)continue;const pb=0.32+(stop?0.18:0)+(A(f,'spd')+A(f,'cat')*0.5-A(d,'cov')*1.5)*0.045;
+ for(const d of M.D){if(d.man!==f)continue;const pb=0.32+(stop?0.08:0)+(A(f,'spd')+A(f,'cat')*0.5-A(d,'cov')*1.5)*0.045;
   if(Math.random()<clamp(pb,stop?0.35:0.1,stop?0.8:0.75)){d.beat=(stop?0.45:0.4)+Math.random()*0.3;d.overrun=stop;}}}
+/* Run THROUGH route corners at full speed (no braking into each waypoint) and make the cut
+   sharply; only a final "stop" point (curl/hitch/comeback) is approached with braking. */
+function runThrough(f,tx,ty,spd,acc,dt){const dx=tx-f.x,dy=ty-f.y,d=Math.hypot(dx,dy)||1;
+ let ax=dx/d*spd-f.vx,ay=dy/d*spd-f.vy;const am=Math.hypot(ax,ay),mx=acc*dt;if(am>mx){ax*=mx/am;ay*=mx/am;}
+ f.vx+=ax;f.vy+=ay;f.x+=f.vx*dt;f.y+=f.vy*dt;}
 function followRoute(f,dt){
- if(f.route&&f.ri<f.route.length){const w=f.route[f.ri];if(Math.hypot(w.x-f.x,w.y-f.y)<0.7){f.ri++;routeBreak(f);}
-  if(f.ri<f.route.length){const w2=f.route[f.ri];steer(f,w2.x,w2.y,f.spd,f.acc*1.25,dt);return;}}
+ if(f.route&&f.ri<f.route.length){const w=f.route[f.ri],last=f.ri===f.route.length-1,reach=last?0.7:Math.max(0.7,Math.hypot(f.vx,f.vy)*0.09);
+  if(Math.hypot(w.x-f.x,w.y-f.y)<reach){f.ri++;routeBreak(f);f.cut=0.25;}
+  if(f.ri<f.route.length){const w2=f.route[f.ri],fin=f.ri===f.route.length-1&&w2.stop;
+   if(f.cut>0)f.cut-=dt;const acc=f.acc*(f.cut>0?2.4:1.25);
+   if(fin)steer(f,w2.x,w2.y,f.spd,acc,dt);else runThrough(f,w2.x,w2.y,f.spd,acc,dt);return;}}
  if(f.route&&f.route.length&&f.route[f.route.length-1].stop){steer(f,f.x,f.y,0,f.acc,dt);if(M.qb)f.face=M.qb.x<f.x?-1:1;return;}
  steer(f,f.x+5,clamp(f.y,2,51.3),f.spd,f.acc,dt);
 }
@@ -2922,7 +2930,7 @@ function upDef(f,dt){
   if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
   const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
   // receiver sitting down in a curl: defender recovers to a spot behind him, he doesn't teleport onto his hip
-  if(parked){steer(f,Math.min(m.x+1.1,119.5),m.y,f.spd*0.75,f.acc*0.7,dt);return;}
+  if(parked){steer(f,Math.min(m.x+0.7,119.5),m.y,f.spd*0.85,f.acc*0.8,dt);return;}
   steer(f,Math.min(m.x+m.vx*0.1+cush,119.5),m.y+m.vy*0.1,f.spd*0.97,f.acc,dt);return;}
  steer(f,f.x,f.y,0,10,dt);
 }
