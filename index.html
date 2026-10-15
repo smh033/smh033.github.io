@@ -2447,7 +2447,7 @@ function setupPlay(){
  if(Math.random()<0.10+diffLvl()*0.08)lb[0].blitz=true;
  for(const f of[c1,c2,lb[0],lb[1],sf])f.acc=10+A(f,'cov')*1.3;
  M.O=[...ol,te,w1,w2,rb,qb];M.D=[...dl,...lb,c1,c2,sf];
- M.qb=qb;M.rb=rb;M.w1=w1;M.w2=w2;M.te=te;M.runVar=null;M.celeb=null;M.dpick=false;M.loose=null;M.big=null;M.qbDraw=false;
+ M.helmets=null;M.qb=qb;M.rb=rb;M.w1=w1;M.w2=w2;M.te=te;M.runVar=null;M.celeb=null;M.dpick=false;M.loose=null;M.big=null;M.qbDraw=false;
  // default look: a pass play from your team's playbook (call another from PLAYBOOK)
  {const pb=playbook(L.user).filter(n=>PLAYS[n].k==='pass');applyRoutes(pick(pb));}M.kr=null;M.ball=null;M.carrier=null;M.aim=null;M.thrown=false;M.comp=null;M.primary=null;M.intBy=null;M.tbOK=false;M.fair=false;
  queueWarm();
@@ -2588,6 +2588,20 @@ function looseFrom(b,bp,deflect){
  if(!b||!b.F||!bp)return;const F=b.F,t=bp.t||b.t||0,v=F.v,vz=F.vz-(F.g||PASS.G)*t;
  if(deflect)looseBall(bp.x,bp.y,Math.max(bp.z,1),-F.ux*v*0.18+rnd(-2.5,2.5),F.uy*v*0.1+rnd(-3,3),rnd(3,6.5));
  else looseBall(bp.x,bp.y,0.05,F.ux*v*0.5,F.uy*v*0.5,Math.abs(vz)*rnd(0.35,0.55)+1.5);}
+/* ---------- helmet popping off on a hit stick ---------- */
+function popHelmet(f,dir){if(!M||!f)return;const lk=f.lk||{};
+ M.helmets=M.helmets||[];M.helmets.push({x:f.x,y:f.y,z:2.2,vx:(dir||1)*rnd(3,6)+f.vx*0.3,vy:rnd(-3.5,3.5),vz:rnd(6,8.5),col:lk.helm||'#888',st:lk.stripe||'#fff',t:0,n:0,rot:0,vr:rnd(8,16)*(Math.random()<.5?-1:1)});
+ // the player now shows his hair instead of a helmet
+ const hc=f.pl?HAIRC[f.pl.hc||0]:'#16100c',bald=f.pl&&f.pl.hair===0,top=bald?(f.lk.skin):hc;
+ f.lk=Object.assign({},f.lk,{helm:top,stripe:top});f.lk.key=[f.lk.helm,f.lk.stripe,f.lk.jersey,f.lk.trim,f.lk.pants,f.lk.socks,f.lk.skin].join('')+'nohelm';
+ pop('HELMET OFF!',f.x,f.y-3,'#ffe94a');}
+function upHelmets(dt){if(!M.helmets)return;for(const h of M.helmets){h.t+=dt;h.vz-=24*dt;h.x+=h.vx*dt;h.y+=h.vy*dt;h.z+=h.vz*dt;h.rot+=h.vr*dt;
+  if(h.z<=0){h.z=0;if(h.vz<-1.4&&h.n<5){h.n++;h.vz=-h.vz*rnd(0.35,0.55);h.vx*=0.7;h.vy*=0.7;h.vr*=0.6;if(h.n<3)sfx('hit');}else{h.vz=0;const k=Math.pow(0.04,dt);h.vx*=k;h.vy*=k;h.vr*=k;}}
+  h.y=clamp(h.y,-1,54.3);}M.helmets=M.helmets.filter(h=>h.t<6);}
+function drawHelmets(){if(!M.helmets)return;for(const h of M.helmets){const sx=wx(h.x),sy=wy(h.y),hy=Math.round(sy-h.z*PZ);
+  cx.fillStyle='rgba(0,0,0,.3)';cx.beginPath();cx.ellipse(sx,sy,4,1.5,0,0,Math.PI*2);cx.fill();
+  cx.save();cx.translate(sx,hy);cx.rotate(Math.round(h.rot/(Math.PI/2))*(Math.PI/2));   // snap to 90° for crisp pixels
+  rect(-5,-4,10,8,'#000');rect(-4,-3,8,6,h.col);rect(-4,-3,8,1,h.st);rect(2,-1,3,3,'#d3d7dd');rect(-3,-2,2,1,'rgba(255,255,255,.5)');cx.restore();}}
 function upLoose(dt){
  const b=M.loose;if(!b)return;b.t+=dt;b.vz-=24*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.sp+=dt*(4+Math.hypot(b.vx,b.vy));
  if(b.z<=0){b.z=0;if(b.vz<-1.6&&b.n<6){b.n++;b.vz=-b.vz*rnd(0.35,0.62);const sp=Math.hypot(b.vx,b.vy),ang=Math.atan2(b.vy,b.vx)+rnd(-1.3,1.3),ns=sp*rnd(0.45,0.8)+rnd(0,1.2);b.vx=Math.cos(ang)*ns;b.vy=Math.sin(ang)*ns;if(b.n<3)sfx('hit');}
@@ -3003,7 +3017,7 @@ function contacts(dt){
   if(dd<1.35){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>0.3){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live')return;}}else d.trail=0;}}
  else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){if(Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);
    // a blitzing linebacker / DB can hit-stick the QB: 30% of those strip the ball
-   if((d.role==='LB'||d.role==='DB'||d.role==='S')&&Math.random()<0.10){M.shake=10;pop('HIT STICK!',q.x,q.y,'#ff5c5c');
+   if((d.role==='LB'||d.role==='DB'||d.role==='S')&&Math.random()<0.10){M.shake=10;pop('HIT STICK!',q.x,q.y,'#ff5c5c');if(Math.random()<0.5)popHelmet(q,-1);
     if(Math.random()<0.30){M.ts.to++;cr(q.pl,'fum',1);sfx('bad');looseBall(q.x-0.3,q.y,1.1,rnd(-3,2),rnd(-4,4),rnd(4,7));pop('STRIP SACK!',q.x,q.y-2,'#ff8a8a');return endPlay('fumble',q.x,q.y);}}
    return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;M.aimShake=0.9;M.shake=Math.max(M.shake||0,3);pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}   /* keep aiming, but the throw is shaky for a moment */
 }
@@ -3039,7 +3053,7 @@ function tackleAttempt(d,c){
  if(Math.random()<pb){d.stun=0.9;d.down=0.9;c.vx*=0.55;c.vy*=0.55;c.slow=0.3;pop('BROKEN TACKLE!',c.x,c.y,'#7fffd4');M.shake=3;sfx('hit');xpG(c.pl,3);return;}
  // HIT STICK: defensive backs sometimes lay the runner out (10%); 30% of those knock the ball loose.
  const stick=(d.role==='DB'||d.role==='S'||d.role==='LB')&&Math.random()<0.10;   // linebackers too, on anyone (QB scrambles included)
- if(stick){M.shake=10;sfx('hit');pop('HIT STICK!',c.x,c.y,'#ff5c5c');c.vx*=0.2;c.vy*=0.2;}
+ if(stick){M.shake=10;sfx('hit');pop('HIT STICK!',c.x,c.y,'#ff5c5c');if(Math.random()<0.5)popHelmet(c,c.x>=d.x?1:-1);c.vx*=0.2;c.vy*=0.2;}
  const fumP=stick?0.30:clamp(0.04*(1.25-str*0.05),0.025,0.055);   // ~4% on a normal tackle
  if(Math.random()<fumP){M.ts.to++;cr(c.pl,'fum',1);c.down=1;sfx('bad');looseBall(c.x+0.3,c.y,1.1,c.vx*0.5+rnd(-2,3),rnd(-4,4),rnd(4,7));pop('FUMBLE!',c.x,c.y,'#ff8a8a');return endPlay('fumble',c.x,c.y);}
  c.down=1;M.shake=4;sfx('hit');endPlay('tackle',c.x+0.4,c.y);
@@ -3048,7 +3062,7 @@ function tackleAttempt(d,c){
 /* ---------- returns ---------- */
 function startReturn(kind,landX,landY){
  const d=M.dep,od=M.odep;
- M.loose=null;M.big=null;M.rp=null;M.leap=false;M.celeb=null;M.dpick=false;recStart();M.play='ret';M.retKind=kind;M.caught=false;M.caughtInEZ=false;M.tbOK=false;M.fair=false;M.los=landX;M.land={x:landX,y:landY};M.conv=false;
+ M.loose=null;M.helmets=null;M.big=null;M.rp=null;M.leap=false;M.celeb=null;M.dpick=false;recStart();M.play='ret';M.retKind=kind;M.caught=false;M.caughtInEZ=false;M.tbOK=false;M.fair=false;M.los=landX;M.land={x:landX,y:landY};M.conv=false;
  const cand=[d.RB[0],d.WR[0],d.WR[1],d.DB[0],d.TE[0]].filter(Boolean).sort((a,b)=>attr(b,'spd')-attr(a,'spd'));
  const krp=cand[0]||null,kr=mkF(krp,'O','KR',landX-3,landY);M.kr=kr;
  const bl=[d.TE[0],d.LB[0],d.LB[1],d.DB[1],d.OL[0],d.DB[2]].map(x=>x===krp?null:x);
@@ -3233,7 +3247,7 @@ function step(dt){
  if(M.phase==='pre'&&M.pc!=null&&!M.paused){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
  if(M.phase==='pre'&&M.runoff>0){const d=Math.min(M.runoff,dt*6);M.runoff-=d;M.clock-=d;if(M.clock<=0){M.clock=0;M.runoff=0;M.aim=null;M.input=null;clockCheck(toPre);return;}}
  if(M.phase==='replay'){upReplay(dt);if(M)upCam(dt);return;}
- if(M.loose)upLoose(dt);
+ if(M.loose)upLoose(dt);if(M.helmets)upHelmets(dt);
  if(M.phase==='live')upLive(dt);
  else if(M.phase==='dead')upDead(dt);
  if(M&&(M.phase==='live'||M.phase==='dead'))recFrame(dt);
@@ -3403,7 +3417,7 @@ function draw(){
  cx.save();cx.translate(Math.round(sh),Math.round(sh*0.6));
  drawField();
  if(M.phase==='pre')drawRoutes();
- drawTarget();drawPlayers();drawBall();if(M.loose)drawLoose();
+ drawTarget();drawPlayers();drawBall();if(M.loose)drawLoose();if(M.helmets)drawHelmets();
  if(M.ov&&M.ov.type==='drive')drawDriveBall();
  if(M.night)nightFX();
  if(M.aim)drawAim();
