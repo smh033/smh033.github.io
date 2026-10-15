@@ -741,7 +741,7 @@ function runOffseasonAging(){
 }
 function finishResign(keep){
  for(const id of L.off.expiring){const p=P(id);if(!p)continue;
-  if(keep.includes(id)){p.yrs=ri(2,4);p.sal=salFor(starsOf(p),p.age);p.mor=clamp(p.mor+10,0,100);}
+  if(keep.includes(id)){p.yrs=(L.off.yrs&&L.off.yrs[id])||3;p.sal=salFor(starsOf(p),p.age);p.mor=clamp(p.mor+10,0,100);}
   else{p.team=-1;p.yrs=ri(1,3);news(fullname(p)+' leaves in free agency.');}}
  L.off.expiring=[];
 }
@@ -1638,9 +1638,9 @@ SCR.off=()=>{
  if(O.step==='prog'){const ch=O.changes.map(c=>{const p=P(c.id);if(!p)return'';return`<tr><td>${p.pos}</td><td>${esc(pname(p).toUpperCase())}</td><td>${p.age}</td><td>${Object.entries(c.ch).map(([k,v])=>`<span class="${v>0?'grt':'rdt'}">${ATTR[k].split(' ').pop().slice(0,4)} ${v>0?'+':''}${v}</span>`).join(' ')}</td></tr>`;}).join('');
   return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('PLAYER PROGRESSION')}</div><div style="width:50px"></div></div><div class="row grow stretch" style="gap:10px"><div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th>AGE</th><th>CHANGES</th></tr>${ch||'<tr><td colspan="4" class="dim">NO CHANGES</td></tr>'}</table></div>
   <div class="col" style="width:200px;gap:10px">${box('RETIRED',`<div class="s7" style="line-height:2">${O.retired.map(esc).join('<br>')||'NONE'}</div>`)}${box('HALL OF FAME',`<div class="s7 yl" style="line-height:2">${O.hof.map(esc).join('<br>')||'<span class="dim">NONE</span>'}</div>`)}</div></div><div class="row end"><button class="bt y big" data-a="off2">CONTRACTS &gt;</button></div></div>`;}
- if(O.step==='con'){const rows=O.expiring.map(id=>{const p=P(id);if(!p)return'';const k=O.keep.includes(id);return`<tr><td>${p.pos}</td><td>${esc(fullname(p).toUpperCase())}</td><td>${p.age}</td><td>${stars(starsOf(p),'xs')}</td><td class="r">${salFor(starsOf(p),p.age).toFixed(1)}M</td><td class="r">${extCost(p)} <i class="cc"></i></td><td class="r"><button class="bt ${k?'g':''}" style="padding:3px 6px 2px" data-a="keep" data-id="${id}">${k?'RE-SIGN':'LET GO'}</button></td></tr>`;}).join('');
+ if(O.step==='con'){const rows=O.expiring.map(id=>{const p=P(id);if(!p)return'';const k=O.keep.includes(id);return`<tr><td>${p.pos}</td><td>${esc(fullname(p).toUpperCase())}</td><td>${p.age}</td><td>${stars(starsOf(p),'xs')}</td><td class="r">${salFor(starsOf(p),p.age).toFixed(1)}M</td><td class="r">${extCost(p)} <i class="cc"></i></td><td class="r" style="white-space:nowrap"><button class="bt ${k?'':'r'}" style="padding:3px 5px 2px" data-a="keepSet" data-id="${id}" data-v="0">LET GO</button> <button class="bt ${k?'g':''}" style="padding:3px 5px 2px" data-a="keepSet" data-id="${id}" data-v="1">KEEP</button>${k?` <span class="row" style="display:inline-flex;gap:2px;vertical-align:middle">${[1,2,3,4,5].map(y=>`<span class="chip ${((O.yrs||{})[id]||3)===y?'on':''}" style="padding:3px 4px 2px" data-a="keepYrs" data-id="${id}" data-v="${y}">${y}Y</span>`).join('')}</span>`:''}</td></tr>`;}).join('');
   const cost=O.keep.reduce((s,id)=>s+extCost(P(id)),0);
-  return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('CONTRACTS')}</div><div style="width:50px"></div></div><div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th>AGE</th><th>RATING</th><th class="r">NEW SALARY</th><th class="r">COST</th><th></th></tr>${rows||'<tr><td colspan="7" class="dim">NO EXPIRING CONTRACTS</td></tr>'}</table></div><div class="row"><span>COST: <span class="${cost>L.cc?'rdt':'yl'}">${cost}</span> <i class="cc"></i></span><div class="sp"></div><button class="bt y big" data-a="off3" ${cost>L.cc?'disabled':''}>TO THE DRAFT &gt;</button></div></div>`;}
+  return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('CONTRACTS')}</div><div style="width:50px"></div></div><div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th>AGE</th><th>RATING</th><th class="r">NEW SALARY</th><th class="r">COST</th><th class="r">DECISION · YEARS</th></tr>${rows||'<tr><td colspan="7" class="dim">NO EXPIRING CONTRACTS</td></tr>'}</table></div><div class="row"><span>COST: <span class="${cost>L.cc?'rdt':'yl'}">${cost}</span> <i class="cc"></i></span><div class="sp"></div><button class="bt y big" data-a="off3" ${cost>L.cc?'disabled':''}>TO THE DRAFT &gt;</button></div></div>`;}
  if(O.step==='draft')return SCR.draft();
  if(O.step==='jobs'){const c=UI.sub.c||T(L.user).conf;return`<div class="screen">${ttl('JOB OFFERS')}
   <div class="row ctr" style="gap:10px"><button class="bt ${c==='AFC'?'y':''}" style="width:150px" data-a="jc" data-c="AFC">AFC</button><button class="bt ${c==='NFC'?'y':''}" style="width:150px" data-a="jc" data-c="NFC">NFC</button></div>
@@ -1650,6 +1650,8 @@ SCR.off=()=>{
 };
 ACT.off1=()=>{runOffseasonAging();L.off.step='prog';save();render();};
 ACT.off2=()=>{L.off.step='con';render();};
+ACT.keepSet=d=>{const id=+d.id,O=L.off;O.yrs=O.yrs||{};const i=O.keep.indexOf(id);if(d.v==='1'){if(i<0)O.keep.push(id);if(!O.yrs[id])O.yrs[id]=3;}else if(i>=0)O.keep.splice(i,1);UI.keepScroll=true;save();render();};
+ACT.keepYrs=d=>{const O=L.off;O.yrs=O.yrs||{};O.yrs[+d.id]=+d.v;UI.keepScroll=true;save();render();};
 ACT.keep=d=>{const id=+d.id,O=L.off;const i=O.keep.indexOf(id);if(i>=0)O.keep.splice(i,1);else O.keep.push(id);UI.keepScroll=true;render();};
 ACT.off3=()=>{const O=L.off,cost=O.keep.reduce((s,id)=>s+extCost(P(id)),0);if(cost>L.cc)return;L.cc-=cost;finishResign(O.keep);O.keep=[];setupDraft(false);O.step='draft';save();UI.sub={};render();};
 ACT.jc=d=>{UI.sub.c=d.c;render();};
