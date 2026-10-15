@@ -2201,6 +2201,7 @@ function moveDir(f,dx,dy,spd,acc,dt){
 }
 function tickF(f,dt){
  if(f.stun>0){f.stun-=dt;f.vx*=0.86;f.vy*=0.86;f.x+=f.vx*dt;f.y+=f.vy*dt;}
+ if(f.side==='O'&&f.vx*f.vx+f.vy*f.vy>16)f.runT=(f.runT||0)+dt;   // sprint time this play (for fatigue)
  if(f.down>0&&f!==M.carrier)f.down-=dt;
  if(f.jk>0)f.jk-=dt;if(f.jump>0)f.jump-=dt;if(f.reach>0)f.reach-=dt;if(f.oneh>0)f.oneh-=dt;if(f.hurdle>0)f.hurdle-=dt;if(f.jkc>0)f.jkc-=dt;if(f.shed>0)f.shed-=dt;if(f.slow>0)f.slow-=dt;if(f.throwT>0)f.throwT-=dt;
  if(f.eng){f.engT-=dt;if(f.engT<=0||f.eng.stun>0){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.55;}}   /* short window before a lineman can pick him up again */
@@ -2452,7 +2453,7 @@ function setupPlay(){
  queueWarm();
 }
 function snap(type){
- if(M.phase!=='pre')return;
+ if(M.phase!=='pre')return;M.aimShake=0;
  M.play=type;M.phase='live';M.pt=0;M.banT=0;M.thrown=false;M.ball=null;M.carrier=null;M.comp=null;M.passBullet=false;M.primary=null;M.handed=false;M.scramble=false;M.steer=null;M.plays++;M.went4=false;
  if(M.runoff>0){M.clock-=Math.min(M.runoff*0.5,Math.max(0,M.clock-1));M.runoff=0;}
  sfx('whistle');recStart();M.leap=false;M.rp=null;
@@ -2546,7 +2547,7 @@ function aimInfo(a){
  // Max placement error (yd). The ring drawn in the preview is exactly this radius,
  // and the real throw can never land outside it.
  const accMul=1.5-0.09*(clamp(acc,1,11)-1);               // acc 1 -> 1.5x, acc 11 -> 0.6x
- const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1)*(1+0.2*Math.max(0,diffLvl()));
+ const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1)*(1+0.2*Math.max(0,diffLvl()))*(M.aimShake>0?1.9:1);
  const F=makeFlight(x0,y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,tm.T,bullet?PASS.G:PASS.G_LOB);
  return{tx,ty,x0,y0,d:tm.d,v:tm.v,T:tm.T,p:tm.p,maxR:tm.maxR,run,err,press,moving,pull,str,acc,bullet,F};
 }
@@ -2808,7 +2809,7 @@ function toggleBullet(){if(!canToggleBullet())return false;M.passBullet=!M.passB
 /* ---------- live play update ---------- */
 function upLive(dt){
  if(M.play==='intret')return upIntRet(dt);
- M.pt+=dt;M.clock-=dt;
+ M.pt+=dt;M.clock-=dt;if(M.aimShake>0)M.aimShake-=dt;
  for(const f of M.O){f._px=f.x;f._py=f.y;}for(const f of M.D){f._px=f.x;f._py=f.y;} // start-of-frame positions for swept catch tests
  const b=M.ball;
  if(M.play==='run'&&!M.carrier&&!M.handed){const v=M.runVar||'dive';
@@ -2939,7 +2940,8 @@ function upCarrier(c,dt){
  if(c.dive>0){c.dive-=dt;c.x+=c.vx*dt;c.y+=c.vy*dt;if(c.x>=110)return endPlay('td',c.x,c.y);if(c.y<0.15||c.y>53.18){c.y=clamp(c.y,0.15,53.18);c.dive=0;c.down=1;return endPlay('oob',c.x,c.y);}if(c.dive<=0){c.dive=0;c.down=1;c.vx=c.vy=0;return endPlay('tackle',c.x,c.y);}return;}
  /* Retro Bowl runners keep moving automatically. Touch gestures are discrete
     commands: up/down = one side-step, back = slow/hesitate, forward = dive. */
- const sp=c.spd*(c.slow>0?0.55:1),vmax=sp*1.4;   // side-steps are quick, like Retro Bowl
+ const fat=1-clamp(((c.runT||0)-3.0)*0.07*(1.35-A(c,'stm')*0.06),0,0.28);   /* long sprints (route + run after catch) wear him down */
+ const sp=c.spd*(c.slow>0?0.55:1)*fat,vmax=sp*1.4;   // side-steps are quick, like Retro Bowl
  if(c.ty==null)c.ty=c.y;
  const vyT=clamp((c.ty-c.y)*14,-vmax,vmax),vxT=sp*(1-0.28*Math.abs(vyT)/vmax);
  let ax=vxT-c.vx,ay=vyT-c.vy,mx=135*dt,am=Math.hypot(ax,ay);
@@ -2991,7 +2993,7 @@ function contacts(dt){
   // Chasing right on his heels: after a moment in arm's reach he gets a hand on him
   // (otherwise an equally fast defender could trail a runner forever without tackling).
   if(dd<1.35){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>0.3){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live')return;}}else d.trail=0;}}
- else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){M.aim=null;if(Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}
+ else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){if(Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;M.aimShake=0.9;M.shake=Math.max(M.shake||0,3);pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}   /* keep aiming, but the throw is shaky for a moment */
 }
 /* ---------- diving tackles ----------
    A defender who is close but can't quite get his hands on a ball carrier
@@ -3023,7 +3025,11 @@ function tackleAttempt(d,c){
  const str=A(c,'str'),tk=A(d,'tkl'),gang=M.D.filter(x=>x!==d&&x.stun<=0&&!x.eng&&d2(x,c)<1.6).length;
  let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,1));if(c.role==='QB'&&!M.scramble)pb*=0.5;
  if(Math.random()<pb){d.stun=0.9;d.down=0.9;c.vx*=0.55;c.vy*=0.55;c.slow=0.3;pop('BROKEN TACKLE!',c.x,c.y,'#7fffd4');M.shake=3;sfx('hit');xpG(c.pl,3);return;}
- if(Math.random()<0.012*(1.4-str*0.07)&&Math.random()<0.6){M.ts.to++;cr(c.pl,'fum',1);c.down=1;sfx('bad');looseBall(c.x+0.3,c.y,1.1,c.vx*0.5+rnd(-2,3),rnd(-4,4),rnd(4,7));pop('FUMBLE!',c.x,c.y,'#ff8a8a');return endPlay('fumble',c.x,c.y);}
+ // HIT STICK: defensive backs sometimes lay the runner out (10%); 30% of those knock the ball loose.
+ const stick=(d.role==='DB'||d.role==='S')&&Math.random()<0.10;
+ if(stick){M.shake=10;sfx('hit');pop('HIT STICK!',c.x,c.y,'#ff5c5c');c.vx*=0.2;c.vy*=0.2;}
+ const fumP=stick?0.30:clamp(0.04*(1.25-str*0.05),0.025,0.055);   // ~4% on a normal tackle
+ if(Math.random()<fumP){M.ts.to++;cr(c.pl,'fum',1);c.down=1;sfx('bad');looseBall(c.x+0.3,c.y,1.1,c.vx*0.5+rnd(-2,3),rnd(-4,4),rnd(4,7));pop('FUMBLE!',c.x,c.y,'#ff8a8a');return endPlay('fumble',c.x,c.y);}
  c.down=1;M.shake=4;sfx('hit');endPlay('tackle',c.x+0.4,c.y);
 }
 
@@ -3311,6 +3317,9 @@ function drawBall(){
 }
 function drawAim(){
  const a=M.aim;if(!a||!M.qb)return;const ai=aimInfo(a);if(ai.pull<PASS.PULL_MIN)return;const q=M.qb;
+ if(M.aimShake>0){cx.save();cx.translate(Math.round((Math.random()-0.5)*5),Math.round((Math.random()-0.5)*4));try{drawAimInner(a,ai,q);}finally{cx.restore();}return;}
+ drawAimInner(a,ai,q);}
+function drawAimInner(a,ai,q){
  if(ai.run){const sx=wx(q.x),sy=wy(q.y);ctext('RUN',sx-22*M.dir,sy-46,'#7fffd4');for(let i=0;i<3;i++)rect(sx-(16+i*8)*M.dir-2,sy-30,5,3,'#7fffd4');return;}
  /* Retro-style preview: evenly timed white dots (black outline) for the ball, small dark dots
     for its shadow on the grass. It only shows the first ~80% of the flight, so the exact
