@@ -129,6 +129,7 @@ input.txt{font:inherit;font-size:10px;background:var(--nv);border:2px solid #fff
 #fw{position:absolute;inset:0;width:640px;height:360px;image-rendering:pixelated;pointer-events:none}
 body.mobile .bt{padding:8px 9px 7px}body.mobile .chip{padding:6px 7px 5px}
 .ngc .chip{padding:4px 7px 3px}.ngc input.txt{padding-top:3px;padding-bottom:2px}
+.nwi{white-space:normal;overflow-wrap:anywhere;line-height:1.35;flex:none}
 </style>
 </head>
 <body>
@@ -1345,7 +1346,7 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
   <div class="col" style="flex:1;min-width:0;gap:12px">
    ${box('FANS '+Math.round(L.fan)+'%',`<div class="bar"><i style="width:${L.fan}%"></i></div>`,'padding:10px 8px 7px')}
    <div class="row stretch" style="gap:8px">${box('MORALE',`${mor}% ${face(mor)}`,'flex:1;min-width:0','c')}${box('OFFENSE',stars(R.offS,'o'),'flex:1;min-width:0','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1;min-width:0','c')}</div>
-   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${L.news.slice(0,4).map(n=>`<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0')}
+   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${L.news.slice(0,4).map(n=>`<div class="nwi">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0')}
   </div>
  </div>
  <div class="row" style="gap:7px">
