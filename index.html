@@ -2365,7 +2365,7 @@ function upLive(dt){
    if(passFlightStep(b,b.t,b.t+dt))return;   // swept flight: catches, picks, tips, ball hitting the ground
   }
  }
- contacts();
+ contacts(dt);
 }
 function upQB(f,dt){
  if(M.pt<0.5)steer(f,M.los-6.6,M.ballY,7,34,dt);
@@ -2396,7 +2396,8 @@ function upOL(f,dt){
 function upBlocker(f,dt){
  if(f.blk&&((f.blk.eng&&f.blk.eng!==f)||f.blk.stun>0||(f.blk.shed>0&&f.blk.eng!==f)))f.blk=null;
  const ref=M.carrier||(M.play==='ret'?M.kr:M.rb)||f;
- if(!f.blk){let best=null,bs=1e9;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(M.O.some(o=>o!==f&&o.blk===d))continue;const dd=d2(f,d);if(dd>10)continue;const s=dd+d2(d,ref)*0.6;if(s<bs){bs=s;best=d;}}f.blk=best;}
+ if(f.blk&&M.carrier&&f.blk.x<M.carrier.x-0.6&&f.blk.eng!==f)f.blk=null;
+ if(!f.blk){let best=null,bs=1e9;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(M.O.some(o=>o!==f&&o.blk===d))continue;if(M.carrier&&d.x<M.carrier.x-0.6)continue;/* nobody can block a defender chasing from behind */const dd=d2(f,d);if(dd>10)continue;const s=dd+d2(d,ref)*0.6;if(s<bs){bs=s;best=d;}}f.blk=best;}
  const d=f.blk;
  if(d){if(d.eng===f)holdBlock(f,d,dt);else{steer(f,d.x,d.y,f.spd*0.92,f.acc,dt);if(d2(f,d)<1.1&&!d.eng&&d.shed<=0)engage(f,d);}}
  else steer(f,ref===f?f.x+2:ref.x+4,f.y,f.spd*0.6,14,dt);
@@ -2410,7 +2411,7 @@ function upChase(f,dt){
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
-function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8;steer(f,c.x+c.vx*lead,c.y+c.vy*lead,f.spd,f.acc+6,dt);}
+function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8;steer(f,c.x+c.vx*lead,c.y+c.vy*lead,f.spd*(dist<3.5?1.07:1),f.acc+6,dt);}   // a final burst when he's right on the runner
 function upDef(f,dt){
  if(f.eng){const h=M.carrier||M.qb||f.eng;const dx=h.x-f.x,dy=h.y-f.y,l=Math.hypot(dx,dy)||1;f.vx=dx/l*0.8;f.vy=dy/l*0.8;f.x+=f.vx*dt;f.y+=f.vy*dt;return;}
  const c=M.carrier;
@@ -2453,9 +2454,16 @@ const STEP=3.6;
 function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,0.6,52.7);c.jk=0.3;sfx('juke');}
 function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.carrier.x,M.carrier.y);}
 function fairCatch(){if(M&&M.play==='ret'&&M.retKind==='punt'&&!M.caught){M.fair=true;banner('FAIR CATCH','','#fff',0.9);}}
-function contacts(){
+function contacts(dt){
  const c=M.carrier;
- if(c){if(c.dive>0)return;for(const d of M.D){if(d.stun>0||d.eng||d.dive>0)continue;if(d2(d,c)<0.8){tackleAttempt(d,c);if(M.phase!=='live')return;}}}
+ if(c){if(c.dive>0)return;
+  // A defender held by a blocker who ends up right on (or behind) the runner sheds the block.
+  for(const d of M.D){if(d.eng&&(d2(d,c)<1.0||d.x<c.x-0.6)){if(d.eng.blk===d)d.eng.blk=null;d.eng=null;d.shed=0;}}
+  for(const d of M.D){if(d.stun>0||d.eng||d.dive>0)continue;const dd=d2(d,c);
+  if(dd<0.8){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live')return;continue;}
+  // Chasing right on his heels: after a moment in arm's reach he gets a hand on him
+  // (otherwise an equally fast defender could trail a runner forever without tackling).
+  if(dd<1.35){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>0.3){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live')return;}}else d.trail=0;}}
  else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){M.aim=null;if(Math.random()<0.86){q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}
 }
 /* ---------- diving tackles ----------
@@ -2465,7 +2473,7 @@ function contacts(){
 function maybeDefDive(f,dt){
  const c=M.carrier;if(!c||M.phase!=='live'||f.dove||f.eng||f.shed>0||c.dive>0||c.down>0)return;
  if(M.play==='run'&&M.pt<0.5)return;
- const d=d2(f,c);if(d<1.2||d>3.2)return;
+ const d=d2(f,c);if(d<0.9||d>3.2)return;
  const lead=0.3,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y);
  const sp=Math.hypot(c.vx,c.vy);if(sp<2.5)return;                 // only on a moving runner
  const closing=((c.x-f.x)*(f.vx-c.vx)+(c.y-f.y)*(f.vy-c.vy))/(d||1); // > 0 means he's gaining
