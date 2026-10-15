@@ -518,6 +518,9 @@ function nflQuality(r,pos){
  const tp=clamp((NFL_POWER[String(r.team||'').toUpperCase()]||0)/8,-1,1);
  let seed=0;for(let i=0;i<key.length;i++)seed=(seed*31+key.charCodeAt(i))%997;const noise=(seed%13-6)*0.05;
  const status=String(r.status||'').toUpperCase(),stB=status==='RES'||status==='PUP'||status==='RSN'?-0.4:status==='DEV'?-0.6:0;
+ // Real production this season (blended with last season early on), as a percentile within
+ // the position - computed weekly by build_rosters.py from nflverse player stats.
+ if(r.perf!=null&&r.perf!==''){const pf=+r.perf;return clamp(3.2+6.4*Math.pow(pf,3)+tp*0.2+(r.depth>2?-0.4:0)+stB*0.5,2.5,9.8);}
  if(override)return clamp(4.6+(override-7)*1.45+tp*0.35+(r.depth>1?-0.6:0)+stB*0.5,3.4,9.3);
  const exp=Math.min(9,Math.max(0,Number(r.years_exp)||0)),dn=Number(r.draft_number)||0;
  const draftB=(dn?(dn<=10?0.9:dn<=32?0.65:dn<=64?0.4:dn<=100?0.2:0):-0.1)*(exp<=5?1:0.5);
@@ -577,6 +580,16 @@ function buildSchedule(){
  const b1=ri(6,8),b2=ri(10,13);let oi=0;const weeks=[];
  for(let w=1;w<=18;w++){if(w===b1)weeks.push(g17.slice(0,8));else if(w===b2)weeks.push(g17.slice(8));else weeks.push(order[oi++].g);}
  L.sched=weeks.map(gs=>gs.map(([h,a])=>({h,a,hs:null,as:null})));
+ balanceHome();
+}
+/* Make every team play 8 or 9 home games (the pairing above can pile home games onto one
+   team). Only games not yet played are flipped, so it is safe on an existing season too. */
+function balanceHome(){
+ if(!L.sched)return;const hc={};for(const t of L.teams)hc[t.id]=0;
+ for(const w of L.sched)for(const g of w)hc[g.h]++;
+ for(let pass=0;pass<40;pass++){let moved=false;
+  for(const w of L.sched)for(const g of w){if(g.hs!=null)continue;if(hc[g.h]-hc[g.a]>=2){const t=g.h;g.h=g.a;g.a=t;hc[g.a]--;hc[g.h]++;moved=true;}}
+  if(!moved)break;}
 }
 function teamGame(wk,t){const w=L.sched[wk-1];return w?w.find(g=>g.h===t||g.a===t)||null:null;}
 
@@ -1125,7 +1138,7 @@ function syncNFLLooks(){
   L.looksV=1;PRC.clear();for(const k in AVC)delete AVC[k];SPC.clear();save();if(UI.scr!=='game')render();
  }).catch(()=>{}).finally(()=>{window.__lookSync=false;});
 }
-SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;syncNFLLooks();if(L.awardsShow&&L.awards&&L.awards[0]&&!UI.modal)setTimeout(()=>{if(UI.scr==='hub'&&!UI.modal&&L.awardsShow)modal(awardsHTML(L.awards[0]));},0);
+SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){balanceHome();L.homeBal=1;save();}syncNFLLooks();if(L.awardsShow&&L.awards&&L.awards[0]&&!UI.modal)setTimeout(()=>{if(UI.scr==='hub'&&!UI.modal&&L.awardsShow)modal(awardsHTML(L.awards[0]));},0);
  const t=L.user,R=teamRatings(t),nodes=tlNodes();
  const nh=(n,x,cur)=>n?`<div class="nd" style="left:${x}%"><div class="a">${n.a}</div><div class="b">${esc(n.b)}</div><div class="dot ${cur?'c':n.res?n.res.c:''}"></div><div class="r">${n.res?n.res.txt:''}</div></div>`:'';
  const div=divStand(T(t).di).map(x=>{const r=L.teams[x];return`<tr class="${x===t?'me':''}"><td style="overflow:hidden;text-overflow:ellipsis">${esc(teamName(x).toUpperCase())}</td><td class="c">${r.w}</td><td class="c">${r.l}</td><td class="c">${r.t}</td></tr>`;}).join('');
@@ -1668,8 +1681,20 @@ const nm=p=>p?pname(p).toUpperCase():'';
 const A=(f,k)=>clamp(eff(f.pl,k)+(f.side==='D'?M.dAdj:0),1,11);
 const effK=(p,k)=>eff(p,k);
 const SKILL=['WR','TE','RB'];
-const COLD=['BUF','NE','NJ','BAL','CIN','CLE','PIT','DEN','KC','NY','PHI','WAS','CHI','GB','SEA','TEN'];
-const DOME=['DET','MIN','NO','ATL','IND','HOU','LV','ARI','LA','DAL'];
+const COLD=['BUF','NE','NJ','BAL','CIN','CLE','PIT','DEN','KC','NY','NYG','NYJ','PHI','WAS','CHI','GB','SEA','TEN'];
+const DOME=['DET','MIN','NO','ATL','IND','HOU','LV','ARI','LA','LAC','DAL'];
+/* Weather by stadium and time of year. Snow only outdoors in cold cities and only later in
+   the season (more likely in the playoffs); the snow belt (Buffalo, Green Bay, Cleveland,
+   Pittsburgh, Chicago, Denver, New England) gets it most. Rain is common in Seattle and
+   in late-autumn cold-weather games. */
+const SNOWBELT=['BUF','GB','CLE','PIT','CHI','DEN','NE'],MIDCOLD=['CIN','KC','NYG','NYJ','NJ','NY','PHI','BAL','WAS'];
+function pickWeather(home){
+ const ab=abbr(home);if(DOME.includes(ab))return'dome';
+ const wk=L.phase==='PO'?19+(L.po?L.po.cur:0):L.week,late=clamp((wk-9)/9,0,1);   // 0 until week 9, 1 by the playoffs
+ const snowP=SNOWBELT.includes(ab)?(late>0?0.08+0.5*late:0):MIDCOLD.includes(ab)?0.03+0.3*late:(ab==='SEA'||ab==='TEN')?0.08*late:0;
+ const rainP=ab==='SEA'?0.32:COLD.includes(ab)?0.14+0.08*late:['MIA','TB','JAX','CAR'].includes(ab)?0.16:0.1;
+ const r=Math.random();return r<snowP?'snow':r<snowP+rainP?'rain':'clear';
+}
 const keys={};
 const ptr={down:false,id:null,x:0,y:0,sx:0,sy:0,t0:0,moved:0,hist:[]};
 
@@ -1680,6 +1705,18 @@ function xpG(pl,v){const s=psOf(pl);if(s)s.xp=Math.max(0,s.xp+Math.round(v));}
 
 /* ---------- field / crowd prerender ---------- */
 function txtCol(c1,c2){return Math.abs(lum(c1)-lum(c2))>70?c2:(lum(c1)>150?'#111':'#fff');}
+/* Home end zones, styled after each stadium: [background, letters, outline, one end, other end]. */
+const EZ_STYLE={ARI:['#97233f','#ffffff','#000000','ARIZONA','CARDINALS'],ATL:['#101820','#a71930','#ffffff','ATLANTA','FALCONS'],
+ BAL:['#241773','#000000','#ffffff','RAVENS','RAVENS'],BUF:['#00338d','#ffffff','#c60c30','BUFFALO','BILLS'],CAR:['#0085ca','#101820','#ffffff','CAROLINA','PANTHERS'],
+ CHI:['#0b162a','#c83803','#ffffff','BEARS','BEARS'],CIN:['#fb4f14','#000000','#ffffff','BENGALS','BENGALS'],CLE:['#ff3c00','#311d00','#ffffff','CLEVELAND','BROWNS'],
+ DAL:['#041e42','#ffffff','#869397','DALLAS','COWBOYS'],DEN:['#002244','#fb4f14','#ffffff','DENVER','BRONCOS'],DET:['#0076b6','#ffffff','#b0b7bc','DETROIT','LIONS'],
+ GB:['#203731','#ffb612','#ffffff','GREEN BAY','PACKERS'],HOU:['#03202f','#ffffff','#a71930','HOUSTON','TEXANS'],IND:['#002c5f','#ffffff','#a2aaad','INDIANAPOLIS','COLTS'],
+ JAX:['#006778','#d7a22a','#101820','JACKSONVILLE','JAGUARS'],KC:['#e31837','#ffffff','#ffb81c','KANSAS CITY','CHIEFS'],LV:['#000000','#a5acaf','#ffffff','LAS VEGAS','RAIDERS'],
+ LAC:['#0080c6','#ffc20e','#ffffff','LOS ANGELES','CHARGERS'],LA:['#003594','#ffd100','#ffffff','LOS ANGELES','RAMS'],MIA:['#008e97','#ffffff','#fc4c02','MIAMI','DOLPHINS'],
+ MIN:['#4f2683','#ffffff','#ffc62f','MINNESOTA','VIKINGS'],NE:['#002244','#ffffff','#c60c30','NEW ENGLAND','PATRIOTS'],NO:['#101820','#d3bc8d','#ffffff','NEW ORLEANS','SAINTS'],
+ NYG:['#0b2265','#ffffff','#a71930','GIANTS','GIANTS'],NYJ:['#125740','#ffffff','#000000','JETS','JETS'],PHI:['#004c54','#ffffff','#a5acaf','EAGLES','EAGLES'],
+ PIT:['#101820','#ffb612','#ffffff','PITTSBURGH','STEELERS'],SF:['#aa0000','#b3995d','#ffffff','49ERS','49ERS'],SEA:['#002244','#ffffff','#69be28','SEAHAWKS','SEAHAWKS'],
+ TB:['#d50a0a','#ffffff','#34302b','TAMPA BAY','BUCCANEERS'],TEN:['#0c2340','#ffffff','#4b92db','TENNESSEE','TITANS'],WAS:['#5a1414','#ffb612','#ffffff','WASHINGTON','COMMANDERS']};
 function buildField(flip){
  const FX=yd=>flip?(120-yd)*PXY:yd*PXY,RX=(yd,w)=>flip?(120-yd-w)*PXY:yd*PXY;
  const W=120*PXY,H=FH,TOP=16,BOT=14,c=document.createElement('canvas');c.width=W;c.height=H+TOP+BOT;const x=c.getContext('2d');
@@ -1691,9 +1728,16 @@ function buildField(flip){
  for(let py=0;py<H;py+=6)R('rgba(0,0,0,.03)',0,py,W,3);
  const us=teamCol(M.g.h===L.user?L.user:M.g.h),hc=teamCol(M.g.h),ac=teamCol(M.g.a);void us;
  const uc=teamCol(L.user),oc=teamCol(M.op);
- const ez=(x0,c,rot,label)=>{R(c.c1,x0,0,10*PXY,H);
-  x.save();x.translate(x0+5*PXY,H/2);x.rotate(rot);x.font='16px "Press Start 2P",monospace';x.textAlign='center';x.textBaseline='middle';x.fillStyle='rgba(0,0,0,.35)';x.fillText(label,2,2);x.fillStyle=txtCol(c.c1,c.c2);x.fillText(label,0,0);x.restore();};
- ez(RX(0,10),uc,flip?Math.PI/2:-Math.PI/2,teamName(L.user).toUpperCase());ez(RX(110,10),oc,flip?-Math.PI/2:Math.PI/2,T(M.op).name.toUpperCase());
+ // Both end zones belong to the HOME team (like a real stadium). Letters are sized to fill
+ // the end zone: as tall as ~60% of its depth and spanning most of the field's width.
+ const hT=M.g.h,hcol=teamCol(hT),st=(L.custom&&hT===L.user)?null:EZ_STYLE[T(hT).abbr];
+ const S=st||[hcol.c1,txtCol(hcol.c1,hcol.c2),'#ffffff',(T(hT).nickname||T(hT).city).toUpperCase(),(T(hT).nickname||T(hT).city).toUpperCase()];
+ const ez=(x0,rot,label)=>{R(S[0],x0,0,10*PXY,H);
+  const fs=Math.max(14,Math.min(Math.floor(10*PXY*0.6),Math.floor(H*0.86/(label.length*1.02))));
+  x.save();x.translate(x0+5*PXY,H/2);x.rotate(rot);x.font=fs+'px "Press Start 2P",monospace';x.textAlign='center';x.textBaseline='middle';
+  x.lineJoin='round';x.lineWidth=Math.max(3,Math.round(fs*0.16));x.strokeStyle='rgba(0,0,0,.35)';x.strokeText(label,2,3);x.strokeStyle=S[2];x.strokeText(label,0,0);
+  x.fillStyle=S[1];x.fillText(label,0,0);x.restore();};
+ ez(RX(0,10),flip?Math.PI/2:-Math.PI/2,S[3]);ez(RX(110,10),flip?-Math.PI/2:Math.PI/2,S[4]);
  for(let yd=10;yd<=110;yd+=5)R('#fff',FX(yd)-1,0,2,H);
  const h1=Math.round(23.58*PYY),h2=Math.round(29.75*PYY);
  for(let yd=11;yd<110;yd++){if(yd%5===0)continue;const px=FX(yd);R('rgba(255,255,255,.85)',px,3,1,4);R('rgba(255,255,255,.85)',px,H-7,1,4);R('rgba(255,255,255,.85)',px,h1-2,1,4);R('rgba(255,255,255,.85)',px,h2-2,1,4);}
@@ -1801,14 +1845,15 @@ function separate(list){for(let i=0;i<list.length;i++)for(let j=i+1;j<list.lengt
 function startMatch(g,uAway){
  const home=g.h===L.user,op=home?g.a:g.h,ha=abbr(g.h);
  const late=L.phase==='PO'||L.week>=12;
- const wxr=DOME.includes(ha)?'dome':(COLD.includes(ha)&&late&&Math.random()<0.4)?'snow':Math.random()<0.12?'rain':'clear';
+ const wxr=pickWeather(g.h);void late;
  M={g,home,op,sc:[0,0],qtr:1,clock:L.settings.qlen,to:3,ps:{},ts:{pyd:0,cmp:0,att:0,ryd:0,td:0,to:0},
   dep:lineup(L.user),odep:lineup(op),dAdj:diffAdj(),cam:45,phase:'ov',O:[],D:[],ov:null,
   pops:[],conf:[],parts:[],shake:0,hype:0,tt:0,runoff:0,ban:null,banT:0,hc:{},plays:0,carries:0,paused:false,
   wx:wxr,wind:wxr==='dome'?0:clamp(Math.round(gauss()*7),-18,18),ballOn:35,ballY:26.67,down:1,fdX:45,los:35,conv:false};
  {const uc=teamCol(L.user),oc=teamCol(op),uJ=home?uc.c1:'#f0f0f0',oJ=home?'#f0f0f0':oc.c1;M.oalt=colDist(uc.c1,oc.c1)<120||(colDist(uJ,oJ)<90);}
  {const du=defaultUnis(g);M.uU=uAway&&uAway.uU!=null?uAway.uU:du.uU;M.uO=uAway&&uAway.uO!=null?uAway.uO:du.uO;}M.uAway=M.uU===1;M.oalt=false;
- M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[buildField(false),buildField(true)];M.crowd=buildCrowd();SPC.clear();
+ M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[buildField(false),buildField(true)];
+ if(document.fonts&&document.fonts.load)document.fonts.load('16px "Press Start 2P"').then(()=>{if(M&&M.g===g)M.fieldCvs=[buildField(false),buildField(true)];}).catch(()=>{});M.crowd=buildCrowd();SPC.clear();
  if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';

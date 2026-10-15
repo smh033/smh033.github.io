@@ -40,6 +40,48 @@ def depth_ranks():
             if k and (k not in out or rk < out[k][0]): out[k] = (rk, r["pos_abb"])
     return out
 
+def stat_url(season):
+    return f"https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_reg_{season}.csv"
+
+def production():
+    """Per-game production score by position from real stats, this season blended with last
+    season (last season fades out as games are played), turned into a percentile 0..1 within
+    each position. Offensive line has no individual stats, so OL get no score."""
+    def load(season):
+        try: return {r["player_id"]: r for r in csv.DictReader(io.StringIO(get(stat_url(season))))}
+        except Exception as e: print("stats unavailable", season, e); return {}
+    cur, prev = load(SEASON), load(SEASON - 1)
+    f = lambda r, k: float(r.get(k) or 0)
+    def score(r, pos):
+        g = max(1.0, f(r, "games"))
+        if pos == "QB": v = f(r,"passing_yards")/25 + f(r,"passing_tds")*4 - f(r,"passing_interceptions")*2 + f(r,"rushing_yards")/10 + f(r,"rushing_tds")*6 + (f(r,"passing_epa")+f(r,"rushing_epa"))*0.3
+        elif pos == "RB": v = f(r,"rushing_yards")/10 + f(r,"rushing_tds")*6 + f(r,"receptions")*0.5 + f(r,"receiving_yards")/10 + f(r,"receiving_tds")*6 + (f(r,"rushing_epa")+f(r,"receiving_epa"))*0.3
+        elif pos in ("WR", "TE"): v = f(r,"receptions")*0.5 + f(r,"receiving_yards")/10 + f(r,"receiving_tds")*6 + f(r,"receiving_epa")*0.3
+        elif pos == "DL": v = f(r,"def_sacks")*4 + f(r,"def_tackles_for_loss")*1.5 + f(r,"def_qb_hits") + (f(r,"def_tackles_solo")+f(r,"def_tackle_assists")*0.5)*0.4 + f(r,"def_fumbles_forced")*3 + f(r,"def_pass_defended")
+        elif pos == "LB": v = (f(r,"def_tackles_solo")+f(r,"def_tackle_assists")*0.5)*0.6 + f(r,"def_sacks")*4 + f(r,"def_tackles_for_loss")*1.5 + f(r,"def_interceptions")*5 + f(r,"def_pass_defended")*1.5 + f(r,"def_fumbles_forced")*3
+        elif pos == "DB": v = f(r,"def_interceptions")*6 + f(r,"def_pass_defended")*2.5 + (f(r,"def_tackles_solo")+f(r,"def_tackle_assists")*0.5)*0.4 + f(r,"def_fumbles_forced")*3 + f(r,"def_tds")*6
+        elif pos == "K": v = f(r,"fg_made")*3 - f(r,"fg_missed")*2.5
+        else: return None, 0
+        return v/g, f(r, "games")
+    POS = {"QB":"QB","RB":"RB","FB":"RB","WR":"WR","TE":"TE","DE":"DL","DT":"DL","NT":"DL","DL":"DL","LB":"LB","ILB":"LB","OLB":"LB","MLB":"LB","CB":"DB","S":"DB","SS":"DB","FS":"DB","DB":"DB","K":"K","PK":"K"}
+    vals = {}
+    for pid in set(cur) | set(prev):
+        r = cur.get(pid) or prev.get(pid); pos = POS.get(r.get("position", ""))
+        if not pos: continue
+        a, ga = score(cur[pid], pos) if pid in cur else (None, 0)
+        b, gb = score(prev[pid], pos) if pid in prev else (None, 0)
+        if a is None and b is None: continue
+        w = ga/(ga+4) if a is not None else 0
+        v = a if b is None else b if a is None else w*a + (1-w)*b
+        if ga + gb < 3: continue                     # too small a sample to judge
+        vals.setdefault(pos, []).append((v, pid))
+    out = {}
+    for pos, lst in vals.items():
+        lst.sort()
+        n = len(lst)
+        for i, (v, pid) in enumerate(lst): out[pid] = round((i + 0.5)/n, 3)
+    return out
+
 def team_power():
     """Point margin per game (60%) blended with the betting-line implied margin (40%)."""
     try:
@@ -91,6 +133,10 @@ def main():
     for r in rows:
         d = dr.get(r.get("gsis_id")) or dr.get(r.get("espn_id"))
         if d and r["team"]: r["depth"], r["dpos"] = d
+    perf = production()
+    for r in rows:
+        if r.get("gsis_id") in perf: r["perf"] = perf[r["gsis_id"]]
+    print(f"production percentile for {sum(1 for r in rows if 'perf' in r)} players")
     print(f"{cut} released players moved to free agency; depth chart entries matched: {sum(1 for r in rows if 'depth' in r)}")
     rows.sort(key=lambda r: (r["team"], r["position"], r["full_name"]))
     out = {"season": SEASON, "builtAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0, tzinfo=None).isoformat() + "Z",
