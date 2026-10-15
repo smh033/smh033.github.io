@@ -241,7 +241,9 @@ const rmax=()=>L.settings.rmax;
 const capUsed=t=>rosterOf(t).reduce((s,p)=>s+p.sal,0);
 const capRoom=()=>L.cap-capUsed(L.user);
 const ccCost=p=>Math.max(2,Math.round(starsOf(p)*starsOf(p)*1.1));
-const extCost=p=>Math.max(1,Math.round(starsOf(p)*1.8));
+/* Re-signing cost in coins: a longer contract costs more (3 years = the base price). */
+const YRS_MULT=[0,0.55,0.8,1,1.3,1.6];
+const extCost=(p,yrs)=>Math.max(1,Math.round(starsOf(p)*1.8*YRS_MULT[clamp(yrs||3,1,5)]));
 
 /* ---------- lineup (10/12 stars + filler) ---------- */
 const SLOTS=['QB','RB','WR','WR','TE','OL','OL','DL','DL','LB','LB','DB','DB','DB','K'];
@@ -328,10 +330,10 @@ function createLeague(ut,coach,opt){
 function fillAIRoster(t){
  const tq=L.teams[t].tq;let r=rosterOf(t);
  for(const pos of AI_T.slice(0,rmax())){if(rosterOf(t).length>=rmax())break;const need=AI_T.slice(0,rmax()).filter(x=>x===pos).length;if(r.filter(p=>p.pos===pos).length>=need)continue;
-  const fa=faList().find(p=>p.pos===pos&&Math.abs(ovr(p)-tq)<1.6&&Math.random()<0.6);
+  const fa=faList().find(p=>p.pos===pos&&Math.abs(ovr(p)-tq)<1.6&&!(p.rel&&p.rel.t===t&&p.rel.y===L.year)&&Math.random()<0.6);
   if(fa){fa.team=t;fa.yrs=ri(1,3);}else{const p=genPlayer(pos,clamp(tq+rnd(-1.3,1.3),1.5,9.5));p.team=t;addPlayer(p);}r=rosterOf(t);}
  while(rosterOf(t).length<rmax()){const p=genPlayer(pick(AI_T),clamp(tq+rnd(-1.5,1),1.5,9));p.team=t;addPlayer(p);}
- r=rosterOf(t);if(r.length>rmax()){const st=starterSet(t);const cut=r.filter(p=>!st.has(p.id)).sort((a,b)=>ovr(a)-ovr(b));for(let i=0;i<r.length-rmax()&&i<cut.length;i++){cut[i].team=-1;cut[i].yrs=1;}}
+ r=rosterOf(t);if(r.length>rmax()){const st=starterSet(t);const cut=r.filter(p=>!st.has(p.id)).sort((a,b)=>ovr(a)-ovr(b));for(let i=0;i<r.length-rmax()&&i<cut.length;i++){cut[i].team=-1;cut[i].yrs=1;cut[i].rel={t,y:L.year,w:L.week||0};}}
 }
 function addFA(q){const pos=pick(['QB','RB','WR','WR','TE','OL','OL','K','DL','DL','LB','DB','DB']);let qq=q;if(qq==null){qq=rnd(2.6,5.8);if(Math.random()<.12)qq=rnd(6,7.6);}const p=genPlayer(pos,qq,ri(23,33));p.team=-1;p.yrs=ri(1,3);return addPlayer(p);}
 const faList=()=>L.players.filter(p=>p.team===-1).sort((a,b)=>ovr(b)-ovr(a));
@@ -609,8 +611,20 @@ function simWeekOthers(){for(const g of curGames())if(g.hs==null){const[hs,as]=s
 function weeklyUpkeep(bye){
  for(const p of L.players){if(p.inj>0)p.inj--;p.cond=Math.min(100,p.cond+(bye?26:13)+L.fac.rehab*1.6);}
  for(const p of L.players)if(p.team>=0&&p.team!==L.user&&Math.random()<0.005)p.inj=ri(1,3);
- if(L.rosterMode!=='NFL'){const fa=faList();for(let i=0;i<3&&fa.length>30;i++){const x=pick(fa);if(x)removePlayer(x);}for(let i=0;i<3;i++)addFA();}
+ if(L.rosterMode!=='NFL'){const fa=faList().filter(p=>!p.rel);for(let i=0;i<3&&fa.length>30;i++){const x=pick(fa);if(x)removePlayer(x);}for(let i=0;i<3;i++)addFA();}
  for(const p of rosterOf(L.user))p.mor=clamp(p.mor+(65-p.mor)*0.06,0,100);
+ // other teams shake up their rosters: cut a player now and then and sign a replacement
+ if(L.phase==='REG')for(const t of L.teams){if(t.id===L.user||Math.random()>=0.04)continue;aiRelease(t.id,true);}
+}
+/* An AI team releases someone (a backup, an aging vet, or a player who is hurt for a while).
+   He becomes a free agent anyone can sign, and the team fills his spot. */
+function aiRelease(t,refill){
+ const r=rosterOf(t);if(r.length<3)return null;const st=starterSet(t);
+ const score=p=>(st.has(p.id)?3:0)+ovr(p)*0.5-Math.max(0,p.age-30)*0.6-(p.inj>2?2:0)+rnd(0,1.2);
+ const p=r.slice().sort((a,b)=>score(a)-score(b))[0];if(!p)return null;
+ p.team=-1;p.yrs=ri(1,2);p.bench=false;p.mor=clamp(p.mor-10,20,100);p.rel={t,y:L.year,w:L.phase==='REG'?L.week:0};
+ news(abbr(t)+' release '+p.pos+' '+fullname(p)+'.');
+ if(refill)fillAIRoster(t);return p;
 }
 function advanceWeek(){
  simWeekOthers();
@@ -740,7 +754,7 @@ function runOffseasonAging(){
  for(const k of['oc','dc'])if(L[k]){L[k].yrs--;if(L[k].yrs<=0){news('Your '+k.toUpperCase()+' '+L[k].ln+' leaves as his contract ends.');L[k]=null;}}
 }
 function finishResign(keep){
- for(const id of L.off.expiring){const p=P(id);if(!p)continue;
+ for(const id of L.off.expiring){const p=P(id);if(!p||p.team!==L.user)continue;   // traded away meanwhile
   if(keep.includes(id)){p.yrs=(L.off.yrs&&L.off.yrs[id])||3;p.sal=salFor(starsOf(p),p.age);p.mor=clamp(p.mor+10,0,100);}
   else{p.team=-1;p.yrs=ri(1,3);news(fullname(p)+' leaves in free agency.');}}
  L.off.expiring=[];
@@ -776,7 +790,7 @@ function draftAI(n){
   const p=cand[Math.min(cand.length-1,Math.floor(Math.pow(Math.random(),2)*3))].p;
   D.pool.splice(D.pool.indexOf(p.id),1);
   const t=pick(L.teams.filter(x=>x.id!==L.user)).id;delete p.scout;p.team=t;
-  const r=rosterOf(t);if(r.length>rmax()){const w=r.filter(x=>x!==p).sort((a,b)=>ovr(a)-ovr(b))[0];if(w){w.team=-1;w.yrs=1;}}
+  const r=rosterOf(t);if(r.length>rmax()){const w=r.filter(x=>x!==p).sort((a,b)=>ovr(a)-ovr(b))[0];if(w){w.team=-1;w.yrs=1;w.rel={t,y:L.year,w:0};}}
   D.log.unshift({id:p.id,t,r:D.round+1});
  }
 }
@@ -795,6 +809,8 @@ function finishDraft(){
  const D=L.draft;
  for(const id of D.pool){const p=P(id);if(p){if(Math.random()<.4){p.team=-1;delete p.scout;}else removePlayer(p);}}
  L.draft=null;
+ // offseason roster cuts: most teams let at least one player go
+ for(const t of L.teams)if(t.id!==L.user&&Math.random()<0.6)aiRelease(t.id,false);
  for(const t of L.teams)if(t.id!==L.user)fillAIRoster(t.id);
  if(L.rosterMode!=='NFL')while(faList().length<34)addFA();
 }
@@ -1024,9 +1040,9 @@ function render(){
  const ui=$('#ui');
  if(UI.scr==='game'){$('#cv').style.display='block';return;}
  $('#cv').style.display='none';
- const sc=ui.querySelector('.scroll');const keep=sc&&UI.keepScroll?sc.scrollTop:0;
+ const keep=UI.keepScroll?[...ui.querySelectorAll('.scroll')].map(e=>e.scrollTop):null;
  ui.innerHTML=SCR[UI.scr]()+(UI.modal?`<div class="modal" data-a="mbg">${UI.modal}</div>`:'');
- if(keep){const s2=ui.querySelector('.scroll');if(s2)s2.scrollTop=keep;}
+ if(keep){[...ui.querySelectorAll('.scroll')].forEach((e,i)=>{if(keep[i])e.scrollTop=keep[i];});}
  UI.keepScroll=false;
  if(UI.scr==='champ')startFireworks();
 }
@@ -1572,13 +1588,13 @@ ACT.finfo=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-a
 ACT.capUp=()=>{if(L.cc<CFG.capCost||L.cap>=CFG.capMax)return;L.cc-=CFG.capCost;L.cap+=CFG.capStep;sfx('coin');save();render();toast('SALARY CAP IS NOW '+L.cap+'M');};
 function ensureFA(){if(!L)return;let n=faList().length,k=0;if(n>=24)return;while(n<34&&k<60){addFA();n=faList().length;k++;}save();}
 SCR.fa=()=>{ensureFA();
- const f=UI.sub.f||'ALL',pg=UI.sub.pg||0;let r=faList();if(f!=='ALL')r=r.filter(p=>p.pos===f);
+ const f=UI.sub.f||'ALL',pg=UI.sub.pg||0;let r=faList();const cut=p=>p.rel&&p.rel.y>=L.year-1;if(f==='CUT')r=r.filter(cut);else if(f!=='ALL')r=r.filter(p=>p.pos===f);
  const per=rmax()===12?6:5,n=per*2,pages=Math.max(1,Math.ceil(r.length/n)),pr=r.slice(pg*n,pg*n+n);
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl('FREE AGENTS')}</div><div class="coin">CAP ${fmtM(capRoom())}</div></div>
- <div class="row ctr" style="gap:4px">${['ALL',...POSL].map(x=>`<span class="chip ${f===x?'on':''}" data-a="faf" data-f="${x}">${x}</span>`).join('')}</div>
+ <div class="row ctr" style="gap:4px">${['ALL','CUT',...POSL].map(x=>`<span class="chip ${f===x?'on':''}" data-a="faf" data-f="${x}">${x==='CUT'?'RELEASED':x}</span>`).join('')}</div>
  <div class="row grow" style="gap:6px"><button class="bt ico" data-a="fapg" data-d="-1" ${pg>0?'':'disabled'}>&lt;</button>
-  <div class="grow" style="display:grid;grid-template-columns:repeat(${per},auto);justify-content:center;gap:8px 7px;align-content:center">${pr.map(p=>pcard(p,L.user,{sm:per===6,act:'faP',extra:`<div style="text-align:center;padding:2px 0 3px;background:#000" class="s7">${ccCost(p)} <i class="cc"></i> · ${p.sal.toFixed(0)}M</div>`})).join('')||'<div class="dim">NO FREE AGENTS</div>'}</div>
+  <div class="grow" style="display:grid;grid-template-columns:repeat(${per},auto);justify-content:center;gap:8px 7px;align-content:center">${pr.map(p=>pcard(p,L.user,{sm:per===6,act:'faP',tag:cut(p)?`<span class="tg ex">CUT ${T(p.rel.t).abbr}</span>`:'',extra:`<div style="text-align:center;padding:2px 0 3px;background:#000" class="s7">${ccCost(p)} <i class="cc"></i> · ${p.sal.toFixed(0)}M</div>`})).join('')||'<div class="dim">NO FREE AGENTS</div>'}</div>
   <button class="bt ico" data-a="fapg" data-d="1" ${pg<pages-1?'':'disabled'}>&gt;</button></div>
  <div class="row"><button class="bt ico" data-a="go" data-s="${L.phase==='OFF'?'off':'fo'}">${ICON.back}</button><div class="sp"></div><span class="s7 dim">ROSTER ${rosterOf(L.user).length}/${rmax()} · PAGE ${pg+1}/${pages} · ${L.rosterMode==='NFL'?'NFL FREE-AGENT DATA · LIVE MOVES IN THIS SAVE':'NEW FREE AGENTS EVERY WEEK'}</span></div></div>`;
 };
@@ -1778,8 +1794,8 @@ SCR.off=()=>{
  if(O.step==='prog'){const ch=O.changes.map(c=>{const p=P(c.id);if(!p)return'';return`<tr><td>${p.pos}</td><td>${esc(pname(p).toUpperCase())}</td><td>${p.age}</td><td>${Object.entries(c.ch).map(([k,v])=>`<span class="${v>0?'grt':'rdt'}">${ATTR[k].split(' ').pop().slice(0,4)} ${v>0?'+':''}${v}</span>`).join(' ')}</td></tr>`;}).join('');
   return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('PLAYER PROGRESSION')}</div><div style="width:50px"></div></div><div class="row grow stretch" style="gap:10px"><div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th>AGE</th><th>CHANGES</th></tr>${ch||'<tr><td colspan="4" class="dim">NO CHANGES</td></tr>'}</table></div>
   <div class="col" style="width:200px;gap:10px">${box('RETIRED',`<div class="s7" style="line-height:2">${O.retired.map(esc).join('<br>')||'NONE'}</div>`)}${box('HALL OF FAME',`<div class="s7 yl" style="line-height:2">${O.hof.map(esc).join('<br>')||'<span class="dim">NONE</span>'}</div>`)}</div></div><div class="row end"><button class="bt y big" data-a="off2">CONTRACTS &gt;</button></div></div>`;}
- if(O.step==='con'){const rows=O.expiring.map(id=>{const p=P(id);if(!p)return'';const k=O.keep.includes(id);return`<tr><td>${p.pos}</td><td>${esc(fullname(p).toUpperCase())}</td><td>${p.age}</td><td>${stars(starsOf(p),'xs')}</td><td class="r">${salFor(starsOf(p),p.age).toFixed(1)}M</td><td class="r">${extCost(p)} <i class="cc"></i></td><td class="r" style="white-space:nowrap"><button class="bt ${k?'':'r'}" style="padding:3px 5px 2px" data-a="keepSet" data-id="${id}" data-v="0">LET GO</button> <button class="bt ${k?'g':''}" style="padding:3px 5px 2px" data-a="keepSet" data-id="${id}" data-v="1">KEEP</button>${k?` <span class="row" style="display:inline-flex;gap:2px;vertical-align:middle">${[1,2,3,4,5].map(y=>`<span class="chip ${((O.yrs||{})[id]||3)===y?'on':''}" style="padding:3px 4px 2px" data-a="keepYrs" data-id="${id}" data-v="${y}">${y}Y</span>`).join('')}</span>`:''}</td></tr>`;}).join('');
-  const cost=O.keep.reduce((s,id)=>s+extCost(P(id)),0);
+ if(O.step==='con'){const rows=O.expiring.map(id=>{const p=P(id);if(!p)return'';const k=O.keep.includes(id);return`<tr><td>${p.pos}</td><td>${esc(fullname(p).toUpperCase())}</td><td>${p.age}</td><td>${stars(starsOf(p),'xs')}</td><td class="r">${salFor(starsOf(p),p.age).toFixed(1)}M</td><td class="r">${k?extCost(p,(O.yrs||{})[id]||3)+' <i class="cc"></i>':'<span class="dim">'+extCost(p,1)+'-'+extCost(p,5)+'</span>'}</td><td class="r" style="white-space:nowrap"><button class="bt ${k?'':'r'}" style="padding:3px 5px 2px" data-a="keepSet" data-id="${id}" data-v="0">LET GO</button> <button class="bt ${k?'g':''}" style="padding:3px 5px 2px" data-a="keepSet" data-id="${id}" data-v="1">KEEP</button>${k?` <span class="row" style="display:inline-flex;gap:2px;vertical-align:middle">${[1,2,3,4,5].map(y=>`<span class="chip ${((O.yrs||{})[id]||3)===y?'on':''}" style="padding:3px 4px 2px" data-a="keepYrs" data-id="${id}" data-v="${y}" title="${extCost(p,y)} COINS">${y}Y</span>`).join('')}</span>`:''}</td></tr>`;}).join('');
+  const cost=O.keep.reduce((s,id)=>s+extCost(P(id),(O.yrs||{})[id]||3),0);
   return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('CONTRACTS')}</div><div style="width:50px"></div></div><div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th>AGE</th><th>RATING</th><th class="r">NEW SALARY</th><th class="r">COST</th><th class="r">DECISION · YEARS</th></tr>${rows||'<tr><td colspan="7" class="dim">NO EXPIRING CONTRACTS</td></tr>'}</table></div><div class="row"><span>COST: <span class="${cost>L.cc?'rdt':'yl'}">${cost}</span> <i class="cc"></i></span><div class="sp"></div><button class="bt y big" data-a="off3" ${cost>L.cc?'disabled':''}>TO THE DRAFT &gt;</button></div></div>`;}
  if(O.step==='draft')return SCR.draft();
  if(O.step==='jobs'){const c=UI.sub.c||T(L.user).conf;return`<div class="screen">${ttl('JOB OFFERS')}
@@ -1793,7 +1809,7 @@ ACT.off2=()=>{L.off.step='con';render();};
 ACT.keepSet=d=>{const id=+d.id,O=L.off;O.yrs=O.yrs||{};const i=O.keep.indexOf(id);if(d.v==='1'){if(i<0)O.keep.push(id);if(!O.yrs[id])O.yrs[id]=3;}else if(i>=0)O.keep.splice(i,1);UI.keepScroll=true;save();render();};
 ACT.keepYrs=d=>{const O=L.off;O.yrs=O.yrs||{};O.yrs[+d.id]=+d.v;UI.keepScroll=true;save();render();};
 ACT.keep=d=>{const id=+d.id,O=L.off;const i=O.keep.indexOf(id);if(i>=0)O.keep.splice(i,1);else O.keep.push(id);UI.keepScroll=true;render();};
-ACT.off3=()=>{const O=L.off,cost=O.keep.reduce((s,id)=>s+extCost(P(id)),0);if(cost>L.cc)return;L.cc-=cost;finishResign(O.keep);O.keep=[];setupDraft(false);O.step='draft';save();UI.sub={};render();};
+ACT.off3=()=>{const O=L.off,cost=O.keep.reduce((s,id)=>s+extCost(P(id),(O.yrs||{})[id]||3),0);if(cost>L.cc)return;L.cc-=cost;finishResign(O.keep);O.keep=[];setupDraft(false);O.step='draft';save();UI.sub={};render();};
 ACT.jc=d=>{UI.sub.c=d.c;render();};
 ACT.jobT=d=>{const t=+d.t,R=teamRatings(t);modal(`<div class="mp" style="width:600px;align-items:center;text-align:center">${ttl(esc(T(t).name.toUpperCase()),true)}${L.jobWhy&&L.jobWhy[t]?`<div class="s7 yl">${esc(L.jobWhy[t])}</div>`:''}<div class="row ctr" style="gap:14px"><span>${recStr(t)} LAST SEASON</span>${stars(R.offS,'o')}${stars(R.defS,'d')}</div><div class="row ctr" style="flex-wrap:wrap;gap:5px">${rosterOf(t).map(p=>pcard(p,t,{sm:true,act:'close'})).join('')}</div><div class="row"><button class="bt" data-a="close">BACK</button><button class="bt y big" data-a="jobT2" data-t="${t}">ACCEPT JOB</button></div></div>`);};
 ACT.jobT2=d=>{switchTeam(+d.t);L.off.step='new';L.jobs=null;save();UI.modal=null;go('off');toast('WELCOME TO '+T(+d.t).name.toUpperCase());};
