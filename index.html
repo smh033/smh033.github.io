@@ -1999,6 +1999,7 @@ function crowd(dur,vol){if(!sndOn())return;const ac=audio();if(!ac)return;if(!NO
    ===================================================================== */
 const cv=$('#cv'),cx=cv.getContext('2d');
 const CW=640,CH=360,ST=16,FT=56,FB=328,FH=FB-FT,PXY=10,PYY=FH/53.33,PZ=7,HALFW=CW/2/PXY,AIMG=2.4;
+const CAM_PAD=8;   // the camera may slide this many yards past the end lines, so an end zone isn't jammed against the screen edge
 let M=null;
 const wx=x=>Math.round((M.dir<0?M.cam-x:x-M.cam)*PXY+CW/2),wy=y=>Math.round(FT+y*PYY);
 const d2=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -2334,7 +2335,7 @@ function onsideKick(){
 }
 function startDrive(x,lab){M.to=2;M.cp=2;M.ballOn=clamp(x,10.5,109);M.down=1;M.fdX=Math.min(M.ballOn+10,110);M.ballY=26.67;M.runoff=0;M.conv=false;if(lab)banner(lab,'','#fff',1.3);clockCheck(toPre);}
 function toPre(){
- M.play=null;M.res=null;setupPlay();M.phase='pre';M.pc=PLAY_CLOCK;M.cam=clamp(M.ballOn+12,HALFW,120-HALFW);
+ M.play=null;M.res=null;setupPlay();M.phase='pre';M.pc=PLAY_CLOCK;M.cam=clamp(M.ballOn+12,HALFW-CAM_PAD,120-HALFW+CAM_PAD);
  if(M.down===4&&!M.conv&&!M.went4){
   const opts=[['GO FOR IT',()=>{M.phase='pre';M.went4=true;},'y']];
   if(inFG()||M.ballOn>=60)opts.push(['FIELD GOAL ('+fgDist()+')',()=>{M.phase='pre';startKick('fg',true);},'g']);
@@ -2349,7 +2350,7 @@ const PLAY_CLOCK=25;
 function delayOfGame(){
  if(M.phase!=='pre')return;const pen=Math.min(5,Math.max(0,(M.ballOn-10)/2));
  M.ballOn=Math.max(10.5,M.ballOn-pen);if(M.conv)M.fdX=110;M.aim=null;M.input=null;M.pb=false;
- setupPlay();M.pc=PLAY_CLOCK;M.cam=clamp(M.ballOn+12,HALFW,120-HALFW);
+ setupPlay();M.pc=PLAY_CLOCK;M.cam=clamp(M.ballOn+12,HALFW-CAM_PAD,120-HALFW+CAM_PAD);
  sfx('whistle');banner('DELAY OF GAME','-'+Math.round(pen)+' YARDS · '+downTxt().toUpperCase(),'#ffe94a',1.6);
 }
 function scoreTD(){M.sc[0]+=6;M.ts.td++;patChoice();}
@@ -3088,7 +3089,7 @@ function startReturn(kind,landX,landY){
  M.D=cov.map((p,i)=>{const f=mkF(p,'D','COV',sx+rnd(0,6),4+i*(45/(cov.length-1)));f.lane=(f.y-landY)*0.3;return f;});
  M.ball={x0:landX+(kind==='ko'?38:30),y0:landY+rnd(-5,5),x1:landX,y1:landY,T:kind==='ko'?1.9:2.0,t:0,z0:7,z1:1.4,peak:kind==='ko'?11:14,ret:true};
  M.qb=null;M.rb=null;M.carrier=null;M.thrown=true;M.comp=null;M.aim=null;M.steer=null;
- M.phase='live';M.pt=0;M.cam=clamp(landX+14,HALFW,120-HALFW);
+ M.phase='live';M.pt=0;M.cam=clamp(landX+14,HALFW-CAM_PAD,120-HALFW+CAM_PAD);
  sfx('kick');
 }
 
@@ -3249,7 +3250,7 @@ function upCam(dt){
  else if(M.carrier)f=M.carrier.x+(M.play==='intret'?-6:7);
  else if(M.qb)f=M.qb.x+(M.aim?21:16);   // look further downfield while aiming
  else f=M.cam;
- f=clamp(f,HALFW,120-HALFW);M.cam+=(f-M.cam)*Math.min(1,dt*3.2);
+ f=clamp(f,HALFW-CAM_PAD,120-HALFW+CAM_PAD);M.cam+=(f-M.cam)*Math.min(1,dt*3.2);
 }
 function step(dt){
  if(M.slowmo>0){M.slowmo-=dt;dt*=0.38;}
@@ -3308,6 +3309,12 @@ function drawField(){
  rect(0,0,CW,CH,'#1d5a22');rect(0,0,CW,ST,'#0b0d1c');
  drawStands();
  cx.drawImage(M.fieldCvs[M.dir<0?1:0],Math.round(-(M.dir<0?120-M.cam:M.cam)*PXY+CW/2),FT-16);
+ // past the end lines: sideline turf + goal posts at the back of each end zone
+ {const e0=wx(0),e1=wx(120),lo=Math.min(e0,e1),hi=Math.max(e0,e1);if(lo>0)rect(0,FT-16,lo,FH+30,'#2c7a31');if(hi<CW)rect(hi,FT-16,CW-hi,FH+30,'#2c7a31');
+  for(const ex of[e0,e1]){if(ex<-20||ex>CW+20)continue;const yb=wy(26.67),y1=wy(23.58),y2=wy(29.75),h=20;
+   rect(ex-1,yb-h+2,4,h,'rgba(0,0,0,.25)');rect(ex-2,yb-h,4,h,'#e8b820');                  // post
+   rect(ex-2,y1-h,4,y2-y1,'#ffd23a');                                                     // crossbar (runs across the field)
+   rect(ex-2,y1-h-26,4,26,'#ffd23a');rect(ex-2,y2-h-26,4,26,'#ffd23a');}}               // uprights
  if(M.wx==='snow')rect(0,FT,CW,FH,'rgba(255,255,255,.14)');else if(M.wx==='rain')rect(0,FT,CW,FH,'rgba(20,30,60,.16)');
  const showLines=M.phase==='pre'||M.phase==='live'||M.phase==='dead';
  if(showLines&&M.play!=='ret'&&M.O.length){rect(wx(M.los)-1,FT,2,FH,'rgba(60,120,255,.95)');if(M.fdX<110&&!M.conv)rect(wx(M.fdX)-1,FT,2,FH,'rgba(255,230,0,.95)');
