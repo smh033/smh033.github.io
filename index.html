@@ -2099,6 +2099,20 @@ function buildField(flip){
  for(const yd of[6,10,110,114]){const cl={helm:hc.c1,stripe:hc.c1,jersey:'#f4f4f4',trim:hc.c1,pants:hc.c1,socks:'#f4f4f4',skin:SKIN[(yd*3)%6]};person(yd*PXY,cl,1);}
  return c;
 }
+/* End-zone stands (behind each end line): columns of fans in home colours behind a padded wall. */
+function buildEzStands(){
+ const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],W=220,HH=FB-FT+44;
+ for(let f=0;f<2;f++){const c=document.createElement('canvas');c.width=W;c.height=HH;const g=c.getContext('2d');
+  g.fillStyle='#161830';g.fillRect(0,0,W,HH);
+  let seed=29;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  const misc=['#e8e8e8','#c04040','#3a6ac0','#d0b040','#40a060'];
+  for(let col=0;col*6<W-8;col++){const x=W-14-col*6;g.fillStyle=col%2?'#202346':'#262a55';g.fillRect(x-2,0,2,HH);   // aisle between rows of seats
+   for(let y=(col%2)*2;y<HH;y+=4){const r=R(),r2=R(),r3=R();if(r<0.08)continue;const cl=r<0.55?hc.c1:r<0.75?hc.c2:r<0.85?oc.c1:misc[Math.floor(r2*5)];
+    const up=f===1&&((y*7+col*13)%10)<4?1:0;g.fillStyle=cl;g.fillRect(x+up,y,3,3);g.fillStyle=SKIN[Math.floor(r3*6)];g.fillRect(x+3+up,y+1,2,2);}}
+  g.fillStyle=hc.c1;g.fillRect(W-8,0,8,HH);g.fillStyle='rgba(255,255,255,.25)';g.fillRect(W-8,0,1,HH);g.fillStyle='#8a8f9a';g.fillRect(W-3,0,3,HH);   // padded wall
+  fr.push(c);}
+ return fr;
+}
 function buildCrowd(){
  const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],HH=FT-16-ST;
  for(let f=0;f<2;f++){const c=document.createElement('canvas');c.width=640;c.height=HH;const g=c.getContext('2d');
@@ -2238,7 +2252,7 @@ function startMatch(g,uAway){
  {const uc=teamCol(L.user),oc=teamCol(op),uJ=home?uc.c1:'#f0f0f0',oJ=home?'#f0f0f0':oc.c1;M.oalt=colDist(uc.c1,oc.c1)<120||(colDist(uJ,oJ)<90);}
  {const du=defaultUnis(g);M.uU=uAway&&uAway.uU!=null?uAway.uU:du.uU;M.uO=uAway&&uAway.uO!=null?uAway.uO:du.uO;}M.uAway=M.uU===1;M.oalt=false;
  M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[buildField(false),buildField(true)];
- if(document.fonts&&document.fonts.load)document.fonts.load('16px "Press Start 2P"').then(()=>{if(M&&M.g===g)M.fieldCvs=[buildField(false),buildField(true)];}).catch(()=>{});M.crowd=buildCrowd();SPC.clear();
+ if(document.fonts&&document.fonts.load)document.fonts.load('16px "Press Start 2P"').then(()=>{if(M&&M.g===g)M.fieldCvs=[buildField(false),buildField(true)];}).catch(()=>{});M.crowd=buildCrowd();M.ezStands=buildEzStands();SPC.clear();
  if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
@@ -3311,10 +3325,17 @@ function drawField(){
  cx.drawImage(M.fieldCvs[M.dir<0?1:0],Math.round(-(M.dir<0?120-M.cam:M.cam)*PXY+CW/2),FT-16);
  // past the end lines: sideline turf + goal posts at the back of each end zone
  {const e0=wx(0),e1=wx(120),lo=Math.min(e0,e1),hi=Math.max(e0,e1);if(lo>0)rect(0,FT-16,lo,FH+30,'#2c7a31');if(hi<CW)rect(hi,FT-16,CW-hi,FH+30,'#2c7a31');
-  for(const ex of[e0,e1]){if(ex<-20||ex>CW+20)continue;const yb=wy(26.67),y1=wy(23.58),y2=wy(29.75),h=20;
-   rect(ex-1,yb-h+2,4,h,'rgba(0,0,0,.25)');rect(ex-2,yb-h,4,h,'#e8b820');                  // post
-   rect(ex-2,y1-h,4,y2-y1,'#ffd23a');                                                     // crossbar (runs across the field)
-   rect(ex-2,y1-h-26,4,26,'#ffd23a');rect(ex-2,y2-h-26,4,26,'#ffd23a');}}               // uprights
+  // stands start ~3 yards behind the end line, on both ends
+  if(M.ezStands){const st=M.ezStands[M.hype>0?Math.floor(M.tt*8)%2:0],gap=30,top=FT-22;
+   if(lo-gap>0)cx.drawImage(st,Math.round(lo-gap-st.width),top);
+   if(hi+gap<CW){cx.save();cx.translate(Math.round(hi+gap+st.width),top);cx.scale(-1,1);cx.drawImage(st,0,0);cx.restore();}}
+  // goal posts at the back of each end zone: post, crossbar across the field, two uprights
+  for(const ex0 of[e0,e1]){if(ex0<-30||ex0>CW+30)continue;const ex=ex0+(ex0===lo?-6:6),yb=wy(26.67),y1=wy(23.58),y2=wy(29.75),h=22,up=34;
+   rect(ex-2,yb-1,10,3,'rgba(0,0,0,.25)');rect(ex+2,y1-h+3,5,y2-y1,'rgba(0,0,0,.18)');            // shadows
+   rect(ex-3,yb-h,6,h,'#d9a514');rect(ex-3,yb-h,2,h,'#ffe066');                                    // padded post
+   rect(ex-3,y1-h,6,y2-y1+3,'#ffd23a');rect(ex-3,y1-h,2,y2-y1+3,'#fff0a0');                        // crossbar
+   rect(ex-2,y1-h-up,4,up,'#ffd23a');rect(ex-2,y2-h-up+3,4,up,'#ffd23a');                          // uprights
+   rect(ex-2,y1-h-up,4,3,'#ff5c5c');rect(ex-2,y2-h-up+3,4,3,'#ff5c5c');}}                        // wind flags
  if(M.wx==='snow')rect(0,FT,CW,FH,'rgba(255,255,255,.14)');else if(M.wx==='rain')rect(0,FT,CW,FH,'rgba(20,30,60,.16)');
  const showLines=M.phase==='pre'||M.phase==='live'||M.phase==='dead';
  if(showLines&&M.play!=='ret'&&M.O.length){rect(wx(M.los)-1,FT,2,FH,'rgba(60,120,255,.95)');if(M.fdX<110&&!M.conv)rect(wx(M.fdX)-1,FT,2,FH,'rgba(255,230,0,.95)');
