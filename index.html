@@ -1167,7 +1167,10 @@ ACT.hubGo=()=>{
  const g=userGame();
  if(g)return go('pregame',defaultUnis(g));
  if(L.phase==='REG')return modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl('WEEK '+L.week,true)}<div class="s12">BYE WEEK</div><div class="s7 dim">YOUR PLAYERS REST AND RECOVER CONDITION.</div><button class="bt y big" data-a="adv">CONTINUE</button></div>`);
- if(aliveInPO(L.user))return modal(`<div class="mp" style="width:380px;align-items:center;text-align:center">${ttl(T(L.user).conf+' '+ROUNDS[L.po.cur],true)}<div class="s12">FIRST-ROUND BYE</div><div class="s7 dim">AS THE #1 SEED YOU SKIP THE WILD CARD ROUND. YOUR PLAYERS REST WHILE THE OTHER GAMES ARE PLAYED.</div><div class="row"><button class="bt" data-a="go" data-s="bracket">BRACKET</button><button class="bt y big" data-a="adv">CONTINUE</button></div></div>`);
+ if(L.phase==='PO'){const mine=curGames().find(g=>g.h===L.user||g.a===L.user);
+  // Your playoff game this round is already finished (e.g. right after the Super Bowl): move the bracket on.
+  if(mine&&mine.hs!=null){if(L.lastPost)return go('endweek');advanceWeek();return resumeFlow();}}
+ if(aliveInPO(L.user)&&L.po.cur===0&&!curGames().some(g=>g.h===L.user||g.a===L.user))return modal(`<div class="mp" style="width:380px;align-items:center;text-align:center">${ttl(T(L.user).conf+' '+ROUNDS[L.po.cur],true)}<div class="s12">FIRST-ROUND BYE</div><div class="s7 dim">AS THE #1 SEED YOU SKIP THE WILD CARD ROUND. YOUR PLAYERS REST WHILE THE OTHER GAMES ARE PLAYED.</div><div class="row"><button class="bt" data-a="go" data-s="bracket">BRACKET</button><button class="bt y big" data-a="adv">CONTINUE</button></div></div>`);
  modal(`<div class="mp" style="width:380px;align-items:center;text-align:center">${ttl(ROUNDS[L.po.cur],true)}<div class="s10">${inPlayoffs(L.user)?'ELIMINATED':'SEASON OVER'}</div><div class="s7 dim">${seasonResultText()}</div><div class="row"><button class="bt" data-a="go" data-s="bracket">BRACKET</button><button class="bt y" data-a="adv">SIM ROUND</button><button class="bt" data-a="simpo">SIM ALL</button></div></div>`);
 };
 /* ---------- pregame matchup screen (uniforms + ball) ---------- */
