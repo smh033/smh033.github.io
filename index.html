@@ -229,7 +229,7 @@ function genPlayer(pos,q,age){
  const r=NUMR[pos];p.num=(r.length>2&&Math.random()<.5)?ri(r[2],r[3]):ri(r[0],r[1]);
  p.pot=clamp(ovr(p)+(age<=24?rnd(0.5,3):age<=27?rnd(0,1.2):0),1,10);
  p.lvl=clamp(Math.round((age-21)/2)+1,1,8);p.seasons=Math.max(0,age-22);p.peak=ovr(p);
- p.sal=salFor(starsOf(p),age);
+ p.sal=salFor(starsOf(p),age);retAgeOf(p);
  return p;
 }
 const P=id=>L.pmap[id];
@@ -731,18 +731,54 @@ function progressPlayer(p){
  for(let i=0;i<Math.abs(n);i++){const k=pick(ks),b=p.a[k];if(n>0){if(ovr(p)<p.pot+0.4)p.a[k]=Math.min(10,p.a[k]+1);}else p.a[k]=Math.max(1,p.a[k]-1);if(p.a[k]!==b)ch[k]=(ch[k]||0)+(p.a[k]-b);}
  p.peak=Math.max(p.peak||0,ovr(p));return ch;
 }
+/* ---------- retirement ----------
+   Every player has his own retirement age (set when he's created), based on position:
+   kickers and QBs last longest, running backs the shortest. Nobody retires young unless he
+   is a fading backup. Reaching his age he usually retires, but a player coming off a good
+   season tends to keep going (and pushes his age back a year). */
+const RET_BASE={QB:37,K:38,OL:34,TE:33.5,WR:33,DL:33,LB:32.5,DB:32.5,RB:31};
+function retAgeOf(p){
+ if(p.retAge==null){let a=Math.round((RET_BASE[p.pos]||33)+gauss()*1.6);a=clamp(a,29,42);
+  if(a<=p.age)a=p.age+ri(1,3);     // older players in saves from before this existed get a few more years
+  p.retAge=a;}
+ return p.retAge;}
+/* Season that was good enough to want to keep playing (judged on the season just finished). */
+function goodSeason(p){
+ const s=p.s||{},yr=(p.awards||[]).some(a=>a.endsWith(' '+L.year));if(yr)return true;
+ if(!(s.gp>0))return false;
+ if(p.pos==='QB')return s.pyd>=3200||s.ptd>=24;
+ if(p.pos==='RB')return s.ryd+s.wyd>=1000||s.rtd+s.wtd>=9;
+ if(p.pos==='WR'||p.pos==='TE')return s.wyd>=850||s.wtd>=8;
+ if(p.pos==='K')return s.fga>0&&s.fgm>=20&&s.fgm/s.fga>=0.82;
+ if(p.pos==='OL')return p.team>=0&&L.teams[p.team].w>=11;
+ return s.sck>=8||s.dint>=4||s.tkl>=75;}
+function shouldRetire(p,good){
+ const ra=retAgeOf(p),o=ovr(p);
+ if(p.age>=ra+3||p.age>=43)return true;                                  // hard stop
+ if(p.age<ra){                                                            // before his age: only a washed-up backup quits
+  if(!good&&p.age>=30&&o<3.2&&p.age>=ra-3&&Math.random()<0.25)return true;
+  return false;}
+ if(good||o>=7.5){if(Math.random()<0.15)return true;p.retAge++;return false;}   // still playing well: one more year
+ return Math.random()<(p.age===ra?0.7:0.9);}
+/* Hall of Fame: a long career plus greatness, not one big year. */
+function hofWorthy(p){
+ const c=p.c,aw=p.awards||[],mvp=aw.filter(a=>a.startsWith('MVP')).length;
+ const big=c.pyd>=30000||c.ptd>=220||c.ryd>=9000||c.rtd>=80||c.wyd>=10000||c.wtd>=75||c.sck>=90||c.dint>=45||c.fgm>=350||c.tkl>=1100;
+ if(p.seasons<8)return false;
+ return big||mvp>=2||aw.length>=4||(p.peak>=9&&p.seasons>=10&&aw.length>=1);}
 function runOffseasonAging(){
  const O=L.off;O.changes=[];O.retired=[];O.hof=[];
  for(const p of L.players.slice()){
+  const good=goodSeason(p);retAgeOf(p);
   for(const k in p.s)p.c[k]+=p.s[k];p.s=newStats();
   p.age++;p.seasons++;p.inj=0;p.cond=100;
   const ch=progressPlayer(p);
   if(p.team===L.user&&Object.keys(ch).length)O.changes.push({id:p.id,ch});
   const o=ovr(p);
-  if((p.age>=34&&Math.random()<.55)||p.age>=36||(p.age>=31&&o<3.5&&Math.random()<.4)){
+  if(shouldRetire(p,good)){
    if(p.team===L.user){O.retired.push(fullname(p)+' ('+p.pos+', '+p.age+')');
-    const c=p.c,aw=(p.awards||[]),big=c.pyd>=12000||c.ryd>=5000||c.wyd>=6000||c.ptd+c.rtd+c.wtd>=45||c.sck>=40||c.dint>=20||aw.some(a=>a.startsWith('MVP'))||aw.length>=2;
-    if((p.peak>=8&&p.seasons>=4)||big){L.hof.unshift({name:fullname(p),pos:p.pos,yrs:p.seasons,team:abbr(L.user),peak:Math.round(p.peak*10)/20,c:Object.assign({},c),year:L.year});O.hof.push(fullname(p));}}
+    if(hofWorthy(p)){L.hof.unshift({name:fullname(p),pos:p.pos,yrs:p.seasons,team:abbr(L.user),peak:Math.round(p.peak*10)/20,c:Object.assign({},p.c),year:L.year});O.hof.push(fullname(p));}}
+   else if(p.team>=0&&o>=7)news(abbr(p.team)+' '+p.pos+' '+fullname(p)+' retires at '+p.age+'.');
    removePlayer(p);continue;}
   if(p.team===-1&&Math.random()<.35){removePlayer(p);continue;}
   p.mor=clamp(Math.round((p.mor+65)/2),0,100);
@@ -1382,7 +1418,7 @@ SCR.player=()=>{
   <button class="bt ico" style="align-self:center" data-a="pnav" data-d="-1">&lt;</button>
   <div class="box col" style="flex:1;gap:7px;padding:12px 10px 0"><span class="lbl">${POSNAME[p.pos]}</span>
    <div class="row stretch" style="gap:6px"><div class="col" style="gap:7px;flex:1">
-    ${ln('AGE',p.age)}${ln('CONTRACT','$'+Math.round(p.sal)+'M ('+p.yrs+'Y)')}${ln('MORALE',MORW(p.mor)+' '+face(p.mor))}${ln('CONDITION',CNDW(p))}${ln('VALUE',VALW(p))}${p.awards&&p.awards.length?`<div class="row yl s7" style="gap:6px;flex-wrap:wrap">${p.awards.slice(-4).map(a=>'★ '+a).join(' ')}</div>`:''}${p.bench?'<span class="yl">BENCHED</span>':''}
+    ${ln('AGE',p.age+' <span class="dim s7">· RETIRES ~'+retAgeOf(p)+'</span>')}${ln('CONTRACT','$'+Math.round(p.sal)+'M ('+p.yrs+'Y)')}${ln('MORALE',MORW(p.mor)+' '+face(p.mor))}${ln('CONDITION',CNDW(p))}${ln('VALUE',VALW(p))}${p.awards&&p.awards.length?`<div class="row yl s7" style="gap:6px;flex-wrap:wrap">${p.awards.slice(-4).map(a=>'★ '+a).join(' ')}</div>`:''}${p.bench?'<span class="yl">BENCHED</span>':''}
    </div><div class="col" style="align-items:center;gap:4px"><img class="ava" data-a="pLook" title="EDIT LOOK" src="${portrait(p,t,2)}" width="48" height="48" style="cursor:pointer;border:2px solid #fff;background:${sideOf(p.pos)==='D'?'#e88686':sideOf(p.pos)==='K'?'#d6a067':'#8cc8f5'}"><span>#${p.num}</span><span class="s7 dim" data-a="pLook" style="cursor:pointer">EDIT LOOK</span></div></div>
    <div class="row ctr" style="gap:26px;margin-top:4px"><div class="col" style="align-items:center;gap:4px"><span>RATING</span>${stars(starsOf(p),'lg')}</div><div class="col" style="align-items:center;gap:4px"><span>POTENTIAL</span>${stars(potStars(p),'lg')}</div></div>
    <div class="sp"></div>
