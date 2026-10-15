@@ -3001,7 +3001,11 @@ function contacts(dt){
   // Chasing right on his heels: after a moment in arm's reach he gets a hand on him
   // (otherwise an equally fast defender could trail a runner forever without tackling).
   if(dd<1.35){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>0.3){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live')return;}}else d.trail=0;}}
- else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){if(Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;M.aimShake=0.9;M.shake=Math.max(M.shake||0,3);pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}   /* keep aiming, but the throw is shaky for a moment */
+ else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){if(Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);
+   // a blitzing linebacker / DB can hit-stick the QB: 30% of those strip the ball
+   if((d.role==='LB'||d.role==='DB'||d.role==='S')&&Math.random()<0.10){M.shake=10;pop('HIT STICK!',q.x,q.y,'#ff5c5c');
+    if(Math.random()<0.30){M.ts.to++;cr(q.pl,'fum',1);sfx('bad');looseBall(q.x-0.3,q.y,1.1,rnd(-3,2),rnd(-4,4),rnd(4,7));pop('STRIP SACK!',q.x,q.y-2,'#ff8a8a');return endPlay('fumble',q.x,q.y);}}
+   return endPlay('sack',q.x,q.y);}d.stun=0.8;d.down=0.8;M.aimShake=0.9;M.shake=Math.max(M.shake||0,3);pop('ESCAPED!',q.x,q.y,'#7fffd4');}}}   /* keep aiming, but the throw is shaky for a moment */
 }
 /* ---------- diving tackles ----------
    A defender who is close but can't quite get his hands on a ball carrier
@@ -3034,7 +3038,7 @@ function tackleAttempt(d,c){
  let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,1));if(c.role==='QB'&&!M.scramble)pb*=0.5;
  if(Math.random()<pb){d.stun=0.9;d.down=0.9;c.vx*=0.55;c.vy*=0.55;c.slow=0.3;pop('BROKEN TACKLE!',c.x,c.y,'#7fffd4');M.shake=3;sfx('hit');xpG(c.pl,3);return;}
  // HIT STICK: defensive backs sometimes lay the runner out (10%); 30% of those knock the ball loose.
- const stick=(d.role==='DB'||d.role==='S')&&Math.random()<0.10;
+ const stick=(d.role==='DB'||d.role==='S'||d.role==='LB')&&Math.random()<0.10;   // linebackers too, on anyone (QB scrambles included)
  if(stick){M.shake=10;sfx('hit');pop('HIT STICK!',c.x,c.y,'#ff5c5c');c.vx*=0.2;c.vy*=0.2;}
  const fumP=stick?0.30:clamp(0.04*(1.25-str*0.05),0.025,0.055);   // ~4% on a normal tackle
  if(Math.random()<fumP){M.ts.to++;cr(c.pl,'fum',1);c.down=1;sfx('bad');looseBall(c.x+0.3,c.y,1.1,c.vx*0.5+rnd(-2,3),rnd(-4,4),rnd(4,7));pop('FUMBLE!',c.x,c.y,'#ff8a8a');return endPlay('fumble',c.x,c.y);}
