@@ -2955,7 +2955,7 @@ const HURDLE_T=0.42;
 function hurdle(c){if(!c||c.dive>0||c.down>0||c.hurdle>0)return;c.hurdle=HURDLE_T;c.jk=0;sfx('juke');}
 function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.42;c.dv=0.42;c.vx=Math.max(c.spd*1.25,(c.vx||0)*1.1);c.vy=(c.vy||0)*0.35;c.ty=null;sfx('juke');}
 const STEP=4.4;
-function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,0.6,52.7);c.jk=0.3;sfx('juke');}
+function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,-3,56.3);/* side-stepping past the sideline runs you out of bounds */c.jk=0.3;sfx('juke');}
 function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.carrier.x,M.carrier.y);}
 function fairCatch(){if(M&&M.play==='ret'&&M.retKind==='punt'&&!M.caught){M.fair=true;banner('FAIR CATCH','','#fff',0.9);}}
 function contacts(dt){
