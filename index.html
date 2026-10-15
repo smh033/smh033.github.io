@@ -2073,7 +2073,7 @@ function buildField(flip){
   x.save();x.translate(px,Math.round(10*PYY));x.rotate(Math.PI);x.fillText(n,0,0);x.restore();
   x.fillText(n,px,H-Math.round(10*PYY));
   if(dir){const ax=px+dir*24;for(const yy of[Math.round(10*PYY),H-Math.round(10*PYY)]){x.beginPath();x.moveTo(ax+dir*4,yy);x.lineTo(ax,yy-3);x.lineTo(ax,yy+3);x.closePath();x.fill();}}}
- R('#fff',0,0,W,3);R('#fff',0,H-3,W,3);
+ R('#fff',0,0,W,3);R('#fff',0,H-3,W,3);R('#fff',0,0,3,H);R('#fff',W-3,0,3,H);   // sidelines + end lines
  // Paint the host franchise badge at midfield. It is underneath player sprites,
  // with the center stripe/field markings drawn first so the logo sits naturally
  // on the grass. The field is 120 yards long with midfield at yard 60.
@@ -3268,7 +3268,7 @@ function upCam(dt){
 }
 function step(dt){
  if(M.slowmo>0){M.slowmo-=dt;dt*=0.38;}
- M.tt+=dt;if(warmQ.length)stepWarm();stadiumBeat(dt);
+ M.tt+=dt;if(warmQ.length)stepWarm();upChain(dt);stadiumBeat(dt);
  for(const c of M.conf){c.x+=c.vx*dt;c.y+=c.vy*dt;c.vy+=60*dt;c.l-=dt;}M.conf=M.conf.filter(c=>c.l>0&&c.y<CH+10);
  for(const p of M.pops)p.a+=dt;M.pops=M.pops.filter(p=>p.a<1.1);
  if(M.shake>0)M.shake=Math.max(0,M.shake-dt*14);if(M.hype>0)M.hype-=dt;if(M.banT>0)M.banT-=dt;
@@ -3319,6 +3319,22 @@ function stadiumBeat(dt){
  else if(M.bi===2){if(!NOISE){const n=ac.sampleRate*2;NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
   const sN=ac.createBufferSource();sN.buffer=NOISE;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=1800;f.Q.value=0.8;const g=ac.createGain();g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.0005,t+0.09);sN.connect(f).connect(g).connect(ac.destination);sN.start(t);sN.stop(t+0.1);}
 }
+/* ---------- chain crew ----------
+   Three sideline workers in orange vests: the down box at the line of scrimmage and the two
+   chain poles marking the start of the series and the first-down line. They walk to their
+   new spots after every play. */
+const CREW_LK=(()=>{const lk={helm:'#111111',stripe:'#111111',jersey:'#ff8a1a',trim:'#111111',pants:'#1c1c1c',socks:'#1c1c1c',skin:SKIN[2]};lk.key='crew';return lk;})();
+function upChain(dt){if(!M||!M.O||!M.O.length)return;const goal=M.fdX>=110;
+ const T={box:M.los,a:goal?M.los:M.fdX-10,b:goal?M.los:M.fdX};M.chain=M.chain||{box:T.box,a:T.a,b:T.b,t:0};const C=M.chain;C.t+=dt;C.mv={};
+ for(const k of['box','a','b']){const d=T[k]-C[k];if(Math.abs(d)>0.05){C[k]+=Math.sign(d)*Math.min(Math.abs(d),6*dt);C.mv[k]=true;}}}
+function drawChain(){const C=M.chain;if(!C||M.play==='ret'||M.phase==='kick')return;const y=FB+13,goal=M.fdX>=110;
+ const guy=(x,k)=>{const sx=wx(x);if(sx<-20||sx>CW+20)return;drawSpr(cx,sx,y,CREW_LK,{u:1,face:M.dir,run:!!C.mv[k],t:C.t,shadow:true});};
+ if(!goal){const xa=wx(C.a),xb=wx(C.b);for(let x=Math.min(xa,xb);x<Math.max(xa,xb);x+=4)rect(x,y-7,2,1,'#c0c4cc');}       // the 10-yard chain
+ for(const k of goal?['box']:['a','b','box']){const sx=wx(C[k]);if(sx<-20||sx>CW+20)continue;
+  rect(sx+3,y-24,1,22,'#dcdcdc');                                                                                          // pole
+  if(k==='box'){rect(sx,y-31,8,8,'#000');rect(sx+1,y-30,6,6,'#ff8a1a');cx.font='6px "Press Start 2P",monospace';cx.textAlign='center';cx.textBaseline='middle';cx.fillStyle='#000';cx.fillText(String(M.down||1),sx+4,y-26.5);}
+  else{rect(sx+1,y-29,5,6,'#000');rect(sx+2,y-28,3,4,'#ff8a1a');}}
+ guy(C.a,'a');if(!goal)guy(C.b,'b');guy(C.box,'box');}
 function drawField(){
  rect(0,0,CW,CH,'#1d5a22');rect(0,0,CW,ST,'#0b0d1c');
  drawStands();
@@ -3329,17 +3345,20 @@ function drawField(){
   if(M.ezStands){const st=M.ezStands[M.hype>0?Math.floor(M.tt*8)%2:0],gap=30,top=FT-22;
    if(lo-gap>0)cx.drawImage(st,Math.round(lo-gap-st.width),top);
    if(hi+gap<CW){cx.save();cx.translate(Math.round(hi+gap+st.width),top);cx.scale(-1,1);cx.drawImage(st,0,0);cx.restore();}}
-  // goal posts at the back of each end zone: post, crossbar across the field, two uprights
-  for(const ex0 of[e0,e1]){if(ex0<-30||ex0>CW+30)continue;const ex=ex0+(ex0===lo?-6:6),yb=wy(26.67),y1=wy(23.58),y2=wy(29.75),h=22,up=34;
-   rect(ex-2,yb-1,10,3,'rgba(0,0,0,.25)');rect(ex+2,y1-h+3,5,y2-y1,'rgba(0,0,0,.18)');            // shadows
-   rect(ex-3,yb-h,6,h,'#d9a514');rect(ex-3,yb-h,2,h,'#ffe066');                                    // padded post
-   rect(ex-3,y1-h,6,y2-y1+3,'#ffd23a');rect(ex-3,y1-h,2,y2-y1+3,'#fff0a0');                        // crossbar
-   rect(ex-2,y1-h-up,4,up,'#ffd23a');rect(ex-2,y2-h-up+3,4,up,'#ffd23a');                          // uprights
-   rect(ex-2,y1-h-up,4,3,'#ff5c5c');rect(ex-2,y2-h-up+3,4,3,'#ff5c5c');}}                        // wind flags
+  // goal posts at the back of each end zone. Height is drawn leaning away from the field
+  // (oblique view) so the classic 'Y': post, crossbar and two tall uprights reads clearly.
+  for(const ex0 of[e0,e1]){if(ex0<-40||ex0>CW+40)continue;const out=ex0===lo?-1:1,ex=ex0+out*4,yb=wy(26.67),y1=wy(23.58),y2=wy(29.75);
+   const P=(x,y,h)=>[x+out*h*0.45,y-h];const h1=26,h2=h1+44;
+   const L=(a,b,w,col)=>{cx.strokeStyle=col;cx.lineWidth=w;cx.lineCap='square';cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();};
+   cx.fillStyle='rgba(0,0,0,.28)';cx.fillRect(Math.min(ex,ex+out*30),y1,30,y2-y1);                    // shadow on the turf
+   const segs=[[P(ex,yb,0),P(ex,yb,h1)],[P(ex,y1,h1),P(ex,y2,h1)],[P(ex,y1,h1),P(ex,y1,h2)],[P(ex,y2,h1),P(ex,y2,h2)]];
+   for(const[a,b]of segs)L(a,b,6,'#000');for(const[a,b]of segs)L(a,b,3,'#ffd23a');
+   L(P(ex,yb,2),P(ex,yb,14),5,'#000');L(P(ex,yb,2),P(ex,yb,14),3,'#e0e0e0');                           // padding at the base
+   for(const y of[y1,y2]){const t=P(ex,y,h2);cx.fillStyle='#ff5c5c';cx.fillRect(Math.round(t[0])-1,Math.round(t[1])-5,4,3);}}}  // wind flags
  if(M.wx==='snow')rect(0,FT,CW,FH,'rgba(255,255,255,.14)');else if(M.wx==='rain')rect(0,FT,CW,FH,'rgba(20,30,60,.16)');
  const showLines=M.phase==='pre'||M.phase==='live'||M.phase==='dead';
  if(showLines&&M.play!=='ret'&&M.O.length){rect(wx(M.los)-1,FT,2,FH,'rgba(60,120,255,.95)');if(M.fdX<110&&!M.conv)rect(wx(M.fdX)-1,FT,2,FH,'rgba(255,230,0,.95)');
-  for(const[x,c]of[[M.los,'#f08a24'],[M.fdX<110?M.fdX:null,'#f08a24']])if(x!=null){rect(wx(x)-2,FB+2,5,9,c);rect(wx(x)-2,FB+2,5,2,'#fff');}}
+  drawChain();}
 }
 function arrowTo_(x0,y0,x1,y1,col){const a=Math.atan2(y1-y0,x1-x0);cx.fillStyle=col;cx.beginPath();cx.moveTo(x1+Math.cos(a)*4,y1+Math.sin(a)*4);cx.lineTo(x1+Math.cos(a+2.4)*6,y1+Math.sin(a+2.4)*6);cx.lineTo(x1+Math.cos(a-2.4)*6,y1+Math.sin(a-2.4)*6);cx.closePath();cx.fill();}
 function drawRoutes(){
