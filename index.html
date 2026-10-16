@@ -2780,7 +2780,7 @@ function defPre(){
  M.D.forEach((f,i)=>{f.key=f.role+M.D.filter((g,j)=>j<i&&g.role===f.role).length;});
  applyDefCall();M.ctl=defaultCtl();M.called=null;M.aiQB=null;M.tackler=null;
  if(aiSituation())return;
- M.aiPlay=aiCallPlay();M.aiSnapT=rnd(2.4,3.8);
+ M.aiPlay=aiCallPlay();M.aiSnapT=rnd(3.6,5.2);
 }
 function applyDefCall(){
  const by=M.ballY,los=M.los,D=M.D,dl=D.filter(f=>f.role==='DL'),lb=D.filter(f=>f.role==='LB'),db=D.filter(f=>f.role==='DB'),sf=D.find(f=>f.role==='S');
@@ -2799,8 +2799,14 @@ ACT.gSwitch=()=>switchCtl();
 function switchCtl(){if(!M||!M.def)return;const t=M.carrier||(M.ball&&M.ball.F?{x:M.ball.x1,y:M.ball.y1}:M.qb);if(!t)return;
  let best=null,bd=1e9;for(const f of M.D){if(f===M.ctl||f.stun>0||(f.down>0&&!(f.dive>0)))continue;const d=Math.hypot(f.x-t.x,f.y-t.y);if(d<bd){bd=d;best=f;}}
  if(best){M.ctl=best;M.ctlKey=best.key||M.ctlKey;sfx('tick');}}
-function defSelectAt(px,py){let best=null,bd=18;for(const f of M.D){const sx=wx(f.x),sy=wy(f.y)-14,d=Math.hypot(px-sx,py-sy);if(d<bd){bd=d;best=f;}}
- if(best){M.ctl=best;M.ctlKey=best.key||M.ctlKey;sfx('tick');}}
+function defSelectAt(px,py,rad){let best=null,bd=rad||18;for(const f of M.D){const sx=wx(f.x),sy=wy(f.y)-14,d=Math.hypot(px-sx,py-sy);if(d<bd){bd=d;best=f;}}
+ if(best){M.ctl=best;M.ctlKey=best.key||M.ctlKey;sfx('tick');}return best;}
+/* pre-snap: drag any defender (corners, linebackers, anyone) to line him up wherever you want */
+function dragPre(dt){const f=M.dragD;if(!f||!ptr.down||M.input!=='dctl'){M.dragD=null;return;}if(ptr.moved<4)return;
+ const p=scrToField(ptr.x,ptr.y);if(!M.dragOff)M.dragOff={x:f.x-p.x,y:f.y-p.y};   /* keep the grab point under the finger */
+ const minX=M.los+(f.role==='DL'?0.9:1.2),nx=clamp(p.x+M.dragOff.x,minX,Math.min(119,M.los+30)),ny=clamp(p.y+M.dragOff.y,1,52.3),dx=nx-f.x,dy=ny-f.y;
+ f.x=nx;f.y=ny;f.vx=f.vy=0;f.moved=true;if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
+ if(M.aiSnapT!=null)M.aiSnapT=Math.max(M.aiSnapT,1.2);}   /* the offense waits while you're moving people */
 function ctlActive(){return M.def&&M.ctl&&((ptr.down&&M.input==='dctl')||keys.up||keys.down||keys.left||keys.right);}
 function ctlMove(f,dt){
  if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
@@ -3874,6 +3880,7 @@ function step(dt){
  for(const p of M.parts){if(M.wx==='snow'){p.y+=22*p.s*dt;p.x+=Math.sin(M.tt+p.s*9)*8*dt+M.wind*0.6*dt;}else{p.y+=260*p.s*dt;p.x+=M.wind*2*dt-30*dt;}if(p.y>CH)p.y-=CH;if(p.x<0)p.x+=CW;if(p.x>CW)p.x-=CW;}
  if(M.ov){if(M.ov.type==='drive'&&!M.ov.done){M.ov.tm-=dt;if(M.ov.tm<=0){revealLine();M.ov.tm=0.34;}}upCam(dt);return;}
  if(M.phase==='pre'&&M.pc!=null&&!M.paused){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
+ if(M.def&&M.phase==='pre'&&M.dragD)dragPre(dt);
  if(M.def&&M.phase==='pre'&&!M.paused&&M.aiSnapT!=null){M.aiSnapT-=dt;if(M.aiSnapT<=0){M.aiSnapT=null;aiSnap();return;}}
  if(M.phase==='pre'&&M.runoff>0){const d=Math.min(M.runoff,dt*1.6);   /* game clock runs with the play clock (25s here ~ the NFL's 40s), not on fast-forward */
  M.runoff-=d;M.clock-=d;if(M.clock<=0){M.clock=0;M.runoff=0;M.aim=null;M.input=null;clockCheck(toPre);return;}}
@@ -4180,7 +4187,7 @@ function hud(){
   if(M.def&&M.phase==='pre'){
    for(const[c,l]of COVERS)b.push(`<button class="bt ${M.dcall===c?'y':''}" data-a="dCall" data-c="${c}">${l}</button>`);
    if(M.to>0&&M.runoff>0&&M.clock>0)b.push(`<button class="bt" data-a="gTO">TIMEOUT</button>`);
-   hint=M.plays<12?(IS_MOBILE?'TAP A DEFENDER TO CONTROL HIM · PICK A COVERAGE':'CLICK A DEFENDER TO CONTROL HIM · KEYS 1-4 = COVERAGE'):'';
+   hint=M.plays<12?(IS_MOBILE?'DRAG DEFENDERS TO LINE THEM UP · TAP ONE TO CONTROL HIM':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
   }else if(M.def&&M.phase==='live'){
    if(M.play!=='intret')b.push(`<button class="bt" data-a="gSwitch">SWITCH</button>`);
    hint=M.play==='intret'?(IS_MOBILE?'RUN IT BACK! HOLD &amp; DRAG TO STEER · TAP TO DIVE':'RUN IT BACK! HOLD &amp; DRAG TO STEER · SPACE TO DIVE'):(M.plays<8?(IS_MOBILE?'HOLD &amp; DRAG TO MOVE · TAP TO DIVE AT THE RUNNER / JUMP FOR THE BALL':'DRAG OR ARROWS/WASD TO MOVE · SPACE TO DIVE / JUMP · Q SWITCH'):'');
@@ -4259,7 +4266,7 @@ cv.addEventListener('pointerdown',e=>{
  if(e.pointerType==='mouse'&&e.button!==0)return;
  const p=cpos(e),now=performance.now();try{cv.setPointerCapture(e.pointerId);}catch(_){ }
  Object.assign(ptr,{down:true,id:e.pointerId,x:p.x,y:p.y,sx:p.x,sy:p.y,t0:now,moved:0,hist:[{x:p.x,y:p.y,t:now}],button:e.button});
- if(M.def&&(M.phase==='pre'||M.phase==='live')){M.input='dctl';if(M.phase==='pre')defSelectAt(p.x,p.y);return;}
+ if(M.def&&(M.phase==='pre'||M.phase==='live')){M.input='dctl';ptr.sel=false;if(M.phase==='pre'){M.dragD=defSelectAt(p.x,p.y);M.dragOff=null;}else{const o=M.ctl,g=defSelectAt(p.x,p.y,9);if(g&&g!==o)ptr.sel=true;}return;}
  if(M.phase==='pre'){
   // tapping the running back before the snap is an instant run play
   if(M.rb){const rx=wx(M.rb.x),ry=wy(M.rb.y),qx=M.qb?wx(M.qb.x):-999,qy=M.qb?wy(M.qb.y):-999;
@@ -4305,7 +4312,7 @@ function applyRunSwipe(c,cmd){
 function ptrUp(e){
  if(!ptr.down||(e&&e.pointerId!==ptr.id))return;ptr.down=false;ptr.id=null;if(!M)return;
  const inp=M.input;M.input=null;
- if(inp==='dctl'){if(M.def&&M.phase==='live'&&ptr.moved<14&&performance.now()-ptr.t0<320)ctlTap();return;}
+ if(inp==='dctl'){M.dragD=null;if(M.def&&M.phase==='live'&&!ptr.sel&&ptr.moved<14&&performance.now()-ptr.t0<320)ctlTap();return;}
  if(M.aim){const a=M.aim;M.aim=null;if(inp==='aim'&&M.phase==='live'&&M.play==='pass'&&!M.thrown&&!M.carrier){const ai=aimInfo(a);if(ai.pull>=PULL_MIN){if(ai.run)tuck();else throwBall(ai);}}return;}
  if(M.kick&&M.kick.sw){const s=M.kick.sw;M.kick.sw=null;kickRelease(s.cx-s.sx,s.cy-s.sy);return;}
  if(M.steer){const st=M.steer,c=M.carrier;M.steer=null;if(st.chase){if(M.phase==='live'&&Math.hypot(ptr.x-st.x0,ptr.y-st.y0)<18&&performance.now()-ptr.t0<350)chaserDive();return;}if(c&&M.phase==='live'&&inp==='run')applyRunSwipe(c,swipeCommand(st,{x:ptr.x,y:ptr.y}));}
