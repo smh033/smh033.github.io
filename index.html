@@ -3435,9 +3435,11 @@ function drawField(){
   if(M.ezStands){const beat=M.rival?(M.tt*1.82)%1:0,jump=M.rival&&beat<0.22,st=M.ezStands[M.hype>0?Math.floor(M.tt*8)%2:jump?1:0],gap=30,top=ST;
    /* stadium pulse: the end-zone stands flash in the home colour on the same beat as the sideline stands */
    const pa=M.rival?0.1+0.38*Math.pow(1-beat,3)+(M.hype>0?0.1:0):0,hc=M.rival?teamCol(M.g.h).c1:null;
-   const tint=(x)=>{if(!pa)return;cx.globalAlpha=pa;rect(x,top,st.width,st.height,hc);cx.globalAlpha=1;};
-   if(lo-gap>0){const x=Math.round(lo-gap-st.width);cx.drawImage(st,x,top);tint(x);}
-   if(hi+gap<CW){const x=Math.round(hi+gap);cx.save();cx.translate(x+st.width,top);cx.scale(-1,1);cx.drawImage(st,0,0);cx.restore();tint(x);}}
+   const TH=FT-16-ST,tint=(x,right)=>{if(!pa)return;cx.globalAlpha=pa;rect(x,top,st.width,st.height,hc);
+    /* the wall flashes hard, exactly like the sideline stands' wall, all the way around the corner */
+    cx.globalAlpha=Math.min(1,pa*2.4);rect(x,top+TH-3,st.width,3,hc);rect(right?x:x+st.width-3,top+TH,3,st.height-TH,hc);cx.globalAlpha=1;};
+   if(lo-gap>0){const x=Math.round(lo-gap-st.width);cx.drawImage(st,x,top);tint(x,false);}
+   if(hi+gap<CW){const x=Math.round(hi+gap);cx.save();cx.translate(x+st.width,top);cx.scale(-1,1);cx.drawImage(st,0,0);cx.restore();tint(x,true);}}
   // goal posts at the back of each end zone. Height is drawn leaning away from the field
   // (oblique view) so the classic 'Y': post, crossbar and two tall uprights reads clearly.
   for(const ex0 of[e0,e1]){if(ex0<-40||ex0>CW+40)continue;const out=ex0===lo?-1:1,ex=ex0+out*4,yb=wy(26.67),y1=wy(23.58),y2=wy(29.75);
