@@ -2807,10 +2807,30 @@ function dragPre(dt){const f=M.dragD;if(!f||!ptr.down||M.input!=='dctl'){M.dragD
  const minX=M.los+(f.role==='DL'?0.9:1.2),nx=clamp(p.x+M.dragOff.x,minX,Math.min(119,M.los+30)),ny=clamp(p.y+M.dragOff.y,1,52.3),dx=nx-f.x,dy=ny-f.y;
  f.x=nx;f.y=ny;f.vx=f.vy=0;f.moved=true;if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
  if(M.aiSnapT!=null)M.aiSnapT=Math.max(M.aiSnapT,1.2);}   /* the offense waits while you're moving people */
-function ctlActive(){return M.def&&M.ctl&&((ptr.down&&M.input==='dctl')||keys.up||keys.down||keys.left||keys.right);}
+/* ---------- defense joystick ----------
+   Bottom-left of the screen whenever you're on defense. Push it to run your highlighted
+   defender; before the snap it walks him (corners, linebackers, anyone) to a new spot.
+   A second finger taps to dive / jump, or taps another defender to switch to him. */
+const JOY={x:62,y:284,r:30,hit:48};
+function joyOn(){return !!(M&&M.def&&!M.ov&&(M.phase==='pre'||(M.phase==='live'&&M.play!=='intret')));}
+function joyHit(p){return joyOn()&&Math.hypot(p.x-JOY.x,p.y-JOY.y)<=JOY.hit;}
+function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.x,dy=ptr.y-JOY.y;const d=Math.hypot(dx,dy);if(d<4)return{x:0,y:0,m:0};const m=Math.min(1,d/JOY.r);return{x:dx/d,y:dy/d,m};}
+function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
+ const sp=6.5*v.m,nx=clamp(f.x+v.x*(M.dir<0?-1:1)*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
+ f.x=nx;f.y=ny;f.face=v.x*(M.dir<0?-1:1)>0?1:-1;f.mvT=(f.mvT||0)+dt;f.moved=true;
+ if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
+ if(M.aiSnapT!=null)M.aiSnapT=Math.max(M.aiSnapT,1.2);}
+function drawJoy(){if(!joyOn())return;const v=joyVec(),kx=JOY.x+(v?v.x*v.m*JOY.r:0),ky=JOY.y+(v?v.y*v.m*JOY.r:0);
+ cx.save();cx.globalAlpha=v?0.75:0.45;cx.fillStyle='rgba(0,0,30,.55)';cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.fill();
+ cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.stroke();
+ cx.fillStyle='#fff';for(const[a,b]of[[0,-1],[0,1],[-1,0],[1,0]]){const tx=JOY.x+a*(JOY.r+1),ty=JOY.y+b*(JOY.r+1);cx.fillRect(tx-2+(a?a:0),ty-2+(b?b:0),4,4);}
+ cx.globalAlpha=v?0.95:0.7;cx.fillStyle='#ffe94a';cx.beginPath();cx.arc(kx,ky,13,0,Math.PI*2);cx.fill();cx.strokeStyle='#000';cx.stroke();cx.restore();}
+function ctlActive(){return M.def&&M.ctl&&((ptr.down&&(M.input==='dctl'||M.input==='joy'))||keys.up||keys.down||keys.left||keys.right);}
 function ctlMove(f,dt){
  if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  let tx,ty;
+ const jv=joyVec();
+ if(jv){if(!jv.m){steer(f,f.x,f.y,0,f.acc+10,dt);return;}steer(f,clamp(f.x+jv.x*(M.dir<0?-1:1)*5,-1,121),clamp(f.y+jv.y*5,0,53.3),f.spd*(0.35+0.68*jv.m),f.acc+12,dt);return;}
  if(ptr.down&&M.input==='dctl'){const p=scrToField(ptr.x,ptr.y);tx=p.x;ty=p.y;}
  else{const sx=(keys.right?1:0)-(keys.left?1:0),sy=(keys.down?1:0)-(keys.up?1:0);tx=f.x+sx*(M.dir<0?-1:1)*5;ty=f.y+sy*5;}
  if(Math.hypot(tx-f.x,ty-f.y)<0.4){steer(f,f.x,f.y,0,f.acc+10,dt);return;}
@@ -3881,6 +3901,7 @@ function step(dt){
  if(M.ov){if(M.ov.type==='drive'&&!M.ov.done){M.ov.tm-=dt;if(M.ov.tm<=0){revealLine();M.ov.tm=0.34;}}upCam(dt);return;}
  if(M.phase==='pre'&&M.pc!=null&&!M.paused){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
  if(M.def&&M.phase==='pre'&&M.dragD)dragPre(dt);
+ if(M.def&&M.phase==='pre'&&M.input==='joy')joyPre(dt);
  if(M.def&&M.phase==='pre'&&!M.paused&&M.aiSnapT!=null){M.aiSnapT-=dt;if(M.aiSnapT<=0){M.aiSnapT=null;aiSnap();return;}}
  if(M.phase==='pre'&&M.runoff>0){const d=Math.min(M.runoff,dt*1.6);   /* game clock runs with the play clock (25s here ~ the NFL's 40s), not on fast-forward */
  M.runoff-=d;M.clock-=d;if(M.clock<=0){M.clock=0;M.runoff=0;M.aim=null;M.input=null;clockCheck(toPre);return;}}
@@ -4163,6 +4184,7 @@ function draw(){
  cx.restore();
  drawFX();
  drawLogoLayer(Math.round(sh));
+ drawJoy();
 }
 
 /* ---------- HUD ---------- */
@@ -4187,7 +4209,7 @@ function hud(){
   if(M.def&&M.phase==='pre'){
    for(const[c,l]of COVERS)b.push(`<button class="bt ${M.dcall===c?'y':''}" data-a="dCall" data-c="${c}">${l}</button>`);
    if(M.to>0&&M.runoff>0&&M.clock>0)b.push(`<button class="bt" data-a="gTO">TIMEOUT</button>`);
-   hint=M.plays<12?(IS_MOBILE?'DRAG DEFENDERS TO LINE THEM UP · TAP ONE TO CONTROL HIM':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
+   hint=M.plays<12?(IS_MOBILE?'TAP A DEFENDER · JOYSTICK OR DRAG TO LINE HIM UP':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
   }else if(M.def&&M.phase==='live'){
    if(M.play!=='intret')b.push(`<button class="bt" data-a="gSwitch">SWITCH</button>`);
    hint=M.play==='intret'?(IS_MOBILE?'RUN IT BACK! HOLD &amp; DRAG TO STEER · TAP TO DIVE':'RUN IT BACK! HOLD &amp; DRAG TO STEER · SPACE TO DIVE'):(M.plays<8?(IS_MOBILE?'HOLD &amp; DRAG TO MOVE · TAP TO DIVE AT THE RUNNER / JUMP FOR THE BALL':'DRAG OR ARROWS/WASD TO MOVE · SPACE TO DIVE / JUMP · Q SWITCH'):'');
@@ -4261,11 +4283,12 @@ cv.addEventListener('pointerdown',e=>{
  if(M.phase==='replay'){if(M.rp)M.rp.fast=true;return;}   // tap = fast-forward (SKIP button still skips)
  /* A second touch while aiming is the touch bullet/lob toggle. It never becomes
     the tracked pointer, so lifting it (or the first finger) can't leave stale state. */
- if(ptr.down&&ptr.id!==e.pointerId){toggleBullet();return;}
+ if(ptr.down&&ptr.id!==e.pointerId){if(M.def&&M.input==='joy'){const q=cpos(e);if(M.phase==='pre')defSelectAt(q.x,q.y);else{const o=M.ctl,g=defSelectAt(q.x,q.y,9);if(!g||g===o)ctlTap();}}else toggleBullet();return;}
  /* Only the primary mouse button aims; right-click is handled as the bullet toggle. */
  if(e.pointerType==='mouse'&&e.button!==0)return;
  const p=cpos(e),now=performance.now();try{cv.setPointerCapture(e.pointerId);}catch(_){ }
  Object.assign(ptr,{down:true,id:e.pointerId,x:p.x,y:p.y,sx:p.x,sy:p.y,t0:now,moved:0,hist:[{x:p.x,y:p.y,t:now}],button:e.button});
+ if(joyHit(p)){M.input='joy';return;}
  if(M.def&&(M.phase==='pre'||M.phase==='live')){M.input='dctl';ptr.sel=false;if(M.phase==='pre'){M.dragD=defSelectAt(p.x,p.y);M.dragOff=null;}else{const o=M.ctl,g=defSelectAt(p.x,p.y,9);if(g&&g!==o)ptr.sel=true;}return;}
  if(M.phase==='pre'){
   // tapping the running back before the snap is an instant run play
