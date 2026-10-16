@@ -2923,7 +2923,9 @@ function aiSituation(){
 /* ---------- AI offense: quarterback ---------- */
 function aiQB(q,dt){
  const S=M.aiQB;if(!S||M.thrown||M.carrier||M.phase!=='live')return;S.t-=dt;
- {const u=M.ctl;if(u&&!u.eng&&!(u.stun>0)&&!(u.down>0)&&d2(u,q)<1.05)return;}   /* your defender has him wrapped up: no throw, it's a sack */
+ {const u=M.ctl;if(u&&!(u.stun>0)&&!(u.down>0)){const du=d2(u,q);if(du<1.8)return;   /* you're on him: no throw */
+  /* closing in fast: a quick QB may still get it off (once), otherwise he holds it and goes down */
+  if(du<3.2&&!S.hurry){S.hurry=true;if(Math.random()>0.25+A(q,'acc')*0.03){S.frozen=true;}}if(S.frozen&&du<3.2)return;}}   /* your defender has him wrapped up: no throw, it's a sack */
  let press=9;for(const d of M.D){if(d.eng||d.stun>0||d.down>0)continue;press=Math.min(press,d2(d,q));}
  if(S.t>0&&press>2.0)return;
  let best=null;
@@ -3640,6 +3642,12 @@ function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.car
 function fairCatch(){if(M&&M.play==='ret'&&M.retKind==='punt'&&!M.caught){M.fair=true;banner('FAIR CATCH','','#fff',0.9);}}
 function contacts(dt){
  const c=M.carrier;
+ /* Defense: the player YOU control getting a hand on the QB behind the line is always a sack -
+    even if a blocker is still on him or the QB just tucked it to run. */
+ if(M.def&&M.ctl&&M.qb&&M.play==='pass'&&!M.thrown&&(!c||c===M.qb)){const u=M.ctl,q=M.qb;
+  if(!(u.stun>0)&&!(u.down>0&&!(u.dive>0))&&!(q.down>0)&&!(q.dive>0)&&q.x<=M.los+1&&d2(u,q)<1.65){
+   if(u.eng){if(u.eng.blk===u)u.eng.blk=null;u.eng=null;}
+   q.down=1;M.aim=null;M.aiQB=null;sfx('hit');M.shake=5;cr(q.pl,'sacked',1);pop('SACK!',q.x,q.y,'#ff8a8a');creditD(u,'sck',8);creditD(u,'tkl',0);return endPlay('sack',q.x,q.y);}}
  if(c){if(c.dive>0||c.hurdle>0)return;
   // A defender held by a blocker who ends up right on (or behind) the runner sheds the block.
   for(const d of M.D){if(d.eng&&(d2(d,c)<1.0||d.x<c.x-0.6)){if(d.eng.blk===d)d.eng.blk=null;d.eng=null;d.shed=0;}}
