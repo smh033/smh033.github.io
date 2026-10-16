@@ -3480,14 +3480,13 @@ function plState(f,holder){
 /* Helmet logos are drawn on a separate full-resolution layer over the pixel-art canvas: at the game's
    640x360 resolution a helmet is only ~14 px wide, far too small for a logo to read. The layer uses the
    real screen resolution so logos stay crisp. ESPN images never touch the exported canvases. */
-const LOGO_Q=[],HELM_Q=[];
+const LOGO_Q=[],HELM_Q=[];let LOGO_MASK=null;
 function drawLogoLayer(sh,maxY){
  const lg=document.getElementById('lg');if(!lg)return;
  const st=document.getElementById('stage'),sc=st?(st.getBoundingClientRect().width/640||1):1,dpr=window.devicePixelRatio||1;
  const W=Math.round(640*sc*dpr),H=Math.round(360*sc*dpr);if(lg.width!==W||lg.height!==H){lg.width=W;lg.height=H;}
  const g=lg.getContext('2d');g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,W,H);
  if(!LOGO_Q.length&&!HELM_Q.length)return;const k=W/640;g.setTransform(k,0,0,k,0,0);g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
- if(M&&M.night)g.filter='brightness(0.72)';
  const Q=LOGO_Q;
  /* Rebuild exactly the transform drawMan uses (position, knocked-down rotation, facing flip, run bob,
     celebration/pose offsets) so the logo follows the helmet through every animation. */
@@ -3509,7 +3508,14 @@ function drawLogoLayer(sh,maxY){
   g.drawImage(lm,2.1*u,0.5*u,S,S);}
  /* logos on helmets knocked loose by a hit stick */
  for(const h of HELM_Q){const lm=logoMini(h.t,Math.ceil(6*k));if(!lm)continue;g.setTransform(k,0,0,k,0,0);g.translate(h.x+sh,h.y+sh*0.6);g.rotate(h.r);g.drawImage(lm,-4,-3,6,6);}
- g.filter='none';
+  /* Night games: apply the same multiply + floodlight 'screen' grade as nightFX() does on the field,
+     then cut it back to just the logo pixels (ctx.filter isn't supported on iPad Safari). */
+ if(M&&M.night){g.setTransform(1,0,0,1,0,0);
+  const mk=LOGO_MASK||(LOGO_MASK=document.createElement('canvas'));if(mk.width!==W||mk.height!==H){mk.width=W;mk.height=H;}
+  const mg=mk.getContext('2d');mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,W,H);mg.drawImage(lg,0,0);
+  g.setTransform(k,0,0,k,0,0);g.globalCompositeOperation='multiply';g.fillStyle=M.wx==='dome'?'#8a93b8':'#5e6ea8';g.fillRect(0,ST,CW,CH-ST);
+  g.globalCompositeOperation='screen';for(const[x,y,r]of[[90,FT+20,300],[550,FT+20,300],[320,FB-10,260]]){const gr=g.createRadialGradient(x,y,10,x,y,r);gr.addColorStop(0,'rgba(255,245,210,.30)');gr.addColorStop(1,'rgba(255,245,210,0)');g.fillStyle=gr;g.fillRect(0,ST,CW,CH-ST);}
+  g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='destination-in';g.drawImage(mk,0,0);g.globalCompositeOperation='source-over';}
 }
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
