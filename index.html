@@ -236,6 +236,9 @@ function eff(p,k){const b=k==='cov'?covOf(p):attr(p,k);if(!p)return b;return b*(
 /* Potential caps: no single attribute can go past (potential + 1), and the overall can't go past
    potential + 0.5. Only true 5-star-potential players can max everything out. A player who
    has hit his ceiling stops earning skill points. */
+/* Young QBs: random extra ceiling. Most get a bit more room to grow, some become future franchise QBs,
+   some never get any. Applies to generated players, NFL roster players and draft prospects. */
+function qbPotBoost(p){if(!p||p.pos!=='QB'||p.age>25)return;const r=Math.random();const b=r<0.15?rnd(2,3.5):r<0.6?rnd(0.6,2):r<0.8?rnd(0,0.6):0;p.pot=clamp(p.pot+b*(p.age<=23?1:0.7),1,10);}
 function attrCap(p){return clamp(Math.round(p.pot||0)+1,3,10);}
 function canRaise(p,k){if(p.a[k]>=attrCap(p))return false;const ks=POSDEF[p.pos];return Math.round((ovr(p)*ks.length+1)/ks.length)<=Math.round(p.pot||0);}   /* rating stars never pass potential stars */
 function isMaxed(p){return!POSDEF[p.pos].some(k=>canRaise(p,k));}
@@ -253,7 +256,7 @@ function genPlayer(pos,q,age){
  genLooks(p);
  for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+rnd(-1.4,1.4)),1,10);
  const r=NUMR[pos];p.num=(r.length>2&&Math.random()<.5)?ri(r[2],r[3]):ri(r[0],r[1]);
- p.pot=clamp(ovr(p)+(age<=24?rnd(0.5,3):age<=27?rnd(0,1.2):0),1,10);
+ p.pot=clamp(ovr(p)+(age<=24?rnd(0.5,3):age<=27?rnd(0,1.2):0),1,10);qbPotBoost(p);
  p.lvl=clamp(Math.round((age-21)/2)+1,1,8);p.seasons=Math.max(0,age-22);p.peak=ovr(p);
  p.sal=salFor(starsOf(p),age);retAgeOf(p);
  return p;
@@ -358,7 +361,7 @@ function createLeague(ut,coach,opt){
  const rosterMode=opt.rosterMode==='NFL'&&opt.nflData?'NFL':'CUSTOM';
  L={v:2,nid:1,season:1,year:CFG.startYear,week:1,phase:rosterMode==='NFL'?'REG':'FOUND',user:ut,coach:(coach||'COACH').toUpperCase().slice(0,14),custom:null,rosterMode,nflSourceWeek:rosterMode==='NFL'?opt.nflData.week:null,cc:rosterMode==='NFL'?30:20,fan:50,cap:rosterMode==='NFL'?240:CFG.cap,
   fac:{stad:1,train:1,rehab:1},oc:null,dc:null,staff:null,players:[],pmap:{},teams:TEAMS.map(t=>Object.assign({id:t.id,tq:rnd(4.3,6.9)},zeroRec())),
-  divRank:[],sched:[],po:null,news:[],hist:[],hof:[],settings:{qlen:240,sound:true,diff:opt.diff,rmax:opt.rmax,replay:true},dyn:10,draft:null,off:null,lastPost:null,lastOffer:0,jobs:null,titles:0,champShow:false,career:[],picks:[1,1,1]};
+  divRank:[],sched:[],po:null,news:[],hist:[],hof:[],settings:{qlen:240,sound:true,diff:opt.diff,rmax:opt.rmax,replay:true},dyn:10,draft:null,off:null,lastPost:null,lastOffer:0,jobs:null,titles:0,champShow:false,career:[],picks:[1,1,1],fa1:1,qbpot:1};
  L.settings.dir=opt.dir||'S';
  for(let d=0;d<8;d++)L.divRank.push(shuffle(divTeams(d)));
  if(rosterMode==='NFL'){
@@ -603,7 +606,7 @@ function makeNFLPlayer(r,team){
  let fn=parts.shift()||'NFL',ln=parts.join(' ')||'PLAYER';
  const q=nflQuality(r,pos),p=genPlayer(pos,q,nflAge(r));p.nflQ=q;p.fn=fn;p.ln=ln;p.team=team;p.num=Number(r.jersey_number)||0;
  for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+rnd(-0.65,0.65)),1,10);
- p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+(p.age<=24?rnd(0.4,1.6):p.age<=27?rnd(0.1,0.7):rnd(0,0.3)),1,10);   /* only young players have much room to grow */
+ p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+(p.age<=24?rnd(0.4,1.6):p.age<=27?rnd(0.1,0.7):rnd(0,0.3)),1,10);qbPotBoost(p);   /* only young players have much room to grow */
  p.peak=q;p.seasons=Math.max(0,Number(r.years_exp)||0);p.yrs=clamp(ri(1,4),1,4);p.sal=Math.round(salFor(starsOf(p),p.age)*0.82*10)/10;p.mor=String(r.status||'ACT').toUpperCase()==='ACT'?78:65;
  // look estimated from the player's official headshot by the weekly roster job
  if(Array.isArray(r.look)&&r.look.length===4){[p.skin,p.hair,p.hc,p.beard]=r.look.map(Number);}
@@ -844,9 +847,25 @@ function endSeason(){
  L.off={step:'sum',bonus,changes:[],retired:[],hof:[],expiring:[],keep:[]};
  save();
 }
-function progressPlayer(p){
+/* How a player performed last season compared with what his rating should produce (per full game).
+   -2 = awful, 0 = as expected, +2 = great. Only judged with enough games played. */
+function perfGrade(p){
+ let s=p.s||{};const gp=s.gp||0;if(gp<5)return 0;
+ if(p.team===L.user){try{s=scaledStats(s,userStatScale());}catch(e){}}
+ const o=ovr(p),pg=k=>(s[k]||0)/gp;let g=0;
+ if(p.pos==='QB')g=(pg('pyd')-(150+o*12))/70+(pg('ptd')-1.6*pg('pint')-0.6)*0.8;
+ else if(p.pos==='RB')g=(pg('ryd')+pg('wyd')-(35+o*7))/30+(pg('rtd')+pg('wtd')-0.4);
+ else if(p.pos==='WR'||p.pos==='TE')g=(pg('wyd')-(20+o*6))/25+(pg('wtd')-0.3);
+ else if(p.pos==='DL'||p.pos==='LB'||p.pos==='DB')g=(pg('tkl')+pg('sck')*4+pg('dint')*5-(1.5+o*0.35))/1.6;
+ else if(p.pos==='K')g=s.fga>=8?(s.fgm/s.fga-0.8)*8:0;
+ return clamp(g,-2,2);}
+function progressPlayer(p,perf){
  const ch={},ks=POSDEF[p.pos];
- let n=p.age<=24?ri(1,3):p.age<=27?ri(0,2):p.age<=29?ri(0,1):p.age<=31?-ri(0,1):-ri(1,3);
+ /* age curve: young players grow, prime years hold, then a decline that speeds up after 32 (QBs and Ks age slower) */
+ const a=p.age-(p.pos==='QB'||p.pos==='K'?3:0);
+ let n=a<=24?ri(1,3):a<=27?ri(0,2):a<=29?ri(0,1):a<=31?-ri(0,1):a<=33?-ri(1,2):-ri(1,3);
+ /* performance: a terrible season costs rating, a great one helps (growth still capped by potential) */
+ if(perf!=null){if(perf<=-1.6)n-=2;else if(perf<=-0.9)n-=1;else if(perf>=1.0&&a<=31)n+=1;}
  for(let i=0;i<Math.abs(n);i++){const k=pick(ks),b=p.a[k];if(n>0){if(canRaise(p,k))p.a[k]=Math.min(10,p.a[k]+1);}else p.a[k]=Math.max(1,p.a[k]-1);if(p.a[k]!==b)ch[k]=(ch[k]||0)+(p.a[k]-b);}
  p.peak=Math.max(p.peak||0,ovr(p));return ch;
 }
@@ -887,11 +906,13 @@ function hofWorthy(p){
  return big||mvp>=2||aw.length>=4||(p.peak>=9&&p.seasons>=10&&aw.length>=1);}
 function runOffseasonAging(){
  const O=L.off;O.changes=[];O.retired=[];O.hof=[];
+ /* grade each player against others at his position this season */
+ const raw=new Map(),sum={},cnt={};for(const p of L.players){if(p.team<0||!((p.s||{}).gp>=5))continue;const g=perfGrade(p);raw.set(p.id,g);sum[p.pos]=(sum[p.pos]||0)+g;cnt[p.pos]=(cnt[p.pos]||0)+1;}
  for(const p of L.players.slice()){
-  const good=goodSeason(p);retAgeOf(p);
+  const good=goodSeason(p);retAgeOf(p);const perf=raw.has(p.id)?raw.get(p.id)-sum[p.pos]/cnt[p.pos]:null;
   for(const k in p.s)p.c[k]+=p.s[k];p.s=newStats();
   p.age++;p.seasons++;p.inj=0;p.cond=100;
-  const ch=progressPlayer(p);
+  const ch=progressPlayer(p,perf);
   if(p.team===L.user&&Object.keys(ch).length)O.changes.push({id:p.id,ch});
   const o=ovr(p);
   if(shouldRetire(p,good)){
@@ -923,7 +944,7 @@ function finishResign(keep){
 function genProspect(){
  const pos=pick(['QB','RB','WR','WR','TE','OL','OL','K','DL','DL','LB','DB','DB','RB','LB']);
  const q=clamp(2.2+Math.pow(Math.random(),1.45)*6.6+rnd(-0.4,0.6),1.6,9.8);
- const p=genPlayer(pos,q,ri(21,23));p.lvl=1;p.seasons=0;p.pot=clamp(ovr(p)+rnd(0.4,3.4),1,10);p.yrs=3;p.team=-2;
+ const p=genPlayer(pos,q,ri(21,23));p.lvl=1;p.seasons=0;p.pot=clamp(ovr(p)+rnd(0.4,3.4),1,10);qbPotBoost(p);p.yrs=3;p.team=-2;
  p.sal=Math.round((0.8+starsOf(p)*0.9)*10)/10;
  const st=starsOf(p),off=pick([0,0.5,0.5,1]),up=pick([0,0.5,0.5,1]);p.scout=[clamp(st-off,0.5,5),clamp(st+up,0.5,5)];
  const pg=p.pot-ovr(p)+rnd(-0.8,0.8);p.potg=pg>2.6?'A':pg>1.8?'B':pg>1?'C':'D';
@@ -1313,7 +1334,7 @@ SCR.title=()=>{
 };
 ACT.cont=()=>{L=loadSave();if(!L)return toast('NO SAVE FOUND');indexPlayers();parityFix();resumeFlow();};
 /* older saves: spread the league back out once */
-function parityFix(){if(!L||L.phase==='FOUND')return;try{let ch=false;if(!L.parity){balanceLeague(true);ch=true;}if(!L.fa1){aiFreeAgency(true);L.fa1=1;ch=true;}if(ch)save();}catch(e){console.error(e);}}
+function parityFix(){if(!L||L.phase==='FOUND')return;try{let ch=false;if(!L.parity){balanceLeague(true);ch=true;}if(!L.fa1){aiFreeAgency(true);L.fa1=1;ch=true;}if(!L.qbpot){for(const p of L.players)qbPotBoost(p);L.qbpot=1;ch=true;}if(ch)save();}catch(e){console.error(e);}}
 function resumeFlow(){if(L.phase==='FOUND')return go('draft');if(L.champShow)return go('champ');if(L.phase==='OFF')return go('off');go('hub');}
 ACT.newg=()=>{
  // Start in the first empty slot; if every slot is used, let the player choose which to replace.
@@ -3288,7 +3309,7 @@ const DANCE_N=Object.keys(DANCES);
 function favDance(){return pick(DANCE_N);}   // every touchdown gets a random celebration
 function dancePose(c){const D=DANCES[c.d],i=Math.floor(c.t/D.t)%D.f.length,F=D.f[i],x=F[5]||{};
  return{pose:{lg:F[0],la:F[1],ra:F[2],dx:F[3],dy:F[4],ball:!!x.ball},pk:'d'+c.d+i,down:!!x.down,jy:x.jy||0};}
-function startCeleb(f){if(!f||f.side!=='O')return;M.celeb={who:f,d:favDance(),t:0};M.deadT=Math.max(M.deadT,3.4);}
+function startCeleb(f){if(!f||f.side!=='O')return;/* clear any dive/jump/catch pose so the dance always plays */f.dive=0;f.dv=0;f.down=0;f.hurdle=0;f.jump=0;f.reach=0;f.oneh=0;f.stun=0;f.vx*=0.3;f.vy*=0.3;M.celeb={who:f,d:favDance(),t:0};M.deadT=Math.max(M.deadT,3.4);}
 /* Ball carrier leaps over a defender who dove at him and missed. */
 const HURDLE_T=0.42;
 function hurdle(c){if(!c||c.dive>0||c.down>0||c.hurdle>0)return;c.hurdle=HURDLE_T;c.jk=0;sfx('juke');}
@@ -3531,7 +3552,7 @@ function drawReplay(){
  ctext('REPLAY',24,by+7,'#fff','left',10);ctext(M.rp.lab||'',CW/2,by+7,'#ffe94a','center',10);ctext(M.rp.fast?'FAST FORWARD >>':'TAP TO SPEED UP',CW-112,by+8,'#b7c8ff','right',7);
 }
 function upDead(dt){
- for(const f of[...M.O,...M.D]){tickF(f,dt);if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=Math.max(f.down||0,0.8);f.vx=f.vy=0;}continue;}steer(f,f.x,f.y,0,f===M.carrier?12:7,dt);}
+ for(const f of[...M.O,...M.D]){tickF(f,dt);if(M.celeb&&f===M.celeb.who){f.dive=0;f.down=0;f.hurdle=0;f.jump=0;}if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=Math.max(f.down||0,0.8);f.vx=f.vy=0;}continue;}steer(f,f.x,f.y,0,f===M.carrier?12:7,dt);}
  if(M.celeb){const c=M.celeb,f=c.who;c.t+=dt;const D=DANCES[c.d];if(D&&D.slide&&c.t>0.3){f.x+=D.slide*dt;f.face=1;}
   for(const o of M.O){if(o===f||o.role==='OL'||o.down>0)continue;if(d2(o,f)<16)steer(o,f.x+(o.y<f.y?-1.6:1.6),f.y+(o.y<f.y?-1.4:1.4),o.spd*0.8,20,dt);}}
  if(M.ball){M.ball.t+=dt;if(M.ball.t>M.ball.T+0.4)M.ball=null;}
@@ -3730,7 +3751,7 @@ function plState(f,holder){
  const hur=f.hurdle>0&&!(f.down>0)&&!(f.dive>0);if(hur)jy=Math.round(Math.sin((1-f.hurdle/HURDLE_T)*Math.PI)*13);
  const hasB=f===holder||(f.ball&&M.phase==='dead'),dn=f.down>0||f.dive>0;
  const oneh=f.oneh>0&&!dn,reach=!oneh&&!hasB&&!dn&&!hur&&(jy>0||f.reach>0);
- if(M.celeb&&f===M.celeb.who&&(M.phase==='dead'||M.phase==='replay')&&!(f.dive>0)){const dp=dancePose(M.celeb);
+ if(M.celeb&&f===M.celeb.who&&(M.phase==='dead'||M.phase==='replay')){const dp=dancePose(M.celeb);
   return{x:f.x,y:f.y,jy:dp.jy,lk:f.lk,star:f.star,dn:dp.down,o:{u:2,face:f.face*M.dir,pose:dp.pose,pk:dp.pk,down:dp.down,glow:f.star,shadow:!dp.jy}};}
  return{x:f.x,y:f.y,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
 }
