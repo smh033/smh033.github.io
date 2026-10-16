@@ -1029,6 +1029,12 @@ function lookFor(p,t,away,alt){
  const lk={helm:c.c1,stripe:c.c2,jersey:away?'#f0f0f0':c.c1,trim:away?c.c1:c.c2,pants:away?'#d9d9d9':(pl>70&&pl<215?c.c2:'#e2e2e2'),socks:c.c1,skin:SKIN[p?p.skin:2],teamId:t};
  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;
 }
+const LOGO_MINI={};
+function logoMini(t,px){const img=NFL_FIELD_LOGOS[t];if(!img||!img.complete||!img.naturalWidth)return null;const k=t+'|'+px;if(LOGO_MINI[k])return LOGO_MINI[k];
+ /* halve repeatedly with smoothing for a clean downscale */let src=img,w=img.naturalWidth,h=img.naturalHeight;
+ while(w/2>=px*2){const cc=document.createElement('canvas');cc.width=Math.ceil(w/2);cc.height=Math.ceil(h/2);const g=cc.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,cc.width,cc.height);src=cc;w=cc.width;h=cc.height;}
+ const out=document.createElement('canvas');out.width=px*2;out.height=px*2;const g=out.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,out.width,out.height);
+ return LOGO_MINI[k]=out;}
 function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
  c.save();c.translate(Math.round(x),Math.round(y));
@@ -1082,10 +1088,11 @@ function drawMan(c,x,y,lk,o){
  r(J,3,6,6,4);r(J,2,6,8,2);r(TR,2,6,2,1);r(TR,8,6,2,1);r(TR,4,8,3,1);
  r(sk,5,5,3,1);
  r(H,4,0,4,1);r(H,3,1,6,1);r(H,2,2,7,2);r(H,3,4,5,1);r(lk.stripe,4,0,3,1);r(shade(H,40),4,1,2,1);r(shade(H,-45),4,2,1,1);
- /* Tiny franchise decals on both helmet sides; the sprite flip keeps the near-side decal visible from either direction. */
- const teamLogo=o.logo&&lk.teamId!=null&&NFL_FIELD_LOGOS[lk.teamId];
- if(teamLogo&&teamLogo.complete&&teamLogo.naturalWidth){c.imageSmoothingEnabled=false;c.drawImage(teamLogo,3*u,2*u,2*u,2*u);c.drawImage(teamLogo,7*u,2*u,2*u,2*u); }
- else if(o.logo&&lk.teamId!=null){r(lk.stripe,3,2,2,2);r(lk.stripe,7,2,2,2);}
+ /* Team logo decal on the side of the helmet (the side facing the camera). Drawn from a smoothed,
+    pre-shrunk copy so the logo reads as its real shape/colours instead of a few random pixels, and
+    un-mirrored when the player faces left so text logos aren't backwards. */
+ if(o.logo&&lk.teamId!=null){const lm=logoMini(lk.teamId,Math.round(4*u));
+  if(lm){c.save();c.imageSmoothingEnabled=true;if(o.face<0){c.translate(8.4*u,0);c.scale(-1,1);}c.drawImage(lm,2.2*u,0.6*u,4*u,4*u);c.restore();}}
  r(sk,7,2,2,2);r('#111',8,2,1,1);r('#d3d7dd',9,2,1,3);r('#d3d7dd',7,4,3,1);
  if(o.pose)armP(1,o.pose.ra);
  else if(o.dive){r(J,2,4,2,2);r(J,8,4,2,2);r(sk,2,1,2,3);r(sk,8,1,2,3);if(o.ball){r('#7a3d12',3,-2,5,2);r('#fff',5,-2,1,1);}}
