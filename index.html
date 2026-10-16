@@ -743,7 +743,7 @@ function giveAwards(){
  const list=[['MVP','MOST VALUABLE PLAYER',mvp],['OPOY','OFFENSIVE PLAYER OF THE YEAR',opoy],['DPOY','DEFENSIVE PLAYER OF THE YEAR',dpoy],['ROTY','ROOKIE OF THE YEAR',roty]].filter(x=>x[2]);
  const out={year:L.year,list:list.map(([a,full,p])=>({a,full,id:p.id,name:fullname(p),pos:p.pos,team:p.team,line:statLine(p)+(p.team===L.user&&uf>1.15?' · ≈'+statLine({pos:p.pos,s:S(p)}).split(' · ')[0].replace(/\d+(\.\d+)?/,m=>Math.round(+m))+' FULL GAMES':'')}))};
  for(const [a,,p] of list){p.awards=(p.awards||[]);p.awards.push(a+' '+L.year);
-  if(p.team===L.user){if(!isMaxed(p))p.sp=(p.sp||0)+1;p.mor=clamp(p.mor+20,0,100);L.cc+=10;L.fan=clamp(L.fan+3,0,100);news(fullname(p)+' WINS '+a+'! (+1 SKILL POINT, +10 COINS)');}
+  if(p.team===L.user){if(!isMaxed(p))p.sp=(p.sp||0)+1;p.mor=clamp(p.mor+20,0,100);L.cc+=5;L.fan=clamp(L.fan+3,0,100);news(fullname(p)+' WINS '+a+'! (+1 SKILL POINT, +5 COINS)');}
   else news(abbr(p.team)+' '+p.pos+' '+fullname(p)+' named '+a+'.');}
  L.awards=L.awards||[];L.awards.unshift(out);L.awardsShow=true;
 }
@@ -781,7 +781,7 @@ function seasonResultText(){
 }
 function endSeason(){
  L.phase='OFF';const R=L.teams[L.user],res=seasonResultText();
- let bonus=6;if(inPlayoffs(L.user))bonus+=8;if(L.po.champ===L.user)bonus+=20;L.cc+=bonus;
+ let bonus=3;if(inPlayoffs(L.user))bonus+=4;if(L.po.champ===L.user)bonus+=10;L.cc+=bonus;
  L.hist.unshift({year:L.year,team:L.user,w:R.w,l:R.l,t:R.t,res,champ:L.po.champ,pf:R.pf,pa:R.pa});
  L.off={step:'sum',bonus,changes:[],retired:[],hof:[],expiring:[],keep:[]};
  save();
@@ -1856,7 +1856,14 @@ SCR.draft=()=>{
 ACT.dff=d=>{UI.sub.f=d.f;render();};
 ACT.dpick=d=>{const p=P(+d.id);if(!p||!L.draft||L.draft.done)return;needSpotThen(()=>{if(!L.draft||L.draft.pool.indexOf(p.id)<0)return;draftPick(p);sfx('coin');save();
  UI.modal=null;modal(`<div class="mp" style="width:420px;align-items:center;text-align:center">${ttl('DRAFTED!',true)}<div class="row ctr" style="gap:12px">${pcard(p,L.user,{act:'close'})}<div class="col" style="align-items:flex-start;gap:5px">${POSDEF[p.pos].map(k=>`<div class="row s7" style="gap:5px"><span style="width:100px">${ATTR[k]}</span>${pips(p.a[k])}</div>`).join('')}<div class="s7">POTENTIAL ${p.potg}</div></div></div><button class="bt y" data-a="close">NICE</button></div>`);});};
-ACT.dskip=()=>{if(!L.draft||L.draft.done)return;const p=autoPickTarget();if(!p){draftPick(null);save();return render();}ACT.dpick({id:p.id});};
+const pickValue=()=>[8,5,3,2,2,1,1][Math.min(6,(L.draft&&L.draft.round)||0)];
+ACT.dskip=()=>{if(!L.draft||L.draft.done)return;
+ /* roster already full: offer to trade the pick away for coins instead of forcing a release */
+ if(!L.draft.founding&&rosterOf(L.user).length>=rmax()){const v=pickValue();
+  return modal(`<div class="mp" style="width:440px;align-items:center;text-align:center">${ttl('ROSTER FULL',true)}<div>SELL YOUR ROUND ${L.draft.round+1} PICK FOR <span class="yl">${v} <i class="cc"></i></span> ?</div><div class="s7 dim">OR AUTO PICK AND RELEASE SOMEONE TO MAKE ROOM</div><div class="row ctr" style="gap:8px"><button class="bt" data-a="close">BACK</button><button class="bt" data-a="dskipPick">AUTO PICK</button><button class="bt y" data-a="dsell">SELL PICK +${v}</button></div></div>`);}
+ ACT.dskipPick();};
+ACT.dsell=()=>{if(!L.draft||L.draft.done)return;const v=pickValue();L.cc+=v;news('You traded your round '+(L.draft.round+1)+' pick for '+v+' coins.');UI.modal=null;draftPick(null);sfx('coin');save();render();};
+ACT.dskipPick=()=>{if(!L.draft||L.draft.done)return;UI.modal=null;const p=autoPickTarget();if(!p){draftPick(null);save();return render();}ACT.dpick({id:p.id});};
 ACT.dfin=()=>{const founding=L.draft.founding;finishDraft();if(founding){L.phase='REG';news('The '+L.year+' season is about to begin!');save();go('hub');return;}afterDraft();};
 function afterDraft(){if(offersDue()){L.jobs=genOffers();L.off.step='jobs';}else L.off.step='new';save();go('off');}
 
@@ -1900,8 +1907,8 @@ function postGame(g,R){
  }
  rows.sort((a,b)=>POSL.indexOf(a.pos)-POSL.indexOf(b.pos));
  let recs=[];try{recs=[...recGameCheck(R,res),...recLiveCheck(true)].slice(0,6);for(const r of recs)news('NEW RECORD: '+r);}catch(e){console.error(e);}
- let cc=(res==='W'?4:res==='T'?2:1)+Math.floor(L.fac.stad/3)+(L.fan>=75?2:L.fan>=50?1:0)+(L.phase==='PO'&&res==='W'?4:0);
- if(R.simmed)cc=Math.max(1,cc-1);
+ let cc=(res==='W'?2:res==='T'?1:0)+Math.floor(L.fac.stad/4)+(L.fan>=80?1:0)+(L.phase==='PO'&&res==='W'?2:0);   /* coins are scarce: ~2-3 per win */
+ if(R.simmed)cc=Math.max(0,cc-1);
  L.cc+=cc;fanAdd((res==='W'?3:res==='L'?-3:0)*(1+0.08*(L.fac.stad-1)));
  if(L.settings.diff===3&&!R.simmed){const m=us-th;L.dyn=clamp(L.dyn+(m>=14?2:m>0?1:m<=-14?-2:m<0?-1:0),1,20);}
  news((res==='W'?'WIN':res==='L'?'LOSS':'TIE')+' '+(home?'vs ':'at ')+abbr(R.op)+' '+us+'-'+th+'.');
@@ -2180,13 +2187,14 @@ function mkF(pl,side,role,x,y){
  return f;
 }
 const RT={
- WR:{go:[[45,0]],slant:[[2,0],[14,7]],out:[[8,0],[8,-14]],in:[[8,0],[8,16]],post:[[11,0],[32,11]],corner:[[11,0],[30,-11]],curl:[[11,0],[9.5,1,1]],comeback:[[15,0],[12.5,-3,1]],hitch:[[6,0],[5,0,1]],dig:[[13,0],[13,20]],fade:[[38,-5]]},
+ WR:{go:[[45,0]],slant:[[2,0],[14,7]],out:[[8,0],[8,-14]],in:[[8,0],[8,16]],post:[[11,0],[32,11]],corner:[[11,0],[30,-11]],curl:[[11,0],[9.5,1,1]],comeback:[[15,0],[12.5,-3,1]],hitch:[[6,0],[5,0,1]],qout:[[4,0],[4,-10]],dig:[[13,0],[13,20]],fade:[[38,-5]]},
  TE:{seam:[[40,0]],in:[[7,0],[7,14]],out:[[6,0],[6,-10]],drag:[[2,0],[4,22]],curl:[[9,0],[7.5,1,1]],corner:[[10,0],[26,-10]]},
  RB:{flat:[[0.5,-2],[3,-9],[16,-12]],wheel:[[0.5,-2],[3,-8],[34,-10]],check:[[2,1],[5,1,1]],angle:[[1,-4],[6,5]],swing:[[-1,-5],[5,-12]],leak:[[1.5,-3],[6,-6],[34,-8]]},
 };
 /* ---------- playbooks ----------
-   Every team has a style and an 8-play book built from it. Pass plays set the four
-   routes (top WR, bottom WR, TE, RB); run plays pick how the ball carrier gets it. */
+   Every team has a style and a 16-play, two-page book built from it: pass plays chosen from a big
+   pool by style (and a per-team shuffle, so no two books match), the team's runs, and one trick
+   play that belongs to that team alone. Pass plays set the four routes (top WR, bottom WR, TE, RB). */
 const PLAYS={
  'FOUR VERTS':{k:'pass',r:['go','go','seam','check'],tg:'air vert'},
  'SLANT FLAT':{k:'pass',r:['slant','slant','out','flat'],tg:'wc short'},
@@ -2200,41 +2208,162 @@ const PLAYS={
  'FADE STOP':{k:'pass',r:['fade','comeback','in','wheel'],tg:'vert air'},
  'TE LEAK':{k:'pass',r:['go','post','corner','angle'],tg:'bal'},
  'RB SCREEN':{k:'pass',r:['go','go','out','swing'],tg:'wc short'},
- 'ROCKET TOSS':{k:'trick',r:['post','seam','leak'],team:'SF',tg:''},   /* 49ers: QB pitches to the WR coming back behind the line, WR throws across to the RB leaking out */
- 'HB DIVE':{k:'run',v:'dive'},'HB TOSS':{k:'run',v:'toss'},'HB DRAW':{k:'run',v:'draw'},'QB DRAW':{k:'run',v:'qb'},'POWER O':{k:'run',v:'power'}
+ 'SAIL':{k:'pass',r:['corner','out','seam','flat'],tg:'bal vert'},
+ 'FLOOD':{k:'pass',r:['go','out','corner','flat'],tg:'bal'},
+ 'LEVELS':{k:'pass',r:['in','dig','in','check'],tg:'wc short'},
+ 'Y CROSS':{k:'pass',r:['post','go','in','flat'],tg:'vert bal'},
+ 'SPACING':{k:'pass',r:['hitch','hitch','curl','flat'],tg:'wc short spread'},
+ 'STICK':{k:'pass',r:['go','qout','curl','flat'],tg:'wc short bal'},
+ 'SNAG':{k:'pass',r:['corner','slant','curl','flat'],tg:'wc short'},
+ 'DRIVE':{k:'pass',r:['dig','go','drag','check'],tg:'bal wc'},
+ 'SHALLOW CROSS':{k:'pass',r:['dig','go','drag','angle'],tg:'spread wc'},
+ 'SCISSORS':{k:'pass',r:['post','corner','seam','check'],tg:'vert air'},
+ 'HI-LO':{k:'pass',r:['curl','in','drag','swing'],tg:'short wc'},
+ 'SEATTLE':{k:'pass',r:['go','go','seam','wheel'],tg:'air vert'},
+ 'TAMPA':{k:'pass',r:['post','dig','seam','check'],tg:'vert'},
+ 'BENCH':{k:'pass',r:['out','out','corner','check'],tg:'bal'},
+ 'DOUBLE POST':{k:'pass',r:['post','post','drag','check'],tg:'vert air'},
+ 'CORNER STRIKE':{k:'pass',r:['corner','corner','in','check'],tg:'air'},
+ 'QUICK OUTS':{k:'pass',r:['qout','qout','drag','flat'],tg:'short wc spread'},
+ 'ARROW':{k:'pass',r:['go','slant','out','angle'],tg:'short'},
+ 'BUBBLE':{k:'pass',r:['hitch','qout','seam','swing'],tg:'spread short'},
+ 'CROSSFIRE':{k:'pass',r:['in','dig','seam','flat'],tg:'spread'},
+ 'PA BOOT':{k:'pass',r:['comeback','corner','drag','flat'],tg:'bal'},
+ 'STOP AND GO':{k:'pass',r:['comeback','go','seam','check'],tg:'air vert'},
+ 'WHEEL':{k:'pass',r:['in','post','drag','wheel'],tg:'bal'},
+ 'TEXAS':{k:'pass',r:['go','go','in','angle'],tg:'wc bal'},
+ 'NINER':{k:'pass',r:['dig','dig','seam','check'],tg:'vert'},
+ 'CURL CORNER':{k:'pass',r:['curl','corner','out','flat'],tg:'bal'},
+ 'DEEP CROSS':{k:'pass',r:['post','in','corner','check'],tg:'vert air'},
+ 'MILLS':{k:'pass',r:['post','dig','curl','check'],tg:'vert bal'},
+ 'OMAHA':{k:'pass',r:['slant','in','seam','swing'],tg:'spread'},
+ 'BUNCH SMASH':{k:'pass',r:['hitch','corner','out','flat'],tg:'bal short'},
+ 'FADE OUT':{k:'pass',r:['fade','out','seam','check'],tg:'air'},
+ 'GO OUT':{k:'pass',r:['go','out','in','flat'],tg:'air short'},
+ 'POST WHEEL':{k:'pass',r:['post','curl','drag','wheel'],tg:'vert spread'},
+ 'ZIG':{k:'pass',r:['slant','dig','curl','angle'],tg:'wc'},
+ 'HITCH POST':{k:'pass',r:['hitch','post','seam','flat'],tg:'vert spread'},
+ 'SLUGGO':{k:'pass',r:['slant','fade','drag','check'],tg:'air vert'},
+ 'HB DIVE':{k:'run',v:'dive'},'INSIDE ZONE':{k:'run',v:'dive'},'TRAP':{k:'run',v:'dive'},
+ 'HB TOSS':{k:'run',v:'toss'},'STRETCH':{k:'run',v:'toss'},'SWEEP':{k:'run',v:'toss'},
+ 'HB DRAW':{k:'run',v:'draw'},'DELAY':{k:'run',v:'draw'},
+ 'QB DRAW':{k:'run',v:'qb'},'QB KEEPER':{k:'run',v:'qb'},
+ 'POWER O':{k:'run',v:'power'},'COUNTER':{k:'run',v:'power'}
 };
+/* One trick play per team (by team slot, so custom leagues get them too).
+   t: wrpass (pitch to a WR who throws) · tepass (TE throws) · rbpass (halfback pass) ·
+      flea (handoff, RB pitches back, QB throws) · throwback (pitch to WR/TE, QB leaks out and is the target) ·
+      reverse (handoff, RB hands to the WR going the other way) · endaround (WR takes a pitch across the backfield)
+   s: which side the trick goes to (-1 top, +1 bottom). r: routes for everyone not in the trick. */
+const TRICKS=[
+ ['BUFFALO STAMPEDE',{t:'flea',s:1,r:{w1:'post',w2:'go',te:'seam'}}],
+ ['MIAMI EXPRESS',{t:'endaround',s:-1,r:{w2:'go',te:'drag'}}],
+ ['PATRIOT PASS',{t:'throwback',s:1,r:{w1:'go',te:'seam',rb:'check'}}],
+ ['JET REVERSE',{t:'reverse',s:1,r:{w1:'go',te:'in'}}],
+ ['RAVEN DOUBLE',{t:'rbpass',s:-1,r:{w1:'post',w2:'go',te:'corner'}}],
+ ['TIGER THROWBACK',{t:'wrpass',s:-1,r:{w2:'post',te:'seam',rb:'leak'}}],
+ ['DAWG POUND FLEA',{t:'flea',s:-1,r:{w1:'go',w2:'post',te:'corner'}}],
+ ['STEEL CURTAIN CALL',{t:'tepass',s:1,r:{w1:'post',w2:'corner',rb:'leak'}}],
+ ['TEXAS TWO-STEP',{t:'throwback',s:-1,r:{w2:'go',te:'seam',rb:'check'}}],
+ ['COLT REVERSE',{t:'reverse',s:-1,r:{w2:'go',te:'seam'}}],
+ ['JAGUAR POUNCE',{t:'rbpass',s:1,r:{w1:'go',w2:'corner',te:'post'}}],
+ ['HOMERUN THROWBACK',{t:'wrpass',s:1,r:{w1:'go',te:'corner',rb:'leak'}}],
+ ['MILE HIGH FLICKER',{t:'flea',s:1,r:{w1:'go',w2:'go',te:'post'}}],
+ ['CORN DOG',{t:'tepass',s:-1,r:{w1:'go',w2:'post',rb:'leak'}}],
+ ['SILVER STREAK',{t:'wrpass',s:-1,r:{w2:'go',te:'post',rb:'leak'}}],
+ ['BOLT FLASH',{t:'endaround',s:1,r:{w1:'go',te:'drag'}}],
+ ['STAR DOUBLE PASS',{t:'wrpass',s:1,r:{w1:'post',te:'drag',rb:'leak'}}],
+ ['BIG BLUE FLEA',{t:'flea',s:-1,r:{w1:'post',w2:'go',te:'seam'}}],
+ ['PHILLY SPECIAL',{t:'throwback',s:1,pass:'te',r:{w1:'go',w2:'go',rb:'check'}}],
+ ['CAPITAL REVERSE',{t:'reverse',s:1,r:{w1:'post',te:'drag'}}],
+ ['MONSTERS BALL',{t:'rbpass',s:1,r:{w1:'post',w2:'go',te:'seam'}}],
+ ['GUTSY GOBLIN',{t:'endaround',s:1,r:{w1:'post',te:'out'}}],
+ ['FROZEN TUNDRA FLEA',{t:'flea',s:1,r:{w1:'go',w2:'post',te:'seam'}}],
+ ['VIKING DOUBLE',{t:'wrpass',s:-1,r:{w2:'corner',te:'seam',rb:'leak'}}],
+ ['DIRTY BIRD',{t:'reverse',s:-1,r:{w2:'post',te:'drag'}}],
+ ['PANTHER PITCH',{t:'rbpass',s:-1,r:{w1:'go',w2:'post',te:'out'}}],
+ ['SAINTS SWITCH',{t:'throwback',s:-1,r:{w2:'post',te:'seam',rb:'check'}}],
+ ['PIRATE PLUNDER',{t:'tepass',s:1,r:{w1:'go',w2:'go',rb:'leak'}}],
+ ['DESERT DOUBLE',{t:'endaround',s:-1,r:{w2:'post',te:'drag'}}],
+ ['HOLLYWOOD FLEA',{t:'flea',s:-1,r:{w1:'go',w2:'go',te:'corner'}}],
+ ['ROCKET TOSS',{t:'wrpass',s:1,r:{w1:'post',te:'seam',rb:'leak'}}],
+ ['TWELFTH MAN',{t:'rbpass',s:1,r:{w1:'go',w2:'post',te:'corner'}}]
+];
+for(let i=0;i<TRICKS.length;i++){const[n,sp]=TRICKS[i];PLAYS[n]=Object.assign({k:'trick',slot:i,tg:''},sp);}
 const STYLES={
- 'AIR RAID':{tags:['air','spread'],runs:['HB DRAW','HB DIVE'],pass:0.12,deep:0.12,cp:0},
- 'WEST COAST':{tags:['wc','short'],runs:['HB DIVE','HB TOSS'],pass:0.05,deep:-0.08,cp:0.06},
- 'POWER RUN':{tags:['bal','short'],runs:['HB DIVE','POWER O','HB TOSS','QB DRAW'],pass:-0.14,deep:0,cp:0.02,run:0.7},
- 'VERTICAL':{tags:['vert','air'],runs:['HB DIVE','HB DRAW'],pass:0.06,deep:0.25,cp:-0.05},
- 'SPREAD':{tags:['spread','wc'],runs:['HB TOSS','QB DRAW','HB DRAW'],pass:0.08,deep:0.05,cp:0.02},
- 'BALANCED':{tags:['bal','wc','vert'],runs:['HB DIVE','HB TOSS','POWER O'],pass:0,deep:0,cp:0}
+ 'AIR RAID':{tags:['air','spread'],rv:['draw','dive'],np:11,pass:0.12,deep:0.12,cp:0},
+ 'WEST COAST':{tags:['wc','short'],rv:['dive','toss','draw'],np:10,pass:0.05,deep:-0.08,cp:0.06},
+ 'POWER RUN':{tags:['bal','short'],rv:['dive','power','toss','qb'],np:9,pass:-0.14,deep:0,cp:0.02,run:0.7},
+ 'VERTICAL':{tags:['vert','air'],rv:['dive','draw','toss'],np:11,pass:0.06,deep:0.25,cp:-0.05},
+ 'SPREAD':{tags:['spread','wc'],rv:['toss','qb','draw'],np:10,pass:0.08,deep:0.05,cp:0.02},
+ 'BALANCED':{tags:['bal','wc','vert'],rv:['dive','toss','power','draw'],np:10,pass:0,deep:0,cp:0}
 };
 const STYLE_N=Object.keys(STYLES);
 function teamHash(t){const s=T(t).abbr+T(t).nickname;let h=7;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%99991;return h;}
 function teamStyle(t){if(L&&t===L.user&&L.style)return L.style;return STYLE_N[teamHash(t)%STYLE_N.length];}
+const PB_CACHE={};
 function playbook(t){
- const st=STYLES[teamStyle(t)],h=teamHash(t);
- const sc=n=>{const p=PLAYS[n];let v=0;for(const g of st.tags)if(p.tg.includes(g))v+=2;return v+((h*(n.length+3)+n.charCodeAt(0)*7)%10)/10;};
- const pass=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='pass').sort((a,b)=>sc(b)-sc(a)),runs=st.runs.slice(0,Math.min(st.runs.length,3));
- const tricks=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='trick'&&PLAYS[n].team===T(t).abbr);
- return[...pass.slice(0,8-runs.length-tricks.length),...tricks,...runs];
+ const st=STYLES[teamStyle(t)]||STYLES.BALANCED,h=teamHash(t),key=t+'|'+teamStyle(t);if(PB_CACHE[key])return PB_CACHE[key];
+ const nz=n=>{let x=h*31+7;for(let i=0;i<n.length;i++)x=(x*33+n.charCodeAt(i))%100003;return (x%1000)/1000;};   // per-team shuffle
+ const sc=n=>{const p=PLAYS[n];let v=0;for(const g of st.tags)if(p.tg.includes(g))v+=1.4;return v+nz(n)*2.2;};
+ const np=st.np||10,nr=15-np;
+ const pass=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='pass').sort((a,b)=>sc(b)-sc(a)).slice(0,np);
+ const rsc=n=>{const i=st.rv.indexOf(PLAYS[n].v);return (i<0?-3:-i)+nz(n)*1.6;};
+ const runs=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='run').sort((a,b)=>rsc(b)-rsc(a)).slice(0,nr);
+ const tr=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='trick'&&PLAYS[n].slot===t%TRICKS.length);
+ return PB_CACHE[key]=[...pass,...tr,...runs];
 }
-/* Trick play setup: top WR and TE clear out deep, the bottom WR comes back behind the line for the
-   pitch and becomes the passer, and the RB leaks out the other way on a wheel to the end zone. */
+/* ---------- trick plays ----------
+   The ball goes through a short chain of pitches/handoffs (drawn as a flying ball), then either the
+   last man throws (you aim as usual) or he runs with it. For about two seconds the defense bites:
+   the rushers chase the decoy and the defenders on the players involved flow toward the fake. */
 function setupTrick(name){
- const P0=PLAYS[name];const keep=(f,k,r,ins)=>{if(!f||!RT[k][r])return;const sx=f.x,sy=f.y;setRoute(f,k,r,ins);f.x=sx;f.y=sy;};
- keep(M.w1,'WR',P0.r[0],1);keep(M.te,'TE',P0.r[1],-1);keep(M.rb,'RB',P0.r[2],1);
- const w=M.w2;if(w&&M.qb){w.route=[{x:M.ballOn-3.5,y:clamp(M.qb.y+(w.y>M.qb.y?7:-7),3,50)},{x:M.ballOn-6,y:clamp(M.qb.y+(w.y>M.qb.y?9:-9),3,50),stop:true}];w.ri=0;}
- M.trick={name,w,stage:'wait',t:0,fool:2.1,oq:M.qb};M.called=name;}
+ const P0=PLAYS[name],q=M.qb;if(!P0||!q)return;const s=P0.s||1,bo=M.ballOn,qy=q.y,R=P0.r||{};
+ const keep=(f,k,r,ins)=>{if(!f||!r||!RT[k][r])return;const sx=f.x,sy=f.y;setRoute(f,k,r,ins);f.x=sx;f.y=sy;};
+ const sideW=M.w1&&M.w2?((M.w2.y>M.w1.y)===(s>0)?M.w2:M.w1):(M.w2||M.w1),otherW=sideW===M.w1?M.w2:M.w1;
+ const path=(f,pts)=>{if(!f)return;f.route=pts.map((p,i)=>({x:clamp(p[0],0.5,119.5),y:clamp(p[1],2,51),stop:i===pts.length-1&&p[2]!==0}));f.ri=0;f.rlen=f.route.length;};
+ const T0={name,t:P0.t,s,steps:[],i:0,stage:'wait',ft:0,fool:2.1,decoy:q,bite:[],final:'pass',oq:q,biteRun:false};
+ const rbRoute=r=>keep(M.rb,'RB',r,r==='leak'?s:-1);
+ // routes for players outside the trick
+ const routeOthers=(skip)=>{if(!skip.includes(M.w1))keep(M.w1,'WR',R.w1||'go',1);if(!skip.includes(M.w2))keep(M.w2,'WR',R.w2||'go',-1);if(!skip.includes(M.te))keep(M.te,'TE',R.te||'seam',-1);if(!skip.includes(M.rb)&&R.rb)rbRoute(R.rb);};
+ const t=P0.t;
+ if(t==='wrpass'||t==='tepass'||(t==='throwback')){
+  const pas=(t==='tepass'||P0.pass==='te')&&M.te?M.te:sideW;
+  path(pas,[[bo-3.5,qy+s*7,0],[bo-6,qy+s*9]]);
+  T0.steps=[{to:pas,at:0.45}];T0.bite=[pas,M.rb,sideW];
+  routeOthers([pas]);
+  if(t==='throwback')T0.leak=true;   // QB slips out the other way after the pitch
+ }else if(t==='rbpass'){
+  path(M.rb,[[bo-4,qy+s*6,0],[bo-5.5,qy+s*11]]);
+  T0.steps=[{to:M.rb,at:0.3}];T0.decoy=M.rb;T0.bite=[M.rb,sideW,M.te];routeOthers([M.rb]);
+ }else if(t==='flea'){
+  path(M.rb,[[bo-1.5,qy+s*0.6,0],[bo-0.8,qy+s*1.2]]);
+  T0.steps=[{to:M.rb,at:0.3},{to:q,at:1.15}];T0.decoy=M.rb;T0.bite=[M.rb,M.te];routeOthers([M.rb]);
+ }else if(t==='reverse'){
+  path(M.rb,[[bo-2.5,qy+s*3,0],[bo-1.5,qy+s*9]]);
+  path(sideW,[[bo-2,qy+s*7,0],[bo-2.6,qy+s*4.5]]);
+  T0.steps=[{to:M.rb,at:0.3},{to:sideW,at:0.9}];T0.final='carry';T0.decoy=M.rb;T0.bite=[M.rb,sideW,M.te,otherW];T0.biteRun=true;
+  T0.runTo=qy-s*16;routeOthers([M.rb,sideW]);
+ }else{ // endaround
+  path(sideW,[[bo-2.5,qy+s*2.5,0],[bo-2.5,qy-s*3]]);
+  path(M.rb,[[bo+1.5,qy+s*1,0],[bo+3,qy+s*1.5]]);
+  T0.steps=[{to:sideW,at:0.55}];T0.final='carry';T0.decoy=M.rb;T0.bite=[M.rb,M.te,sideW];T0.biteRun=true;T0.runTo=qy-s*17;routeOthers([sideW,M.rb]);
+ }
+ M.trick=T0;M.called=name;}
 function trickBusy(){return !!(M&&M.trick&&M.trick.stage!=='ready');}
-function upTrick(dt){const T0=M.trick;if(T0&&T0.fool>0)T0.fool-=dt;if(!T0||T0.stage==='ready'||M.thrown||M.carrier)return;const q=M.qb,w=T0.w;if(!q||!w)return;
- if(T0.stage==='wait'){if(M.pt>0.45){T0.stage='fly';T0.t=0;T0.from={x:q.x,y:q.y};T0.T=clamp(Math.hypot(w.x-q.x,w.y-q.y)/16,0.22,0.5);T0.oq=q;sfx('kick');}return;}
- if(T0.stage==='fly'){T0.t+=dt;if(T0.t>=T0.T){T0.stage='ready';M.qb=w;w.route=null;w.face=1;pop('PITCH!',w.x,w.y,'#ffe94a');
-   /* the old QB just blocks now */T0.oq.role='QB';sfx('catch');}}}
-function drawTrickBall(){const T0=M.trick;if(!T0||T0.stage!=='fly')return;const w=T0.w,u=clamp(T0.t/T0.T,0,1);
- drawBallAt(T0.from.x+(w.x-T0.from.x)*u,T0.from.y+(w.y-T0.from.y)*u,1.4+Math.sin(u*Math.PI)*1.6,M.tt*20);}
+function upTrick(dt){const T0=M.trick;if(!T0)return;if(T0.fool>0)T0.fool-=dt;if(T0.stage==='ready'||M.thrown||M.carrier)return;
+ const st=T0.steps[T0.i],q=M.qb;if(!st||!q)return;
+ if(T0.stage==='wait'){if(M.pt>=st.at){T0.stage='fly';T0.ft=0;T0.from={x:q.x,y:q.y};T0.hand=d2(q,st.to)<2.2;T0.T=T0.hand?0.12:clamp(Math.hypot(st.to.x-q.x,st.to.y-q.y)/16,0.2,0.5);T0.prev=q;sfx(T0.hand?'tick':'kick');}return;}
+ if(T0.stage==='fly'){T0.ft+=dt;if(T0.ft<T0.T)return;const to=st.to;M.qb=to;T0.i++;
+  if(!T0.hand)pop(T0.i===1&&T0.t==='flea'?'HANDOFF':T0.i>1&&T0.t==='flea'?'FLEA FLICKER!':'PITCH!',to.x,to.y,'#ffe94a');else if(T0.t==='reverse'&&T0.i===2)pop('REVERSE!',to.x,to.y,'#ffe94a');
+  if(T0.leak&&T0.i===1){const o=T0.oq;o.role='TE';o.route=[{x:clamp(o.x+3,0,119),y:clamp(o.y-T0.s*7,2,51)},{x:clamp(o.x+28,0,119),y:clamp(o.y-T0.s*15,2,51)}];o.ri=0;o.rlen=2;}
+  if(T0.i<T0.steps.length){T0.stage='wait';return;}
+  T0.stage='ready';
+  if(T0.final==='carry'){to.route=null;setCarrier(to);to.ty=clamp(T0.runTo,3,50.3);M.qb=T0.oq;}
+  else{to.route=null;to.face=1;sfx('catch');}}}
+function trickBiteTarget(){const T0=M.trick;if(!T0)return null;if(T0.biteRun)return T0.decoy;return T0.stage==='fly'?T0.steps[T0.i].to:M.qb;}
+function drawTrickBall(){const T0=M.trick;if(!T0||T0.stage!=='fly')return;const w=T0.steps[T0.i].to,u=clamp(T0.ft/T0.T,0,1);
+ drawBallAt(T0.from.x+(w.x-T0.from.x)*u,T0.from.y+(w.y-T0.from.y)*u,1.4+Math.sin(u*Math.PI)*(T0.hand?0.2:1.6),M.tt*20);}
 function applyRoutes(name){
  const P0=PLAYS[name];if(!P0||P0.k!=='pass')return;
  const keep=(f,k,r,ins)=>{if(!f||!RT[k][r])return;const sx=f.x,sy=f.y;setRoute(f,k,r,ins);f.x=sx;f.y=sy;};
@@ -2246,10 +2375,16 @@ function playSVG(name){
  g+=`<line x1="${X(0)}" y1="1" x2="${X(0)}" y2="${H-1}" stroke="#7fb0ff" stroke-width="1"/>`;
  const dot=(x,y,c)=>`<rect x="${X(x)-1.5}" y="${Y(y)-1.5}" width="3" height="3" fill="${c}"/>`;
  if(P0.k==='trick'){
-  const st=[[-1,-13,'WR',1],[-1,4,'TE',-1],[-5,2,'RB',1]];
-  P0.r.forEach((r,i)=>{const[x0,y0,k,ins]=st[i],R=RT[k][r];if(!R)return;let pts=`${X(x0)},${Y(y0)}`;for(const q of R)pts+=` ${X(x0+q[0]*0.75)},${Y(y0+q[1]*ins*0.75)}`;
-   g+=`<polyline points="${pts}" fill="none" stroke="${k==='RB'?'#3d8cff':'#2ef03c'}" stroke-width="1.5"/>`+dot(x0,y0,'#fff');});
-  g+=`<polyline points="${X(-1)},${Y(13)} ${X(-5)},${Y(9)}" fill="none" stroke="#ff9a3d" stroke-width="1.5"/><polyline points="${X(-4)},${Y(0)} ${X(-5)},${Y(9)}" fill="none" stroke="#ffe94a" stroke-width="1" stroke-dasharray="1.5 1.5"/><polyline points="${X(-5)},${Y(9)} ${X(18)},${Y(-12)}" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="2 1.5"/>`+dot(-1,13,'#fff')+dot(-4,0,'#ffe94a');
+  const S=P0.s||1,R0=P0.r||{},st={w1:[-1,-13,'WR',1],w2:[-1,13,'WR',-1],te:[-1,4,'TE',-1],rb:[-5,2,'RB',P0.s||1]};
+  for(const k of['w1','w2','te','rb']){const r=R0[k];if(!r)continue;const[x0,y0,kk,ins0]=st[k],ins=kk==='RB'?(r==='leak'?S:-1):ins0,RR=RT[kk][r];if(!RR)continue;let pts=`${X(x0)},${Y(y0)}`;for(const q of RR)pts+=` ${X(x0+q[0]*0.75)},${Y(y0+q[1]*ins*0.75)}`;
+   g+=`<polyline points="${pts}" fill="none" stroke="${kk==='RB'?'#3d8cff':'#2ef03c'}" stroke-width="1.5"/>`+dot(x0,y0,'#fff');}
+  const sw=S>0?13:-13,t=P0.t,dash=(a,b,c,w)=>`<polyline points="${a.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke="${c}" stroke-width="${w||1.2}" stroke-dasharray="1.5 1.5"/>`,line=(a,c)=>`<polyline points="${a.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke="${c}" stroke-width="2"/>`;
+  if(t==='wrpass'||t==='tepass'||t==='throwback'){const sy=(t==='tepass'||P0.pass==='te')?4*S:sw;g+=line([[-1,sy],[-5,9*S]],'#ff9a3d')+dash([[-4,0],[-5,9*S]],'#ffe94a')+dash([[-5,9*S],[16,-10*S]],'#fff');if(t==='throwback')g+=line([[-4,0],[-2,-6*S],[14,-12*S]],'#3d8cff');}
+  else if(t==='rbpass'){g+=line([[-5,2],[-6,10*S]],'#ff9a3d')+dash([[-6,10*S],[16,-10*S]],'#fff');}
+  else if(t==='flea'){g+=line([[-5,2],[-1,1]],'#ff9a3d')+dash([[-1,1],[-6,0]],'#ffe94a')+dash([[-6,0],[18,-6*S]],'#fff');}
+  else if(t==='reverse'){g+=line([[-5,2],[-3,6*S]],'#ff9a3d')+line([[-1,sw],[-3,6*S],[-2,-10*S],[14,-14*S]],'#ffe94a');}
+  else{g+=line([[-1,sw],[-3,2*S],[-3,-6*S],[14,-14*S]],'#ffe94a')+dash([[-5,2],[-1,1]],'#ff9a3d');}
+  g+=dot(-4,0,'#ffe94a');
  }else if(P0.k==='pass'){
   const st=[[-1,-13,'WR',1],[-1,13,'WR',-1],[-1,4,'TE',-1],[-5,2,'RB',-1]];
   P0.r.forEach((r,i)=>{const[x0,y0,k,ins]=st[i],R=RT[k][r];if(!R)return;let pts=`${X(x0)},${Y(y0)}`;for(const q of R)pts+=` ${X(x0+q[0]*0.75)},${Y(y0+q[1]*ins*0.75)}`;
@@ -3017,7 +3152,7 @@ function upDef(f,dt){
  if(M.play==='ret'){steer(f,M.land.x+2,M.land.y+(f.lane||0),f.spd,18,dt);return;}
  const b=M.ball;
  if(b&&f.hawk&&b.t>f.react){steer(f,b.x1,b.y1,f.spd,f.acc+4,dt);return;}
- if(f.role==='DL'||f.blitz){const tq=M.trick&&M.trick.oq&&M.trick.fool>0?M.trick.oq:M.qb;if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
+ if(f.role==='DL'||f.blitz){const tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
  if(f.role==='S'){
   // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
   // running vertically against a slower linebacker - instead of just floating in the middle.
@@ -3028,7 +3163,7 @@ function upDef(f,dt){
   steer(f,Math.min(tx,119),ty,f.spd*(lock?1:0.95),lock?f.acc:16,dt);return;}
  /* trick play: the defenders on the pitch man and the RB bite and flow to the pitch side,
     keeping contain a few yards off the passer, so the RB slips out the back side */
- if(M.trick&&M.trick.fool>0&&!M.thrown&&(f.man===M.trick.w||f.man===M.rb)&&M.trick.w){const q=M.trick.w,sd=f.y<q.y?-1:1;steer(f,q.x+2.5,q.y+sd*3.2,f.spd*0.9,f.acc,dt);return;}
+ if(M.trick&&M.trick.fool>0&&!M.thrown&&f.man&&M.trick.bite.includes(f.man)){const q=trickBiteTarget();if(q){const sd=f.y<q.y?-1:1;steer(f,q.x+2.5,q.y+sd*3.2,f.spd*0.9,f.acc,dt);return;}}
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,1));
   if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
   const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
@@ -3712,7 +3847,10 @@ function snapRun(v,name){snap('run');if(M.phase!=='live')return;M.runVar=v||'div
  if(v==='qb'){M.scramble=true;M.qbDraw=true;}}
 ACT.gPB=()=>{if(M&&M.phase==='pre')M.pb=!M.pb;};
 ACT.gPlay=d=>callPlay(d.n);
-function pbHTML(){const pb=playbook(L.user);return`<div class="gov" style="z-index:35"><div class="mp" style="width:600px;gap:6px"><div class="row"><div class="grow">${ttl('PLAYBOOK · '+teamStyle(L.user),true)}</div><button class="bt" data-a="gPB">CLOSE</button></div>
+function pbOrder(){const pb=playbook(L.user),ps=pb.filter(n=>PLAYS[n].k==='pass'),tr=pb.filter(n=>PLAYS[n].k==='trick'),rn=pb.filter(n=>PLAYS[n].k==='run');
+ return[...ps.slice(0,6),...tr,...rn.slice(0,1),...ps.slice(6),...rn.slice(1)];}
+ACT.pbPg=d=>{if(M){M.pbPage=+d.p;}};
+function pbHTML(){const all=pbOrder(),pages=Math.ceil(all.length/8),pg=clamp(M.pbPage||0,0,pages-1),pb=all.slice(pg*8,pg*8+8);return`<div class="gov" style="z-index:35"><div class="mp" style="width:600px;gap:6px"><div class="row" style="gap:6px"><div class="grow">${ttl('PLAYBOOK · '+teamStyle(L.user),true)}</div><button class="bt" data-a="pbPg" data-p="${pg-1}" ${pg>0?'':'disabled'}>&lt;</button><span class="s7">PAGE ${pg+1}/${pages}</span><button class="bt" data-a="pbPg" data-p="${pg+1}" ${pg<pages-1?'':'disabled'}>&gt;</button><button class="bt" data-a="gPB">CLOSE</button></div>
  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${pb.map(n=>`<button class="bt" style="padding:4px 4px 3px;display:flex;flex-direction:column;align-items:center;gap:3px;${n===M.called?'border-color:#ffe94a':''}" data-a="gPlay" data-n="${n}">${playSVG(n)}<span class="s7">${n}</span><span class="s6 ${PLAYS[n].k==='run'?'yl':PLAYS[n].k==='trick'?'yl':'cyt'}">${PLAYS[n].k==='run'?'RUN · SNAPS NOW':PLAYS[n].k==='trick'?'TRICK PLAY':'PASS'}</span></button>`).join('')}</div>
  <div class="s7 dim" style="text-align:center">TIP: TAP YOUR RUNNING BACK BEFORE THE SNAP FOR A QUICK RUN</div></div></div>`;}
 ACT.gFG=()=>{if(M)startKick('fg');};
