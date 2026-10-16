@@ -190,14 +190,14 @@ function loadFieldLogo(teamId){
  const img=new Image();
  img.onload=()=>{
   NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGOS[teamId]=img;
-  if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[buildField(false),buildField(true)];
+  if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[];
   // Refresh the TV scoreboard too, so badges that were showing abbreviations
   // switch to the same official NFL logo assets used at midfield.
   if(UI&&UI.scr==='game'&&M&&M.hc)hud();
  };
  img.onerror=()=>{
   NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGO_FAILED.add(teamId);
-  if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[buildField(false),buildField(true)];
+  if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[];
   // Keep the scoreboard's abbreviation fallback when a logo cannot be loaded.
   if(UI&&UI.scr==='game'&&M&&M.hc)hud();
  };
@@ -2160,12 +2160,12 @@ function buildField(flip){
  return c;
 }
 /* End-zone stands (behind each end line): columns of fans in home colours behind a padded wall. */
-function buildEzStands(){
+function buildEzStands(only){
  /* End-zone stands, joined to the sideline stands as one L-shaped bowl: the top band uses the
     same horizontal seat rows and front wall as the sideline stands, and that wall turns the
     corner and runs down the end zone, so the two stands meet instead of overlapping. */
  const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],W=420,HH=FB+22-ST,TH=FT-16-ST;
- for(let f=0;f<2;f++){const c=document.createElement('canvas');c.width=W;c.height=HH;const g=c.getContext('2d');
+ for(let f=0;f<2;f++){if(only!=null&&f!==only){fr.push(null);continue;}const c=document.createElement('canvas');c.width=W;c.height=HH;const g=c.getContext('2d');
   g.fillStyle='#161830';g.fillRect(0,0,W,HH);
   let seed=29;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
   const misc=['#e8e8e8','#c04040','#3a6ac0','#d0b040','#40a060'];
@@ -2472,8 +2472,12 @@ function startMatch(g,uAway){
   night:pickNight(),rival:g.h===L.user||L.phase==='PO'||T(g.h).di===T(g.a).di,wx:wxr,wind:wxr==='dome'?0:clamp(Math.round(gauss()*7),-18,18),ballOn:35,ballY:26.67,down:1,fdX:45,los:35,conv:false};
  {const uc=teamCol(L.user),oc=teamCol(op),uJ=home?uc.c1:'#f0f0f0',oJ=home?'#f0f0f0':oc.c1;M.oalt=colDist(uc.c1,oc.c1)<120||(colDist(uJ,oJ)<90);}
  {const du=defaultUnis(g);M.uU=uAway&&uAway.uU!=null?uAway.uU:du.uU;M.uO=uAway&&uAway.uO!=null?uAway.uO:du.uO;}M.uAway=M.uU===1;M.oalt=false;
- M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[buildField(false),buildField(true)];
- if(document.fonts&&document.fonts.load)document.fonts.load('16px "Press Start 2P"').then(()=>{if(M&&M.g===g)M.fieldCvs=[buildField(false),buildField(true)];}).catch(()=>{});M.crowd=buildCrowd();M.ezStands=buildEzStands();SPC.clear();
+ M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[];
+ if(document.fonts&&document.fonts.load&&!(document.fonts.check&&document.fonts.check('16px "Press Start 2P"')))document.fonts.load('16px "Press Start 2P"').then(()=>{if(M&&M.g===g)M.fieldCvs=[];}).catch(()=>{});
+ {const ck=[M.g.h,M.g.a,teamCol(M.g.h).c1,teamCol(M.g.h).c2,teamCol(M.g.a).c1,teamCol(M.g.a).c2].join('|');if(!STANDS_CACHE[ck])STANDS_CACHE={[ck]:{crowd:buildCrowd(),ez:null}};const SC=STANDS_CACHE[ck];M.crowd=SC.crowd;M.ezStands=SC.ez;
+  /* the end-zone stands are only seen near the goal lines: build them a moment after kickoff instead of during the load */
+  if(!SC.ez){const gm=M;setTimeout(()=>{if(M!==gm||SC.ez)return;const a=buildEzStands(0)[0];SC.ez=[a,a];M.ezStands=SC.ez;
+   setTimeout(()=>{SC.ez[1]=buildEzStands(1)[1];},500);},700);}}
  if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
@@ -3579,15 +3583,35 @@ function pickNight(){
  if(L.phase==='PO')return L.po&&L.po.cur>=3?'SUPER BOWL NIGHT':(L.po&&L.po.cur>=1)||Math.random()<0.5?'PLAYOFF NIGHT':null;
  if(Math.random()<0.27)return pick(['SUNDAY NIGHT','MONDAY NIGHT','THURSDAY NIGHT']);return null;}
 let NIGHTG=null;
+/* Night games. Instead of dimming everything, the stadium is dark and the FIELD is lit:
+   deep blue-black stands and surroundings, a cool-white lit field with brighter pools under the
+   four light towers, a vignette into darkness at the edges, glowing light banks with beams, and
+   camera flashes in the crowd. nightPaint() is shared with the helmet-logo layer so logos match. */
+function nightPaint(g){
+ const dome=M.wx==='dome',e0=wx(0),e1=wx(120),lo=Math.max(0,Math.min(e0,e1)),hi=Math.min(CW,Math.max(e0,e1));
+ g.save();g.globalCompositeOperation='multiply';
+ g.fillStyle=dome?'#5d6590':'#262b58';                                                              // everything outside the lit field
+ if(hi>lo){g.fillRect(0,ST,CW,FT-2-ST);g.fillRect(0,FB+2,CW,CH-FB-2);g.fillRect(0,FT-2,lo,FB-FT+4);g.fillRect(hi,FT-2,CW-hi,FB-FT+4);}else g.fillRect(0,ST,CW,CH-ST);
+ if(hi>lo){g.fillStyle=dome?'#d2d8ec':'#c4cdee';g.fillRect(lo,FT-2,hi-lo,FB-FT+4);                // the lit field (cool white)
+  // the strip between the field and the stands gets some spill light
+}
+ // vignette: falls off into darkness toward the corners
+ if(!NIGHTG||NIGHTG.dome!==dome){NIGHTG={dome};const v=g.createRadialGradient(CW/2,(FT+FB)/2,120,CW/2,(FT+FB)/2,420);v.addColorStop(0,'#ffffff');v.addColorStop(0.6,'#f2f4ff');v.addColorStop(1,dome?'#9aa2c4':'#59639a');NIGHTG.vig=v;
+  NIGHTG.pools=[[110,FT+8],[530,FT+8],[110,FB-6],[530,FB-6]].map(([x,y])=>{const r=g.createRadialGradient(x,y,6,x,y,230);r.addColorStop(0,'rgba(255,250,232,.22)');r.addColorStop(0.5,'rgba(255,250,232,.07)');r.addColorStop(1,'rgba(255,248,225,0)');return r;});}
+ g.fillStyle=NIGHTG.vig;g.fillRect(0,ST,CW,CH-ST);
+ // floodlight pools on the turf
+ g.globalCompositeOperation='screen';if(hi>lo){g.beginPath();g.rect(lo,FT-2,hi-lo,FB-FT+4);g.clip();for(const r of NIGHTG.pools){g.fillStyle=r;g.fillRect(lo,FT-2,hi-lo,FB-FT+4);}}
+ g.restore();}
 function nightFX(){
- cx.save();cx.globalCompositeOperation='multiply';cx.fillStyle=M.wx==='dome'?'#8a93b8':'#5e6ea8';cx.fillRect(0,ST,CW,CH-ST);
- cx.globalCompositeOperation='screen';
- if(!NIGHTG){NIGHTG=[];for(const[x,y,r]of[[90,FT+20,300],[550,FT+20,300],[320,FB-10,260]]){const g=cx.createRadialGradient(x,y,10,x,y,r);g.addColorStop(0,'rgba(255,245,210,.30)');g.addColorStop(1,'rgba(255,245,210,0)');NIGHTG.push(g);}}
- for(const g of NIGHTG){cx.fillStyle=g;cx.fillRect(0,ST,CW,CH-ST);}
+ nightPaint(cx);
+ // light banks on top of the stands with soft beams down onto the field
+ cx.save();cx.globalCompositeOperation='lighter';
+ for(const x of[70,200,440,570]){const gb=cx.createLinearGradient(0,ST+6,0,FT+60);gb.addColorStop(0,'rgba(255,245,210,.07)');gb.addColorStop(0.55,'rgba(255,245,210,.015)');gb.addColorStop(1,'rgba(255,245,210,0)');cx.fillStyle=gb;
+  cx.beginPath();cx.moveTo(x-10,ST+6);cx.lineTo(x+10,ST+6);cx.lineTo(x+46,FT+60);cx.lineTo(x-46,FT+60);cx.closePath();cx.fill();}
  cx.restore();
- // light banks on top of the stands, and camera flashes in the crowd
- for(const x of[70,200,440,570]){rect(x-14,ST,28,6,'#2a2e3c');for(let i=0;i<6;i++)rect(x-12+i*4,ST+1,3,4,'#fffbe0');cx.fillStyle='rgba(255,250,220,.18)';cx.beginPath();cx.ellipse(x,ST+4,26,8,0,0,Math.PI*2);cx.fill();}
- for(let i=0;i<3;i++)if(Math.random()<0.35)rect(Math.random()*CW,ST+8+Math.random()*(FT-ST-26),2,2,'#ffffff');
+ for(const x of[70,200,440,570]){cx.fillStyle='rgba(255,250,220,.28)';cx.beginPath();cx.ellipse(x,ST+4,30,10,0,0,Math.PI*2);cx.fill();
+  rect(x-14,ST,28,6,'#2a2e3c');for(let i=0;i<6;i++)rect(x-12+i*4,ST+1,3,4,'#fffbe0');}
+ for(let i=0;i<4;i++)if(Math.random()<0.4)rect(Math.random()*CW,ST+8+Math.random()*(FT-ST-26),2,2,'#ffffff');
 }
 function drawStands(){
  const beat=M.rival?(M.tt*1.82)%1:0,jump=M.rival&&beat<0.22;
@@ -3621,10 +3645,18 @@ function drawChain(){const C=M.chain;if(!C||M.play==='ret'||M.phase==='kick')ret
   if(k==='box'){rect(sx,y-31,8,8,'#000');rect(sx+1,y-30,6,6,'#ff8a1a');cx.font='6px "Press Start 2P",monospace';cx.textAlign='center';cx.textBaseline='middle';cx.fillStyle='#000';cx.fillText(String(M.down||1),sx+4,y-26.5);}
   else{rect(sx+1,y-29,5,6,'#000');rect(sx+2,y-28,3,4,'#ff8a1a');}}
  guy(C.a,'a');if(!goal)guy(C.b,'b');guy(C.box,'box');}
+/* Field canvases are built when first needed (the flipped one only once teams switch ends) and
+   reused between games with the same teams/logo/font, so loading into a game doesn't stall. */
+let STANDS_CACHE={};const FIELD_CACHE=new Map();
+function fieldCv(i){if(M.fieldCvs[i])return M.fieldCvs[i];
+ const lg=NFL_FIELD_LOGOS[M.fieldLogoTeam],fr=!document.fonts||!document.fonts.check||document.fonts.check('16px "Press Start 2P"');
+ const key=[i,M.g.h,M.g.a,M.fieldLogoTeam,lg&&lg.complete&&lg.naturalWidth?1:0,fr?1:0,teamName(M.g.h),teamName(M.g.a),teamCol(M.g.h).c1,teamCol(M.g.a).c1].join('|');
+ let c=FIELD_CACHE.get(key);if(!c){c=buildField(i===1);if(FIELD_CACHE.size>6)FIELD_CACHE.clear();FIELD_CACHE.set(key,c);}
+ return M.fieldCvs[i]=c;}
 function drawField(){
  rect(0,0,CW,CH,'#1d5a22');rect(0,0,CW,ST,'#0b0d1c');
  drawStands();
- cx.drawImage(M.fieldCvs[M.dir<0?1:0],Math.round(-(M.dir<0?120-M.cam:M.cam)*PXY+CW/2),FT-16);
+ cx.drawImage(fieldCv(M.dir<0?1:0),Math.round(-(M.dir<0?120-M.cam:M.cam)*PXY+CW/2),FT-16);
  // past the end lines: sideline turf + goal posts at the back of each end zone
  {const e0=wx(0),e1=wx(120),lo=Math.min(e0,e1),hi=Math.max(e0,e1);if(lo>0)rect(0,FT-16,lo,FH+30,'#2c7a31');if(hi<CW)rect(hi,FT-16,CW-hi,FH+30,'#2c7a31');
   // stands start ~3 yards behind the end line, on both ends
@@ -3709,8 +3741,7 @@ function drawLogoLayer(sh,maxY){
  if(M&&M.night){g.setTransform(1,0,0,1,0,0);
   const mk=LOGO_MASK||(LOGO_MASK=document.createElement('canvas'));if(mk.width!==W||mk.height!==H){mk.width=W;mk.height=H;}
   const mg=mk.getContext('2d');mg.setTransform(1,0,0,1,0,0);mg.clearRect(0,0,W,H);mg.drawImage(lg,0,0);
-  g.setTransform(k,0,0,k,0,0);g.globalCompositeOperation='multiply';g.fillStyle=M.wx==='dome'?'#8a93b8':'#5e6ea8';g.fillRect(0,ST,CW,CH-ST);
-  g.globalCompositeOperation='screen';for(const[x,y,r]of[[90,FT+20,300],[550,FT+20,300],[320,FB-10,260]]){const gr=g.createRadialGradient(x,y,10,x,y,r);gr.addColorStop(0,'rgba(255,245,210,.30)');gr.addColorStop(1,'rgba(255,245,210,0)');g.fillStyle=gr;g.fillRect(0,ST,CW,CH-ST);}
+  g.setTransform(k,0,0,k,0,0);nightPaint(g);
   g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='destination-in';g.drawImage(mk,0,0);g.globalCompositeOperation='source-over';}
 }
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
