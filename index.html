@@ -239,10 +239,17 @@ function eff(p,k){const b=k==='cov'?covOf(p):attr(p,k);if(!p)return b;return b*(
 /* Young QBs: random extra ceiling. Most get a bit more room to grow, some become future franchise QBs,
    some never get any. Applies to generated players, NFL roster players and draft prospects. */
 function qbPotBoost(p){if(!p||p.pos!=='QB'||p.age>25)return;const r=Math.random();const b=r<0.15?rnd(2,3.5):r<0.6?rnd(0.6,2):r<0.8?rnd(0,0.6):0;p.pot=clamp(p.pot+b*(p.age<=23?1:0.7),1,10);}
-function attrCap(p){return clamp(Math.round(p.pot||0)+1,3,10);}
-function canRaise(p,k){if(p.a[k]>=attrCap(p))return false;const ks=POSDEF[p.pos];return Math.round((ovr(p)*ks.length+1)/ks.length)<=Math.round(p.pot||0);}   /* rating stars never pass potential stars */
+/* Each player has his own attribute profile (p.tilt, from real combine numbers and stats for NFL players):
+   a burner like Xavier Worthy can push his speed well past his overall while his catching tops out lower.
+   An attribute's ceiling is potential + 1, plus the player's natural edge in it. */
+const TILT_K=1.5;
+function attrCap(p,k){const t=k&&p.tilt?Math.max(0,Math.round((p.tilt[k]||0)*TILT_K)):0;return clamp(Math.round(p.pot||0)+1+t,3,10);}
+function canRaise(p,k){if(p.a[k]>=attrCap(p,k))return false;p.a[k]++;const o=ovr(p);p.a[k]--;return Math.round(o)<=Math.round(p.pot||0)+0.0001;}   /* rating stars never pass potential stars */
 function isMaxed(p){return!POSDEF[p.pos].some(k=>canRaise(p,k));}
-function ovr(p){const ks=POSDEF[p.pos];let s=0;for(const k of ks)s+=p.a[k];return s/ks.length;}
+/* Overall is weighted toward what matters at each position, so a 5-star doesn't need every bar maxed
+   (a receiver with elite hands and speed is a star even if he isn't the strongest). */
+const POSW={QB:{str:.3,acc:.45,spd:.25},RB:{spd:.4,str:.35,cat:.25},WR:{cat:.35,spd:.35,str:.15,stm:.15},TE:{cat:.3,str:.25,blk:.25,spd:.2},OL:{blk:.45,str:.4,stm:.15},DL:{tkl:.3,str:.4,spd:.3},LB:{tkl:.45,str:.25,spd:.3},DB:{spd:.4,str:.2,stm:.4},K:{str:.5,kac:.5}};
+function ovr(p){const w=POSW[p.pos];if(!w){const ks=POSDEF[p.pos];let s=0;for(const k of ks)s+=p.a[k];return s/ks.length;}let s=0;for(const k in w)s+=(p.a[k]==null?DEF_ATTR[k]:p.a[k])*w[k];return s;}
 const starsOf=p=>clamp(Math.round(ovr(p))/2,0.5,5);
 function salFor(st,age){let s=1+st*st*1.25;if(age>=31)s*=0.85;return Math.round(s*10)/10;}
 function newStats(){return{gp:0,cmp:0,att:0,pyd:0,ptd:0,pint:0,car:0,ryd:0,rtd:0,rec:0,wyd:0,wtd:0,tkl:0,sck:0,dint:0,fgm:0,fga:0,fum:0};}
@@ -605,7 +612,8 @@ function makeNFLPlayer(r,team){
  const name=String(r.full_name||`${r.first_name||''} ${r.last_name||''}`).trim().replace(/\s+/g,' '),parts=name.split(' ');
  let fn=parts.shift()||'NFL',ln=parts.join(' ')||'PLAYER';
  const q=nflQuality(r,pos),p=genPlayer(pos,q,nflAge(r));p.nflQ=q;p.fn=fn;p.ln=ln;p.team=team;p.num=Number(r.jersey_number)||0;
- for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+rnd(-0.65,0.65)),1,10);
+ if(r.tilt){p.tilt=r.tilt;p.profV=1;}
+ for(const k of POSDEF[pos])p.a[k]=clamp(Math.round(q+(r.tilt?(r.tilt[k]||0)*TILT_K+rnd(-0.3,0.3):rnd(-0.65,0.65))),1,10);
  p.lvl=clamp(Math.floor((Number(r.years_exp)||0)/2)+1,1,8);p.pot=clamp(q+(p.age<=24?rnd(0.4,1.6):p.age<=27?rnd(0.1,0.7):rnd(0,0.3)),1,10);qbPotBoost(p);   /* only young players have much room to grow */
  p.peak=q;p.seasons=Math.max(0,Number(r.years_exp)||0);p.yrs=clamp(ri(1,4),1,4);p.sal=Math.round(salFor(starsOf(p),p.age)*0.82*10)/10;p.mor=String(r.status||'ACT').toUpperCase()==='ACT'?78:65;
  // look estimated from the player's official headshot by the weekly roster job
@@ -1172,7 +1180,7 @@ function drawMan(c,x,y,lk,o){
  r(J,3,6,6,4);r(J,2,6,8,2);r(TR,2,6,2,1);r(TR,8,6,2,1);r(TR,4,8,3,1);
  r(sk,5,5,3,1);
  r(H,4,0,4,1);r(H,3,1,6,1);r(H,2,2,7,2);r(H,3,4,5,1);r(lk.stripe,4,0,3,1);r(shade(H,40),4,1,2,1);r(shade(H,-45),4,2,1,1);
- r(sk,7,2,2,2);r('#111',8,2,1,1);r('#d3d7dd',9,2,1,3);r('#d3d7dd',7,4,3,1);
+ r(sk,7,2,2,2);r('#111',8,2,1,1);if(lk.nohelm){r(sk,7,4,2,1);r(sk,9,2,1,2);r(shade(sk,-30),9,3,1,1);}else{r('#d3d7dd',9,2,1,3);r('#d3d7dd',7,4,3,1);}   /* no facemask once the helmet's gone */
  if(o.pose)armP(1,o.pose.ra);
  else if(o.dive){r(J,2,4,2,2);r(J,8,4,2,2);r(sk,2,1,2,3);r(sk,8,1,2,3);if(o.ball){r('#7a3d12',3,-2,5,2);r('#fff',5,-2,1,1);}}
  else if(o.oneh){/* one-handed snag: right arm stretched high with the ball, left arm out for balance */r(J,8,3,2,3);r(sk,9,0,1,3);r(sk,10,-1,1,1);r('#7a3d12',9,-3,3,2);r('#fff',10,-3,1,1);r(J,2,6,1,2);r(sk,0,6,2,1);}
@@ -1442,6 +1450,22 @@ function syncNFLRatings(){
   save();if(UI.scr!=='game')render();
  }).catch(()=>{}).finally(()=>{window.__rateSync=false;window.__rateDone=true;});
 }
+/* Existing saves: give every NFL player his real attribute profile once, keeping his overall
+   (and potential) - only the mix between his attributes changes. Your own skill-point spending
+   stays in his overall. */
+function syncNFLProfiles(){
+ if(!L||L.rosterMode!=='NFL'||L.profV===1||window.__profSync)return;window.__profSync=true;
+ fetch('nfl-rosters.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
+  if(!j||!L)return;const by=new Map();for(const r of j.rows||[]){const k=nflNameKey(r.full_name||'');if(k&&r.tilt&&!by.has(k))by.set(k,r.tilt);}
+  let n=0;for(const p of L.players){if(!p.nfl||p.profV===1)continue;const t=by.get(nflNameKey(p.fn+' '+p.ln));if(!t)continue;
+   const base=ovr(p),ks=POSDEF[p.pos];p.tilt=t;
+   for(const k of ks)p.a[k]=clamp(Math.round(base+(t[k]||0)*TILT_K),1,10);
+   // nudge the rounding so his overall stays where it was
+   for(let it=0;it<4;it++){const d=ovr(p)-base;if(Math.abs(d)<0.2)break;const k=d>0?ks.reduce((a,b)=>p.a[a]-(t[a]||0)>=p.a[b]-(t[b]||0)?a:b):ks.reduce((a,b)=>p.a[a]-(t[a]||0)<=p.a[b]-(t[b]||0)?a:b);p.a[k]=clamp(p.a[k]+(d>0?-1:1),1,10);}
+   p.profV=1;n++;}
+  L.profV=1;save();if(UI.scr!=='game')render();
+ }).catch(()=>{}).finally(()=>{window.__profSync=false;});
+}
 function syncNFLLooks(){
  if(!L||L.rosterMode!=='NFL'||L.looksV===1||window.__lookSync)return;window.__lookSync=true;
  fetch('nfl-rosters.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{
@@ -1450,7 +1474,7 @@ function syncNFLLooks(){
   L.looksV=1;PRC.clear();for(const k in AVC)delete AVC[k];SPC.clear();save();if(UI.scr!=='game')render();
  }).catch(()=>{}).finally(()=>{window.__lookSync=false;});
 }
-SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){balanceHome();L.homeBal=1;save();}syncNFLLooks();syncNFLRatings();if(L.awardsShow&&L.awards&&L.awards[0]&&!UI.modal)setTimeout(()=>{if(UI.scr==='hub'&&!UI.modal&&L.awardsShow)modal(awardsHTML(L.awards[0]));},0);
+SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){balanceHome();L.homeBal=1;save();}syncNFLLooks();syncNFLProfiles();syncNFLRatings();if(L.awardsShow&&L.awards&&L.awards[0]&&!UI.modal)setTimeout(()=>{if(UI.scr==='hub'&&!UI.modal&&L.awardsShow)modal(awardsHTML(L.awards[0]));},0);
  const t=L.user,R=teamRatings(t),nodes=tlNodes();
  const nh=(n,x,cur)=>n?`<div class="nd" style="left:${x}%"><div class="a">${n.a}</div><div class="b">${esc(n.b)}</div><div class="dot ${cur?'c':n.res?n.res.c:''}"></div><div class="r">${n.res?n.res.txt:''}</div></div>`:'';
  const div=divStand(T(t).di).map(x=>{const r=L.teams[x];return`<tr class="${x===t?'me':''}"><td style="overflow:hidden;text-overflow:ellipsis">${esc(teamName(x).toUpperCase())}</td><td class="c">${r.w}</td><td class="c">${r.l}</td><td class="c">${r.t}</td></tr>`;}).join('');
@@ -1633,7 +1657,7 @@ SCR.player=()=>{
  const t=p.team>=0?p.team:L.user,mine=p.team===L.user,need=xpNeed(p.lvl);
  const ln=(k,v)=>`<div class="row" style="gap:6px"><span>${k}:</span><span>${v}</span></div>`;
  if(isMaxed(p)&&p.sp)p.sp=0;
- const attrs=POSDEF[p.pos].map(k=>`<div class="col" style="gap:3px"><div class="row"><span>${ATTR[k]}</span><div class="sp"></div>${mine&&p.sp>0?(canRaise(p,k)?`<button class="bt" style="padding:2px 6px 1px" data-a="pSp" data-k="${k}">+</button>`:'<span class="s7 dim">MAX</span>'):''}</div><div class="bar" style="height:16px;position:relative"><i style="width:${p.a[k]*10}%"></i>${attrCap(p)<10?`<b style="position:absolute;left:${attrCap(p)*10}%;top:-2px;bottom:-2px;width:2px;background:#ff5c5c" title="POTENTIAL CAP"></b>`:''}</div></div>`).join('');
+ const attrs=POSDEF[p.pos].map(k=>`<div class="col" style="gap:3px"><div class="row"><span>${ATTR[k]}</span><div class="sp"></div>${mine&&p.sp>0?(canRaise(p,k)?`<button class="bt" style="padding:2px 6px 1px" data-a="pSp" data-k="${k}">+</button>`:'<span class="s7 dim">MAX</span>'):''}</div><div class="bar" style="height:16px;position:relative"><i style="width:${p.a[k]*10}%"></i>${attrCap(p,k)<10?`<b style="position:absolute;left:${attrCap(p,k)*10}%;top:-2px;bottom:-2px;width:2px;background:#ff5c5c" title="POTENTIAL CAP"></b>`:''}</div></div>`).join('');
  const met=p.met===L.season*100+L.week;
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl(p.pos+' - '+esc(fullname(p).toUpperCase()),true)}</div>${mine?`<button class="bt ico" data-a="pRename">${PENCIL}</button>`:'<div style="width:32px"></div>'}</div>
@@ -2795,7 +2819,7 @@ function applyDefCall(){
  for(const f of dl)f.blitz=false;
 }
 ACT.dCall=d=>{if(!M||!M.def||M.phase!=='pre')return;M.dcall=d.c;applyDefCall();sfx('tick');};
-ACT.gSwitch=()=>switchCtl();
+ACT.gSwitch=()=>switchCtl();ACT.gDDive=()=>{if(M&&M.def)ctlTap();};
 function switchCtl(){if(!M||!M.def)return;const t=M.carrier||(M.ball&&M.ball.F?{x:M.ball.x1,y:M.ball.y1}:M.qb);if(!t)return;
  let best=null,bd=1e9;for(const f of M.D){if(f===M.ctl||f.stun>0||(f.down>0&&!(f.dive>0)))continue;const d=Math.hypot(f.x-t.x,f.y-t.y);if(d<bd){bd=d;best=f;}}
  if(best){M.ctl=best;M.ctlKey=best.key||M.ctlKey;sfx('tick');}}
@@ -2806,7 +2830,7 @@ function dragPre(dt){const f=M.dragD;if(!f||!ptr.down||M.input!=='dctl'){M.dragD
  const p=scrToField(ptr.x,ptr.y);if(!M.dragOff)M.dragOff={x:f.x-p.x,y:f.y-p.y};   /* keep the grab point under the finger */
  const minX=M.los+(f.role==='DL'?0.9:1.2),nx=clamp(p.x+M.dragOff.x,minX,Math.min(119,M.los+30)),ny=clamp(p.y+M.dragOff.y,1,52.3),dx=nx-f.x,dy=ny-f.y;
  f.x=nx;f.y=ny;f.vx=f.vy=0;f.moved=true;if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
- if(M.aiSnapT!=null)M.aiSnapT=Math.max(M.aiSnapT,1.2);}   /* the offense waits while you're moving people */
+ preAnim(f,dx,dy,dt);}
 /* ---------- defense joystick ----------
    Bottom-left of the screen whenever you're on defense. Push it to run your highlighted
    defender; before the snap it walks him (corners, linebackers, anyone) to a new spot.
@@ -2817,9 +2841,11 @@ function joyHit(p){return joyOn()&&Math.hypot(p.x-JOY.x,p.y-JOY.y)<=JOY.hit;}
 function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.x,dy=ptr.y-JOY.y;const d=Math.hypot(dx,dy);if(d<4)return{x:0,y:0,m:0};const m=Math.min(1,d/JOY.r);return{x:dx/d,y:dy/d,m};}
 function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
  const sp=6.5*v.m,nx=clamp(f.x+v.x*(M.dir<0?-1:1)*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
- f.x=nx;f.y=ny;f.face=v.x*(M.dir<0?-1:1)>0?1:-1;f.mvT=(f.mvT||0)+dt;f.moved=true;
+ f.x=nx;f.y=ny;f.moved=true;
  if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
- if(M.aiSnapT!=null)M.aiSnapT=Math.max(M.aiSnapT,1.2);}
+ preAnim(f,dx,dy,dt);}
+/* running legs for a defender you're moving before the snap */
+function preAnim(f,dx,dy,dt){const sp=Math.hypot(dx,dy)/Math.max(dt,1e-3);if(sp<0.3)return;f.mv=true;f.preMv=true;f.t+=dt*(0.35+Math.min(sp,9)*0.17);if(Math.abs(dx)>0.002)f.face=dx>0?1:-1;}
 function drawJoy(){if(!joyOn())return;const v=joyVec(),kx=JOY.x+(v?v.x*v.m*JOY.r:0),ky=JOY.y+(v?v.y*v.m*JOY.r:0);
  cx.save();cx.globalAlpha=v?0.75:0.45;cx.fillStyle='rgba(0,0,30,.55)';cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.fill();
  cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.stroke();
@@ -2836,16 +2862,19 @@ function ctlMove(f,dt){
  if(Math.hypot(tx-f.x,ty-f.y)<0.4){steer(f,f.x,f.y,0,f.acc+10,dt);return;}
  steer(f,clamp(tx,-1,121),clamp(ty,0,53.3),f.spd*1.03,f.acc+12,dt);
 }
-/* tap on defense: jump at a ball in the air near you, dive at the ball carrier / QB when close, otherwise switch */
+/* tap on defense: jump at a ball in the air near you, otherwise DIVE - at the ball carrier / QB when
+   he's close, straight ahead the way you're running when he isn't. Never switches players on its own. */
 function ctlTap(){
  const f=M.ctl;if(!f||M.phase!=='live')return;
  if(M.play==='intret'){if(M.carrier&&M.carrier.side==='D'){dive(M.carrier);}return;}
- if(f.stun>0||f.down>0||f.dive>0)return switchCtl();
+ if(f.stun>0||f.down>0||f.dive>0||f.dove)return;
  const b=M.ball;if(b&&b.F&&!b.done&&Math.hypot(f.x-b.x1,f.y-b.y1)<4){if(!(f.jump>0)){f.jump=0.45;f.reach=0.3;sfx('juke');}return;}
  const c=M.carrier||(M.play==='pass'&&!M.thrown?M.qb:null);
  if(c&&d2(f,c)<4.2&&!f.eng){const lead=0.3,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y)||1,T=0.38,v=Math.min(dp/T,f.spd*1.9);
   f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;sfx('juke');return;}
- switchCtl();
+ if(f.eng)return;
+ {const sp=Math.hypot(f.vx,f.vy),T=0.38;let ux,uy;if(sp>0.8){ux=f.vx/sp;uy=f.vy/sp;}else{const t=c||M.qb;if(t){const d=Math.hypot(t.x-f.x,t.y-f.y)||1;ux=(t.x-f.x)/d;uy=(t.y-f.y)/d;}else{ux=-1;uy=0;}}
+  const v=Math.max(sp,f.spd)*1.5;f.dove=true;f.dive=T;f.dv=T;f.vx=ux*v;f.vy=uy*v;f.dtk=false;sfx('juke');}
 }
 /* ---------- AI offense: play calling ---------- */
 function aiLead(){return M.sc[1]-M.sc[0];}
@@ -2894,6 +2923,7 @@ function aiSituation(){
 /* ---------- AI offense: quarterback ---------- */
 function aiQB(q,dt){
  const S=M.aiQB;if(!S||M.thrown||M.carrier||M.phase!=='live')return;S.t-=dt;
+ {const u=M.ctl;if(u&&!u.eng&&!(u.stun>0)&&!(u.down>0)&&d2(u,q)<1.05)return;}   /* your defender has him wrapped up: no throw, it's a sack */
  let press=9;for(const d of M.D){if(d.eng||d.stun>0||d.down>0)continue;press=Math.min(press,d2(d,q));}
  if(S.t>0&&press>2.0)return;
  let best=null;
@@ -3038,7 +3068,7 @@ function snap(type){
  sfx('whistle');recStart();M.leap=false;M.rp=null;
  if(type==='run'){for(const f of M.O)if(f.role==='WR'||f.role==='TE')f.route=null;M.rb.route=null;}
 }
-function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;if(M.def){if(M.input!=='dctl')M.input=null;if(f.side==='O'&&M.ctl&&d2(M.ctl,f)>8&&!ctlActive())switchCtl();}else M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down&&!M.def)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
+function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;if(M.def){if(M.input!=='dctl')M.input=null;}else M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down&&!M.def)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
 function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier||trickBusy())return;M.scramble=true;setCarrier(M.qb);pop('QB KEEPER',M.qb.x,M.qb.y,'#ffe94a');}
 
 /* =====================================================================
@@ -3607,11 +3637,13 @@ function contacts(dt){
   // A defender held by a blocker who ends up right on (or behind) the runner sheds the block.
   for(const d of M.D){if(d.eng&&(d2(d,c)<1.0||d.x<c.x-0.6)){if(d.eng.blk===d)d.eng.blk=null;d.eng=null;d.shed=0;}}
   for(const d of M.D){if(d.stun>0||d.eng||d.dive>0)continue;const dd=d2(d,c);
-  const tr=M.def?0.95:0.8;if(dd<tr){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;continue;}
+  const tr=M.def?0.95:0.8;
+  if(M.def&&d===M.ctl&&c===M.qb&&!M.thrown&&c.x<=M.los+0.5&&dd<1.0){/* you got to the QB behind the line: sack */c.down=1;M.aim=null;sfx('hit');M.shake=5;cr(c.pl,'sacked',1);pop('SACK!',c.x,c.y,'#ff8a8a');creditD(d,'sck',8);creditD(d,'tkl',0);return endPlay('sack',c.x,c.y);}
+  if(dd<tr){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;continue;}
   // Chasing right on his heels: after a moment in arm's reach he gets a hand on him
   // (otherwise an equally fast defender could trail a runner forever without tackling).
   if(dd<(M.def?1.55:1.35)){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>(M.def?0.2:0.3)){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;}}else d.trail=0;}}
- else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;if(d2(d,q)<0.85){if(Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);
+ else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;const mine=M.def&&d===M.ctl;if(d2(d,q)<(mine?1.0:0.85)){if(mine||Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);
    // a blitzing linebacker / DB can hit-stick the QB: 30% of those strip the ball
    if((d.role==='LB'||d.role==='DB'||d.role==='S')&&Math.random()<0.10){M.shake=10;pop('HIT STICK!',q.x,q.y,'#ff5c5c');if(Math.random()<0.5)popHelmet(q,-1);
     if(Math.random()<0.30){M.ts.to++;cr(q.pl,'fum',1);sfx('bad');looseBall(q.x-0.3,q.y,1.1,rnd(-3,2),rnd(-4,4),rnd(4,7));pop('STRIP SACK!',q.x,q.y-2,'#ff8a8a');return startFumble(q,'STRIP SACK!');}}
@@ -3639,6 +3671,8 @@ function stepDefDive(f,dt){
   const pt=clamp(0.62+(A(f,'tkl')-A(c,'str'))*0.03+(c.jk>0?-0.25:0)+(c.role==='QB'&&!M.scramble?0.1:0)+(M.def?0.1:0),0.3,0.9);
   if(Math.random()<pt){c.down=1;M.shake=4;sfx('hit');pop('DIVING TACKLE!',c.x,c.y,'#ff8a8a');creditD(f,'tkl',4);endPlay('tackle',c.x+0.3,c.y);return true;}
   pop('MISSED!',c.x,c.y,'#7fffd4');hurdle(c);xpG(c.pl,2);}
+ if(!c&&!f.dtk&&M.play==='pass'&&!M.thrown&&M.qb&&!(M.qb.down>0)&&d2(f,M.qb)<1.15){const q=M.qb;f.dtk=true;
+  if(f.side==='D'&&(M.def||Math.random()<0.7)){M.aim=null;q.down=1;M.shake=5;sfx('hit');cr(q.pl,'sacked',1);pop('SACK!',q.x,q.y,'#ff8a8a');creditD(f,'sck',8);creditD(f,'tkl',0);endPlay('sack',q.x,q.y);return true;}}
  if(f.dive<=0){f.dive=0;f.vx=f.vy=0;f.stun=1.0;f.down=1.0;}
  return false;
 }
@@ -3900,6 +3934,7 @@ function step(dt){
  for(const p of M.parts){if(M.wx==='snow'){p.y+=22*p.s*dt;p.x+=Math.sin(M.tt+p.s*9)*8*dt+M.wind*0.6*dt;}else{p.y+=260*p.s*dt;p.x+=M.wind*2*dt-30*dt;}if(p.y>CH)p.y-=CH;if(p.x<0)p.x+=CW;if(p.x>CW)p.x-=CW;}
  if(M.ov){if(M.ov.type==='drive'&&!M.ov.done){M.ov.tm-=dt;if(M.ov.tm<=0){revealLine();M.ov.tm=0.34;}}upCam(dt);return;}
  if(M.phase==='pre'&&M.pc!=null&&!M.paused){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
+ if(M.def&&M.phase==='pre')for(const f of M.D)if(f.preMv){f.preMv=false;f.mv=false;}
  if(M.def&&M.phase==='pre'&&M.dragD)dragPre(dt);
  if(M.def&&M.phase==='pre'&&M.input==='joy')joyPre(dt);
  if(M.def&&M.phase==='pre'&&!M.paused&&M.aiSnapT!=null){M.aiSnapT-=dt;if(M.aiSnapT<=0){M.aiSnapT=null;aiSnap();return;}}
@@ -4034,6 +4069,22 @@ function drawRoutes(){
   const a=pts[pts.length-2],b=pts[pts.length-1],ang=Math.atan2(b[1]-a[1],b[0]-a[0]),sz=pass?6:8;cx.fillStyle=pass?col:'#071a07';cx.beginPath();cx.moveTo(b[0]+Math.cos(ang)*sz,b[1]+Math.sin(ang)*sz);cx.lineTo(b[0]+Math.cos(ang+2.3)*sz,b[1]+Math.sin(ang+2.3)*sz);cx.lineTo(b[0]+Math.cos(ang-2.3)*sz,b[1]+Math.sin(ang-2.3)*sz);cx.closePath();cx.fill();}
  
  if(M.plays<3){const lab=[[M.w1,'1'],[M.w2,'2'],[M.te,'3'],[M.rb,'4']];for(const[f,n]of lab)if(f)ctext(n,wx(f.x)-14*M.dir,wy(f.y)-30,'#fff','center');}
+}
+/* defense play art before the snap: who's in man (line to his man), zones (circle), blitzers (red arrows) */
+function drawDefArt(){
+ const ln=(x0,y0,x1,y1,col,w,dash)=>{cx.save();cx.strokeStyle=col;cx.lineWidth=w;cx.setLineDash(dash||[]);cx.beginPath();cx.moveTo(x0,y0);cx.lineTo(x1,y1);cx.stroke();cx.restore();};
+ const head=(x0,y0,x1,y1,col,sz)=>{const a=Math.atan2(y1-y0,x1-x0);cx.fillStyle=col;cx.beginPath();cx.moveTo(x1+Math.cos(a)*sz,y1+Math.sin(a)*sz);cx.lineTo(x1+Math.cos(a+2.3)*sz,y1+Math.sin(a+2.3)*sz);cx.lineTo(x1+Math.cos(a-2.3)*sz,y1+Math.sin(a-2.3)*sz);cx.closePath();cx.fill();};
+ const q=M.qb||{x:M.los-6,y:M.ballY};
+ for(const pass of[0,1])for(const f of M.D){const sx=wx(f.x),sy=wy(f.y)-4,mine=f===M.ctl;
+  if(f.zone){const zx=wx(f.zone.x),zy=wy(f.zone.y),rx=5.5*PXY,ry=5*PYY;
+   if(!pass){cx.fillStyle='rgba(60,160,255,.18)';cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.fill();}
+   else{cx.strokeStyle=mine?'#ffe94a':'rgba(120,200,255,.95)';cx.lineWidth=2;cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.stroke();ln(sx,sy,zx,zy,mine?'#ffe94a':'#78c8ff',2,[3,3]);}}
+  else if(f.blitz||f.role==='DL'){const tx=wx(f.role==='DL'?M.los-2.5:q.x+1),ty=f.role==='DL'?sy:wy(q.y);
+   ln(sx,sy,tx,ty,pass?(mine?'#ffe94a':'#ff4d4d'):'#2a0000',pass?3:5);if(pass)head(sx,sy,tx,ty,mine?'#ffe94a':'#ff4d4d',6);}
+  else if(f.man){const tx=wx(f.man.x),ty=wy(f.man.y)-4;ln(sx,sy,tx,ty,pass?(mine?'#ffe94a':'#ffd23a'):'#2a2000',pass?2:4,[4,3]);}
+  else if(f.role==='S'||f.role==='DB'){/* deep help over the top */const zx=wx(Math.min(119,f.x+3)),zy=wy(f.y),rx=8*PXY,ry=9*PYY;
+   if(!pass){cx.fillStyle='rgba(60,160,255,.14)';cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.fill();}else{cx.strokeStyle='rgba(120,200,255,.8)';cx.lineWidth=2;cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.stroke();}}}
+ if(M.plays<6){const c=M.dcall||'MAN',t=c==='MAN'?'MAN: DASHED LINE = HIS MAN':c==='ZONE'?'ZONE: EACH DEFENDER GUARDS HIS CIRCLE':c==='BLITZ'?'BLITZ: RED ARROWS RUSH THE QB':'PREVENT: EVERYONE DEEP';ctext(t,CW/2,FT+4,'#fff','center',7);}
 }
 function miniStar(x,y){cx.fillStyle='#000';cx.fillRect(x-3,y-1,7,3);cx.fillRect(x-1,y-3,3,7);cx.fillStyle='#ffe600';cx.fillRect(x-2,y,5,1);cx.fillRect(x,y-2,1,5);cx.fillRect(x-1,y-1,3,3);}
 function curHolder(){return M.loose||(M.trick&&M.trick.stage==='fly')?null:M.carrier||((M.phase==='pre'||(M.phase==='live'&&M.play==='pass'&&!M.thrown)||(M.phase==='dead'&&M.res&&M.res.kind==='sack'))?M.qb:null);}
@@ -4177,6 +4228,7 @@ function draw(){
  cx.save();cx.translate(Math.round(sh),Math.round(sh*0.6));
  drawField();
  if(M.phase==='pre'&&!M.def)drawRoutes();
+ if(M.phase==='pre'&&M.def&&!M.ov)drawDefArt();
  if(!M.def)drawTarget();drawPlayers();drawBall();if(M.trick)drawTrickBall();if(M.loose)drawLoose();if(M.helmets)drawHelmets();
  if(M.ov&&M.ov.type==='drive')drawDriveBall();
  if(M.night)nightFX();
@@ -4211,7 +4263,7 @@ function hud(){
    if(M.to>0&&M.runoff>0&&M.clock>0)b.push(`<button class="bt" data-a="gTO">TIMEOUT</button>`);
    hint=M.plays<12?(IS_MOBILE?'TAP A DEFENDER · JOYSTICK OR DRAG TO LINE HIM UP':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
   }else if(M.def&&M.phase==='live'){
-   if(M.play!=='intret')b.push(`<button class="bt" data-a="gSwitch">SWITCH</button>`);
+   if(M.play!=='intret')b.push(`<button class="bt r" data-a="gDDive">DIVE</button>`,`<button class="bt" data-a="gSwitch">SWITCH</button>`);
    hint=M.play==='intret'?(IS_MOBILE?'RUN IT BACK! HOLD &amp; DRAG TO STEER · TAP TO DIVE':'RUN IT BACK! HOLD &amp; DRAG TO STEER · SPACE TO DIVE'):(M.plays<8?(IS_MOBILE?'HOLD &amp; DRAG TO MOVE · TAP TO DIVE AT THE RUNNER / JUMP FOR THE BALL':'DRAG OR ARROWS/WASD TO MOVE · SPACE TO DIVE / JUMP · Q SWITCH'):'');
   }else if(M.phase==='pre'){
    b.push(`<button class="bt y" data-a="gPB">PLAYBOOK</button>`);

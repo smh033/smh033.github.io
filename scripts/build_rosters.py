@@ -82,6 +82,113 @@ def production():
         for i, (v, pid) in enumerate(lst): out[pid] = round((i + 0.5)/n, 3)
     return out
 
+COMBINE_URL = "https://github.com/nflverse/nflverse-data/releases/download/combine/combine.csv"
+# in-game attributes per position and how much each one counts toward the overall (same weights as POSW in index.html)
+POSW = {"QB":{"str":.3,"acc":.45,"spd":.25},"RB":{"spd":.4,"str":.35,"cat":.25},"WR":{"cat":.35,"spd":.35,"str":.15,"stm":.15},
+        "TE":{"cat":.3,"str":.25,"blk":.25,"spd":.2},"OL":{"blk":.45,"str":.4,"stm":.15},"DL":{"tkl":.3,"str":.4,"spd":.3},
+        "LB":{"tkl":.45,"str":.25,"spd":.3},"DB":{"spd":.4,"str":.2,"stm":.4},"K":{"str":.5,"kac":.5}}
+GPOS = {"QB":"QB","RB":"RB","FB":"RB","HB":"RB","WR":"WR","TE":"TE","T":"OL","G":"OL","C":"OL","OT":"OL","OG":"OL","OL":"OL","IOL":"OL",
+        "DE":"DL","DT":"DL","NT":"DL","DL":"DL","EDGE":"DL","LB":"LB","ILB":"LB","OLB":"LB","MLB":"LB","CB":"DB","S":"DB","SS":"DB","FS":"DB","DB":"DB","SAF":"DB","K":"K","PK":"K"}
+
+def nkey(n):
+    import re
+    n = re.sub(r"[^a-z ]", "", (n or "").lower())
+    return " ".join(w for w in n.split() if w not in ("jr", "sr", "ii", "iii", "iv", "v"))
+
+def profiles(rows):
+    """Attribute profile ("tilt") per player: who is faster than he is strong, a better catcher
+    than blocker, etc. Built from combine testing (40, bench, weight, jumps) and real per-play
+    stats (catch rate, depth of target, completion % over expected, tackles, pass breakups...).
+    Each tilt is a z-score style offset per attribute with a weighted mean of zero, so it
+    reshapes a player's ratings without changing his overall (the game keeps his overall/potential)."""
+    try: comb = list(csv.DictReader(io.StringIO(get(COMBINE_URL))))
+    except Exception as e: print("combine unavailable:", e); comb = []
+    cb = {}
+    for c in comb:
+        g = GPOS.get(c.get("pos", ""));k = (nkey(c.get("player_name")), g)
+        if g and (k not in cb or c["season"] > cb[k]["season"]): cb[k] = c
+    def load(season):
+        try: return {r["player_id"]: r for r in csv.DictReader(io.StringIO(get(stat_url(season))))}
+        except Exception: return {}
+    seasons = [load(SEASON), load(SEASON - 1), load(SEASON - 2)]   # traits are stable: use three seasons
+    fl = lambda v: float(v) if v not in (None, "", "NA") else None
+    def tot(pid, k):
+        a = [fl(d[pid].get(k)) for d in seasons if pid in d]
+        a = [x for x in a if x is not None]
+        return sum(a) if a else 0.0
+    def ht(h):
+        try: f, i = h.split("-"); return int(f)*12+int(i)
+        except Exception: return None
+    met = {}   # (pos) -> {pid: {attr: [metric values]}} raw metrics, z-scored below
+    raw = {}
+    for r in rows:
+        pos = GPOS.get(r.get("position", "")) or GPOS.get(r.get("dpos", ""))
+        if pos not in POSW: continue
+        pid = r.get("gsis_id"); c = cb.get((nkey(r.get("full_name")), pos)) or {}
+        forty, wt, bench, vert, broad = fl(c.get("forty")), fl(c.get("wt")), fl(c.get("bench")), fl(c.get("vertical")), fl(c.get("broad_jump"))
+        m = {}
+        def add(attr, name, v):
+            if v is not None: m.setdefault(attr, {})[name] = v
+        g = max(1.0, tot(pid, "games"))
+        sp = -forty if forty else None
+        if pos == "QB":
+            att = tot(pid, "attempts")
+            if att >= 60:
+                add("acc", "cmp", tot(pid, "completions")/att); add("acc", "ypa", tot(pid, "passing_yards")/att)
+                add("str", "ay", tot(pid, "passing_air_yards")/att); add("str", "p40", tot(pid, "passing_40")/att)
+                add("spd", "ryg", tot(pid, "rushing_yards")/g); add("spd", "ryg2", tot(pid, "rushing_yards")/g)   # judged against other real starters
+            add("spd", "40", sp)
+        elif pos == "RB":
+            car, tg = tot(pid, "carries"), tot(pid, "targets")
+            if car >= 25: add("spd", "br", tot(pid, "rushing_20")/car); add("str", "fd", tot(pid, "rushing_first_downs")/car)
+            if tg >= 10: add("cat", "cr", tot(pid, "receptions")/tg)
+            if g > 1: add("cat", "rpg", tot(pid, "receptions")/g)
+            add("spd", "40", sp); add("str", "wt", wt); add("str", "bp", bench)
+        elif pos in ("WR", "TE"):
+            tg = tot(pid, "targets")
+            if tg >= 15:
+                add("cat", "cr", tot(pid, "receptions")/tg)
+                add("spd", "adot", tot(pid, "receiving_air_yards")/tg)
+                rec = max(1.0, tot(pid, "receptions")); add("str", "yac", tot(pid, "receiving_yards_after_catch")/rec)
+            if pos == "WR":
+                if g > 1: add("stm", "tpg", tg/g)
+                add("spd", "40", sp); add("spd", "40b", sp); add("str", "wt", wt); add("str", "bp", bench)
+            else:
+                add("spd", "40", sp); add("str", "wt", wt); add("str", "bp", bench); add("blk", "wt", wt)
+                if g > 1: add("blk", "ntpg", -tg/g)
+        elif pos == "OL":
+            add("str", "bp", bench); add("str", "wt", wt); add("blk", "wt", wt); add("blk", "br", broad); add("stm", "g", g if g > 1 else None)
+        elif pos in ("DL", "LB"):
+            tk = tot(pid, "def_tackles_solo") + 0.5*tot(pid, "def_tackle_assists")
+            if g > 1: add("tkl", "tpg", tk/g); add("tkl", "tfl", tot(pid, "def_tackles_for_loss")/g)
+            if g > 1: add("spd", "spg", (tot(pid, "def_sacks") + 0.5*tot(pid, "def_qb_hits"))/g)
+            add("spd", "40", sp); add("str", "wt", wt); add("str", "bp", bench)
+        elif pos == "DB":
+            if g > 1:
+                add("stm", "cov", (2*tot(pid, "def_interceptions") + tot(pid, "def_pass_defended"))/g)
+                add("str", "tpg", (tot(pid, "def_tackles_solo") + 0.5*tot(pid, "def_tackle_assists"))/g)
+            add("spd", "40", sp); add("spd", "vj", vert); add("str", "wt", wt)
+        elif pos == "K":
+            fa = tot(pid, "fg_att")
+            if fa >= 5: add("kac", "pct", tot(pid, "fg_made")/fa); add("str", "50", tot(pid, "fg_made_50_59") + 2*tot(pid, "fg_made_60_"))
+        raw[ident(r)] = (pos, m)
+    # z-score each metric within its position
+    stats = {}
+    for pos, m in raw.values():
+        for attr, d in m.items():
+            for name, v in d.items(): stats.setdefault((pos, attr, name), []).append(v)
+    mu = {k: (sum(v)/len(v), (sum((x - sum(v)/len(v))**2 for x in v)/max(1, len(v) - 1))**0.5 or 1.0) for k, v in stats.items() if len(v) >= 8}
+    out = {}
+    for key, (pos, m) in raw.items():
+        z = {}
+        for attr in POSW[pos]:
+            zs = [(v - mu[(pos, attr, n)][0])/mu[(pos, attr, n)][1] for n, v in m.get(attr, {}).items() if (pos, attr, n) in mu]
+            z[attr] = max(-2.5, min(2.5, sum(zs)/len(zs))) if zs else 0.0
+        if not any(z.values()): continue
+        w = POSW[pos]; mean = sum(z[a]*w[a] for a in w)
+        out[key] = {a: round(max(-2.2, min(2.2, (z[a] - mean)*0.85)), 2) for a in w}
+    return out
+
 def team_power():
     """Point margin per game (60%) blended with the betting-line implied margin (40%)."""
     try:
@@ -133,6 +240,11 @@ def main():
     for r in rows:
         d = dr.get(r.get("gsis_id")) or dr.get(r.get("espn_id"))
         if d and r["team"]: r["depth"], r["dpos"] = d
+    prof = profiles(rows)
+    for r in rows:
+        t = prof.get(ident(r))
+        if t: r["tilt"] = t
+    print(f"attribute profiles for {sum(1 for r in rows if 'tilt' in r)} players")
     perf = production()
     for r in rows:
         if r.get("gsis_id") in perf: r["perf"] = perf[r["gsis_id"]]
