@@ -2323,7 +2323,7 @@ function overtime(){
 function gameOver(){
  M.phase='ov';const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1];
  if(W)boom();else sfx('bad');
- M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center"><span class="s10">${esc(teamName(L.user).toUpperCase())}</span><span class="s16">${M.sc[0]} - ${M.sc[1]}</span><span class="s10">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div>`,acts:[finishMatch]};
+ M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div>`,acts:[finishMatch]};
 }
 function finishMatch(){const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
