@@ -1023,11 +1023,11 @@ function defaultUnis(g){const H=uniformsFor(g.h),A=uniformsFor(g.a);let ua=1;
  return g.h===L.user?{uU:0,uO:ua}:{uU:ua,uO:0};}
 function lookFor(p,t,away,alt){
  if(typeof away==='number'){const U=uniformsFor(t),u=U[((away%U.length)+U.length)%U.length];
-  const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,skin:SKIN[p?p.skin:2]};
-  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin].join('');return lk;}
+  const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,skin:SKIN[p?p.skin:2],teamId:t};
+  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;}
  let c=teamCol(t);if(alt)c={c1:c.c2,c2:c.c1};const pl=lum(c.c2);
- const lk={helm:c.c1,stripe:c.c2,jersey:away?'#f0f0f0':c.c1,trim:away?c.c1:c.c2,pants:away?'#d9d9d9':(pl>70&&pl<215?c.c2:'#e2e2e2'),socks:c.c1,skin:SKIN[p?p.skin:2]};
- lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin].join('');return lk;
+ const lk={helm:c.c1,stripe:c.c2,jersey:away?'#f0f0f0':c.c1,trim:away?c.c1:c.c2,pants:away?'#d9d9d9':(pl>70&&pl<215?c.c2:'#e2e2e2'),socks:c.c1,skin:SKIN[p?p.skin:2],teamId:t};
+ lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;
 }
 function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
@@ -1082,6 +1082,10 @@ function drawMan(c,x,y,lk,o){
  r(J,3,6,6,4);r(J,2,6,8,2);r(TR,2,6,2,1);r(TR,8,6,2,1);r(TR,4,8,3,1);
  r(sk,5,5,3,1);
  r(H,4,0,4,1);r(H,3,1,6,1);r(H,2,2,7,2);r(H,3,4,5,1);r(lk.stripe,4,0,3,1);r(shade(H,40),4,1,2,1);r(shade(H,-45),4,2,1,1);
+ /* Tiny franchise decals on both helmet sides; the sprite flip keeps the near-side decal visible from either direction. */
+ const teamLogo=o.logo&&lk.teamId!=null&&NFL_FIELD_LOGOS[lk.teamId];
+ if(teamLogo&&teamLogo.complete&&teamLogo.naturalWidth){c.imageSmoothingEnabled=false;c.drawImage(teamLogo,3*u,2*u,2*u,2*u);c.drawImage(teamLogo,7*u,2*u,2*u,2*u); }
+ else if(o.logo&&lk.teamId!=null){r(lk.stripe,3,2,2,2);r(lk.stripe,7,2,2,2);}
  r(sk,7,2,2,2);r('#111',8,2,1,1);r('#d3d7dd',9,2,1,3);r('#d3d7dd',7,4,3,1);
  if(o.pose)armP(1,o.pose.ra);
  else if(o.dive){r(J,2,4,2,2);r(J,8,4,2,2);r(sk,2,1,2,3);r(sk,8,1,2,3);if(o.ball){r('#7a3d12',3,-2,5,2);r('#fff',5,-2,1,1);}}
@@ -1098,10 +1102,10 @@ function drawMan(c,x,y,lk,o){
 const SPC=new Map();
 function sprite(lk,o){
  const fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1,u=o.u||2;
- const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0)+(o.hurdle?1:0)+(o.pk||'');
+ const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0)+(o.hurdle?1:0)+(o.pk||'')+(lk.teamId!=null&&NFL_FIELD_LOGOS[lk.teamId]?'L':'');
  let out=SPC.get(key);if(out)return out;
  const W=36*u,H=22*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
- const a=mk(),g=a.getContext('2d');drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr}));
+ const a=mk(),g=a.getContext('2d');drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr,logo:true}));/* helmet logos only on field sprites: ESPN images taint canvases, which would break toDataURL avatars */
  const sil=col=>{const b=mk(),gb=b.getContext('2d');gb.drawImage(a,0,0);gb.globalCompositeOperation='source-in';gb.fillStyle=col;gb.fillRect(0,0,W,H);return b;};
  out=mk();const go=out.getContext('2d');
  if(o.glow){const y=sil('#ffe600');for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]])go.drawImage(y,dx,dy);}
