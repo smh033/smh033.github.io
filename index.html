@@ -2265,7 +2265,7 @@ function startMatch(g,uAway){
  M={g,home,op,sc:[0,0],qtr:1,clock:L.settings.qlen,to:3,ps:{},ts:{pyd:0,cmp:0,att:0,ryd:0,td:0,to:0},
   dep:lineup(L.user),odep:lineup(op),dAdj:diffAdj(),cam:45,phase:'ov',O:[],D:[],ov:null,
   pops:[],conf:[],parts:[],shake:0,hype:0,tt:0,runoff:0,ban:null,banT:0,hc:{},plays:0,carries:0,paused:false,
-  night:pickNight(),rival:T(g.h).di===T(g.a).di||(L.phase==='PO'&&L.po&&L.po.cur===1),wx:wxr,wind:wxr==='dome'?0:clamp(Math.round(gauss()*7),-18,18),ballOn:35,ballY:26.67,down:1,fdX:45,los:35,conv:false};
+  night:pickNight(),rival:g.h===L.user||L.phase==='PO'||T(g.h).di===T(g.a).di,wx:wxr,wind:wxr==='dome'?0:clamp(Math.round(gauss()*7),-18,18),ballOn:35,ballY:26.67,down:1,fdX:45,los:35,conv:false};
  {const uc=teamCol(L.user),oc=teamCol(op),uJ=home?uc.c1:'#f0f0f0',oJ=home?'#f0f0f0':oc.c1;M.oalt=colDist(uc.c1,oc.c1)<120||(colDist(uJ,oJ)<90);}
  {const du=defaultUnis(g);M.uU=uAway&&uAway.uU!=null?uAway.uU:du.uU;M.uO=uAway&&uAway.uO!=null?uAway.uO:du.uO;}M.uAway=M.uU===1;M.oalt=false;
  M.dir=L.settings.dir==='L'?-1:1;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[buildField(false),buildField(true)];
@@ -2277,7 +2277,7 @@ function startMatch(g,uAway){
  const wxTxt=M.wx==='dome'?'INDOORS':M.wx==='snow'?'SNOW':M.wx==='rain'?'RAIN':'CLEAR SKIES';
  const UR=teamRatings(L.user),OR=teamRatings(op);
  ovMsg(lab,`<div class="row ctr" style="gap:14px;align-items:center;margin:2px 0 6px"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,!home)}<span>${esc(teamName(L.user).toUpperCase())}</span><span>${stars(UR.offS,'o xs')} ${stars(UR.defS,'d xs')}</span></div><span class="s16">${home?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,home)}<span>${esc(T(op).name.toUpperCase())}</span><span>${stars(OR.offS,'o xs')} ${stars(OR.defS,'d xs')}</span></div></div>
-  ${M.night?'<div class="cyt">'+M.night+' · UNDER THE LIGHTS</div>':''}${M.rival?'<div class="yl blink">'+(T(g.h).di===T(g.a).di?'DIVISION RIVALRY':'DIVISIONAL ROUND')+' · STADIUM PULSE</div>':''}<div class="s7">${wxTxt}${M.wind?' · WIND '+Math.abs(M.wind)+' MPH':''} · ${esc(abbr(op))} PLAYBOOK: ${teamStyle(op)}</div>
+  ${M.night?'<div class="cyt">'+M.night+' · UNDER THE LIGHTS</div>':''}${M.rival?'<div class="yl blink">'+(L.phase==='PO'?'PLAYOFFS':T(g.h).di===T(g.a).di?'DIVISION RIVALRY':'HOME CROWD')+' · STADIUM PULSE</div>':''}<div class="s7">${wxTxt}${M.wind?' · WIND '+Math.abs(M.wind)+' MPH':''} · ${esc(abbr(op))} PLAYBOOK: ${teamStyle(op)}</div>
   <div class="yl">COIN TOSS: ${weRecv?'YOU RECEIVE THE KICKOFF':esc(T(op).name.toUpperCase())+' RECEIVE'}</div>`,[['KICK OFF',()=>kickoffTo(M.firstRecv),'y']]);
  crowd(1.6,.08);
 }
@@ -2344,7 +2344,7 @@ function simRest(){
 
 /* ---------- possessions ---------- */
 function kickoffTo(who){if(who==='us')return ourReturn(false);return ourKickoff();}
-function ourReturn(free){if(!free&&Math.random()<0.38)return startDrive(35,'TOUCHBACK');startReturn('ko',free?rnd(20,30):rnd(-1,8),rnd(16,37));}
+function ourReturn(free){if(!free&&Math.random()<0.38)return startDrive(35,'TOUCHBACK');startReturn('ko',free?rnd(20,30):rnd(2,8),rnd(16,37));}
 function ourKickoff(){
  if(M.qtr>=5&&M.sc[0]!==M.sc[1])return gameOver();
  clockCheck(()=>{
@@ -2379,7 +2379,10 @@ function toPre(){
    a delay of game: back 5 yards (half the distance near your own goal), replay the down. */
 const PLAY_CLOCK=25;
 function delayOfGame(){
- if(M.phase!=='pre')return;const pen=Math.min(5,Math.max(0,(M.ballOn-10)/2));
+ if(M.phase!=='pre')return;
+ if(!M.conv&&M.ballOn-5<10){/* backed up inside the 5: the penalty pushes the ball into the end zone -> safety */
+  M.aim=null;M.input=null;M.pb=false;M.carrier=null;M.rec=null;M.phase='live';M.play='run';M.los=M.ballOn;sfx('whistle');
+  endPlay('safety',M.ballOn-5,M.ballY,'DELAY OF GAME');M.big=null;pop('DELAY OF GAME',M.ballOn-3,M.ballY,'#ffe94a');return;}const pen=Math.min(5,Math.max(0,(M.ballOn-10)/2));
  M.ballOn=Math.max(10.5,M.ballOn-pen);if(M.conv)M.fdX=110;M.aim=null;M.input=null;M.pb=false;
  setupPlay();M.pc=PLAY_CLOCK;M.cam=clamp(M.ballOn+12,HALFW-CAM_PAD,120-HALFW+CAM_PAD);
  sfx('whistle');banner('DELAY OF GAME','-'+Math.round(pen)+' YARDS · '+downTxt().toUpperCase(),'#ffe94a',1.6);
@@ -2421,7 +2424,7 @@ function simOppDrive(s0){
   if(down===4){
    const fd=100-s+17,desp=q>=4&&lead<0&&clk<240;
    if(!desp&&fd<=54){tryFG();break;}
-   if(!desp&&!(togo<=2&&s>=40&&s<=72&&Math.random()<0.5)){const dist=Math.round(clamp(40+gauss()*5+attr(od.K[0],'str')*0.6,28,62));let land=s+dist,tb='';if(land>=100){land=80;tb=' · TOUCHBACK';}push(abbr(op)+' PUNTS '+dist+' YDS'+tb,null);clk-=8;res='punt';landX=110-land;head='PUNT';s=land;break;}
+   if(!desp&&!(togo<=2&&s>=40&&s<=72&&Math.random()<0.5)){const dist=Math.round(clamp(40+gauss()*5+attr(od.K[0],'str')*0.6,28,62));let land=s+dist,tb='';if(land>=100){land=80;tb=' · TOUCHBACK';}push(abbr(op)+' PUNTS '+dist+' YDS'+tb,null);clk-=8;res='punt';landX=tb?0:110-land;head='PUNT';s=land;break;}
   }
   const pass=Math.random()<(down===3&&togo>4?0.82:hurry?0.8:clamp((down===1?0.48:0.55)+STY.pass,0.25,0.8));
   let y=0,t='',cls='',ro=hurry?14:30;
@@ -3159,7 +3162,7 @@ function startReturn(kind,landX,landY){
  const d=M.dep,od=M.odep;
  M.loose=null;M.fum=null;M.helmets=null;M.big=null;M.rp=null;M.leap=false;M.celeb=null;M.dpick=false;recStart();M.play='ret';M.retKind=kind;M.caught=false;M.caughtInEZ=false;M.tbOK=false;M.fair=false;M.los=landX;M.land={x:landX,y:landY};M.conv=false;
  const cand=[d.RB[0],d.WR[0],d.WR[1],d.DB[0],d.TE[0]].filter(Boolean).sort((a,b)=>attr(b,'spd')-attr(a,'spd'));
- const krp=cand[0]||null,kr=mkF(krp,'O','KR',landX-3,landY);M.kr=kr;
+ const krp=cand[0]||null,kr=mkF(krp,'O','KR',Math.max(1,landX-3),landY);M.kr=kr;
  const bl=[d.TE[0],d.LB[0],d.LB[1],d.DB[1],d.OL[0],d.DB[2]].map(x=>x===krp?null:x);
  const ys=[9,18,26.6,35,44,24];
  M.O=[kr,...bl.map((p,i)=>mkF(p,'O','BL',landX+(kind==='ko'?13:8)+rnd(0,4)-(i===5?6:0),ys[i]))];
