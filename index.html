@@ -389,7 +389,7 @@ function createLeague(ut,coach,opt){
 function fillAIRoster(t){
  const tq=L.teams[t].tq;let r=rosterOf(t);
  for(const pos of AI_T.slice(0,rmax())){if(rosterOf(t).length>=rmax())break;const need=AI_T.slice(0,rmax()).filter(x=>x===pos).length;if(r.filter(p=>p.pos===pos).length>=need)continue;
-  const fa=faList().find(p=>p.pos===pos&&Math.abs(ovr(p)-tq)<1.6&&!(p.rel&&p.rel.t===t&&p.rel.y===L.year)&&Math.random()<0.6);
+  const fa=faList().find(p=>p.pos===pos&&ovr(p)<=tq+1.8&&ovr(p)>=tq-2&&!(p.rel&&p.rel.t===t&&p.rel.y===L.year));
   if(fa){fa.team=t;fa.yrs=ri(1,3);}else{const p=genPlayer(pos,clamp(tq+rnd(-1.3,1.3),1.5,9.5));p.team=t;addPlayer(p);}r=rosterOf(t);}
  while(rosterOf(t).length<rmax()){const p=genPlayer(pick(AI_T),clamp(tq+rnd(-1.5,1),1.5,9));p.team=t;addPlayer(p);}
  r=rosterOf(t);if(r.length>rmax()){const st=starterSet(t);
@@ -677,10 +677,35 @@ function weeklyUpkeep(bye){
  if(L.rosterMode!=='NFL'){const fa=faList().filter(p=>!p.rel);for(let i=0;i<3&&fa.length>30;i++){const x=pick(fa);if(x)removePlayer(x);}for(let i=0;i<3;i++)addFA();}
  for(const p of rosterOf(L.user))p.mor=clamp(p.mor+(65-p.mor)*0.06,0,100);
  // other teams shake up their rosters: cut a player now and then and sign a replacement
- if(L.phase==='REG')for(const t of L.teams){if(t.id===L.user||Math.random()>=0.04)continue;aiRelease(t.id,true);}
+ if(L.phase==='REG')for(const t of L.teams){if(t.id===L.user||Math.random()>=0.025)continue;aiRelease(t.id,true);}
+ if(L.phase==='REG')aiFreeAgency(false);
 }
 /* An AI team releases someone (a backup, an aging vet, or a player who is hurt for a while).
    He becomes a free agent anyone can sign, and the team fills his spot. */
+/* ---------- AI free agency ----------
+   Other teams sign free agents who'd be an upgrade over one of their players at that position
+   (the replaced player goes to free agency instead). Teams below their parity target get first
+   look. In the offseason everyone shops; during the season a couple of signings happen per week,
+   so good free agents get snapped up within a week or two instead of piling up. */
+function aiFreeAgency(offseason){
+ const ai=L.teams.filter(t=>t.id!==L.user);if(!ai.length)return 0;
+ const byTeam={};for(const t of ai)byTeam[t.id]=rosterOf(t.id);
+ const gap=t=>(t.tq||5.6)-teamRatings(t.id).raw;
+ const gaps={};for(const t of ai)gaps[t.id]=gap(t);
+ let pool=faList().filter(p=>ovr(p)>=4.5&&!(p.rel&&p.rel.y===L.year&&L.phase==='REG'&&p.rel.w>=L.week-1));
+ if(!offseason)pool=pool.slice(0,6).filter(()=>Math.random()<0.35);
+ else pool=pool.filter(()=>Math.random()<0.7);   // leave a few good ones for you to fight over early in the season
+ let n=0;const max=offseason?60:3;
+ for(const p of pool){if(n>=max)break;
+  let best=null,bs=-1;
+  for(const t of ai){const same=byTeam[t.id].filter(x=>x.pos===p.pos);if(!same.length)continue;const worst=same.reduce((a,b)=>ovr(a)<ovr(b)?a:b);
+   const gain=ovr(p)-ovr(worst);if(gain<0.8)continue;const sc=gain+Math.max(-0.5,gaps[t.id])*1.5+rnd(0,0.8);if(sc>bs){bs=sc;best={t,worst};}}
+  if(!best)continue;const{t,worst}=best;
+  p.team=t.id;p.yrs=ri(1,3);p.sal=salFor(starsOf(p),p.age);delete p.rel;p.mor=clamp(p.mor+10,0,100);
+  worst.team=-1;worst.yrs=ri(1,2);worst.bench=false;worst.rel={t:t.id,y:L.year,w:L.phase==='REG'?L.week:0};
+  byTeam[t.id]=rosterOf(t.id);gaps[t.id]-=0.1;n++;
+  if(ovr(p)>=6.5)news(abbr(t.id)+' sign '+p.pos+' '+fullname(p)+' ('+starsOf(p)+' STARS).');}
+ return n;}
 function aiRelease(t,refill){
  const r=rosterOf(t);if(r.length<3)return null;const st=starterSet(t);
  const score=p=>(st.has(p.id)?3:0)+ovr(p)*0.5-Math.max(0,p.age-30)*0.6-(p.inj>2?2:0)+rnd(0,1.2);
@@ -882,7 +907,8 @@ function runOffseasonAging(){
  for(const p of L.players.slice()){
   if(p.team<0||p.yrs>0)continue;
   if(p.team===L.user){O.expiring.push(p.id);continue;}
-  if(ovr(p)>=4.5&&p.age<=31&&Math.random()<.75){p.yrs=ri(2,4);p.sal=salFor(starsOf(p),p.age);}else{p.team=-1;p.yrs=ri(1,3);}
+  const keepP=ovr(p)>=7?0.95:ovr(p)>=4.5?0.85:0.35;   /* teams re-sign their good players; mostly backups and old vets hit free agency */
+  if(p.age<=(ovr(p)>=7?34:31)&&Math.random()<keepP){p.yrs=ri(2,4);p.sal=salFor(starsOf(p),p.age);}else{p.team=-1;p.yrs=ri(1,3);}
  }
  for(const k of['oc','dc'])if(L[k]){L[k].yrs--;if(L[k].yrs<=0){news('Your '+k.toUpperCase()+' '+L[k].ln+' leaves as his contract ends.');L[k]=null;}}
 }
@@ -943,9 +969,10 @@ function finishDraft(){
  for(const id of D.pool){const p=P(id);if(p){if(Math.random()<.4){p.team=-1;delete p.scout;}else removePlayer(p);}}
  L.draft=null;
  // offseason roster cuts: most teams let at least one player go
- for(const t of L.teams)if(t.id!==L.user&&Math.random()<0.6)aiRelease(t.id,false);
+ for(const t of L.teams)if(t.id!==L.user&&Math.random()<0.35)aiRelease(t.id,false);
  for(let i=0,n=ri(2,5);i<n;i++)aiTrade();
  for(const t of L.teams)if(t.id!==L.user)fillAIRoster(t.id);
+ aiFreeAgency(true);
  if(L.rosterMode!=='NFL')while(faList().length<34)addFA();
 }
 
@@ -1286,7 +1313,7 @@ SCR.title=()=>{
 };
 ACT.cont=()=>{L=loadSave();if(!L)return toast('NO SAVE FOUND');indexPlayers();parityFix();resumeFlow();};
 /* older saves: spread the league back out once */
-function parityFix(){if(L&&!L.parity&&L.phase!=='FOUND'){try{balanceLeague(true);save();}catch(e){console.error(e);}}}
+function parityFix(){if(!L||L.phase==='FOUND')return;try{let ch=false;if(!L.parity){balanceLeague(true);ch=true;}if(!L.fa1){aiFreeAgency(true);L.fa1=1;ch=true;}if(ch)save();}catch(e){console.error(e);}}
 function resumeFlow(){if(L.phase==='FOUND')return go('draft');if(L.champShow)return go('champ');if(L.phase==='OFF')return go('off');go('hub');}
 ACT.newg=()=>{
  // Start in the first empty slot; if every slot is used, let the player choose which to replace.
