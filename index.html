@@ -2495,7 +2495,7 @@ function setupPlay(){
 function snap(type){
  if(M.phase!=='pre')return;M.aimShake=0;
  M.play=type;M.phase='live';M.pt=0;M.banT=0;M.thrown=false;M.ball=null;M.carrier=null;M.comp=null;M.passBullet=false;M.primary=null;M.handed=false;M.scramble=false;M.steer=null;M.plays++;M.went4=false;
- if(M.runoff>0){M.clock-=Math.min(M.runoff*0.5,Math.max(0,M.clock-1));M.runoff=0;}
+ if(M.runoff>0){const used=(M.ro0||0)-M.runoff,extra=Math.max(0,Math.min(M.runoff,5-used));M.clock-=Math.min(extra,Math.max(0,M.clock-1));M.runoff=0;}   /* hurry-up: a quick snap only costs the ~5s to get set */
  sfx('whistle');recStart();M.leap=false;M.rp=null;
  if(type==='run'){for(const f of M.O)if(f.role==='WR'||f.role==='TE')f.route=null;M.rb.route=null;}
 }
@@ -3236,7 +3236,7 @@ function resolve(){
  if(nx>=M.fdX){M.down=1;M.fdX=Math.min(nx+10,110);}
  else{M.down++;if(M.down>4)return clockCheck(()=>oppDrive(clamp(Math.round(110-nx),1,99),['TURNOVER ON DOWNS!']));}
  const late=(M.qtr===2||M.qtr>=4)&&M.clock<120,ro=(k==='inc'||k==='oob')?0:(late?8:22),before=M.clock;
- void before;M.runoff=ro;
+ void before;M.runoff=ro;M.ro0=ro;
  clockCheck(toPre);
 }
 /* ---------- big-play replays ----------
@@ -3339,7 +3339,8 @@ function step(dt){
  for(const p of M.parts){if(M.wx==='snow'){p.y+=22*p.s*dt;p.x+=Math.sin(M.tt+p.s*9)*8*dt+M.wind*0.6*dt;}else{p.y+=260*p.s*dt;p.x+=M.wind*2*dt-30*dt;}if(p.y>CH)p.y-=CH;if(p.x<0)p.x+=CW;if(p.x>CW)p.x-=CW;}
  if(M.ov){if(M.ov.type==='drive'&&!M.ov.done){M.ov.tm-=dt;if(M.ov.tm<=0){revealLine();M.ov.tm=0.34;}}upCam(dt);return;}
  if(M.phase==='pre'&&M.pc!=null&&!M.paused){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
- if(M.phase==='pre'&&M.runoff>0){const d=Math.min(M.runoff,dt*6);M.runoff-=d;M.clock-=d;if(M.clock<=0){M.clock=0;M.runoff=0;M.aim=null;M.input=null;clockCheck(toPre);return;}}
+ if(M.phase==='pre'&&M.runoff>0){const d=Math.min(M.runoff,dt*1.6);   /* game clock runs with the play clock (25s here ~ the NFL's 40s), not on fast-forward */
+ M.runoff-=d;M.clock-=d;if(M.clock<=0){M.clock=0;M.runoff=0;M.aim=null;M.input=null;clockCheck(toPre);return;}}
  if(M.phase==='replay'){upReplay(dt);if(M)upCam(dt);return;}
  if(M.loose)upLoose(dt);if(M.helmets)upHelmets(dt);
  if(M.phase==='live')upLive(dt);
