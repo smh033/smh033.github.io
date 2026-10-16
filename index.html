@@ -3391,13 +3391,17 @@ function intTackle(f,c,diving){
 function upIntRet(dt){
  const c=M.carrier;M.pt+=dt;M.clock-=dt;M.intT+=dt;const react=M.intT<0.4;   // everyone needs a beat to realise it was picked
  for(const f of[...M.O,...M.D])tickF(f,dt);
+ // returner diving forward: lands and is down there
+ if(c.dive>0){c.dive-=dt;c.x+=c.vx*dt;c.y+=c.vy*dt;if(c.x<=10)return endPlay('pick6',c.x,c.y);if(c.dive<=0){c.dive=0;c.down=1;c.vx=c.vy=0;return endPlay('intdown',c.x,c.y);}}
  // returner: run for the end zone, slide away from tacklers in front of him
- if(!(c.down>0)){let ty=c.y;for(const o of M.O){if(o.stun>0||o.down>0)continue;const dx=c.x-o.x,dy=c.y-o.y,dd=Math.hypot(dx,dy);if(dd<7&&dx>-1.5)ty+=Math.sign(dy||1)*(7-dd)/7*5;}
+ else if(!(c.down>0)){let ty=c.y;for(const o of M.O){if(o.stun>0||o.down>0)continue;const dx=c.x-o.x,dy=c.y-o.y,dd=Math.hypot(dx,dy);if(dd<7&&dx>-1.5)ty+=Math.sign(dy||1)*(7-dd)/7*5;}
   ty=clamp(ty,2,51.3);const jv=M.def?joyVec():null;
   if(jv){if(jv.m)steer(c,c.x+jv.x*(M.dir<0?-1:1)*5,clamp(c.y+jv.y*5,0,53.3),c.spd*(0.4+0.64*jv.m),c.acc+10,dt);else steer(c,c.x,c.y,0,c.acc+10,dt);}
   else if(M.def&&ptr.down&&M.input==='dctl'){const p=scrToField(ptr.x,ptr.y);steer(c,p.x,clamp(p.y,0,53.3),c.spd*1.04,c.acc+10,dt);}else{steer(c,c.x-6,ty,c.spd*1.02,c.acc+10,dt);c.face=-1;}}
  // his teammates block the nearest chasers
- for(const f of M.D){if(f===c||f.stun>0||f.down>0)continue;
+ for(const f of M.D){if(f===c)continue;
+  if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=1;f.vx=f.vy=0;}continue;}   /* someone was mid-dive when the ball got picked: he lands */
+  if(f.stun>0||f.down>0)continue;
   if(f.blkDone){steer(f,c.x-3,f.y,f.spd*0.7,14,dt);continue;}
   let t=null,bd=9;for(const o of M.O){if(o.stun>0||o.down>0)continue;const dd=d2(o,c);if(dd<12&&d2(f,o)<bd){bd=d2(f,o);t=o;}}
   if(t){steer(f,lerp(t.x,c.x,0.25),lerp(t.y,c.y,0.25),f.spd,f.acc,dt);if(d2(f,t)<1.0){f.blkDone=true;t.stun=rnd(0.45,0.9);if(Math.random()<0.3){t.down=0.9;pop('PANCAKED!',t.x,t.y,'#ff8a8a');}}}
@@ -3460,8 +3464,9 @@ function upLive(dt){
   if(b&&f===M.primary){upChase(f,dt);continue;}
   followRoute(f,dt);
  }
- for(const f of M.D){tickF(f,dt);if(f.stun>0)continue;
+ for(const f of M.D){tickF(f,dt);
   if(f.dive>0){if(stepDefDive(f,dt))return;continue;}
+  if(f.stun>0)continue;
   if(f===M.ctl&&ctlActive()){ctlMove(f,dt);continue;}
   upDef(f,dt);if(!(M.def&&f===M.ctl))maybeDefDive(f,dt);}
  separate(M.O);separate(M.D);
@@ -3628,7 +3633,7 @@ function startCeleb(f){if(!f||f.side!=='O')return;/* clear any dive/jump/catch p
 /* Ball carrier leaps over a defender who dove at him and missed. */
 const HURDLE_T=0.42;
 function hurdle(c){if(!c||c.dive>0||c.down>0||c.hurdle>0)return;c.hurdle=HURDLE_T;c.jk=0;sfx('juke');}
-function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.42;c.dv=0.42;c.vx=Math.max(c.spd*1.25,(c.vx||0)*1.1);c.vy=(c.vy||0)*0.35;c.ty=null;sfx('juke');}
+function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.42;c.dv=0.42;c.vx=M&&M.play==='intret'&&c.side==='D'?Math.min(-c.spd*1.25,(c.vx||0)*1.1):Math.max(c.spd*1.25,(c.vx||0)*1.1);c.vy=(c.vy||0)*0.35;c.ty=null;sfx('juke');}
 const STEP=4.4;
 function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,-3,56.3);/* side-stepping past the sideline runs you out of bounds */c.jk=0.3;sfx('juke');}
 function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.carrier.x,M.carrier.y);}
