@@ -18,6 +18,7 @@ html,body{height:100%;background:#000;overflow:hidden;overscroll-behavior:none;t
 body{font-family:"Press Start 2P",ui-monospace,Menlo,Consolas,monospace;color:var(--tx);font-size:8px;line-height:1.5}
 #root{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
 #stage{position:relative;width:640px;height:360px;flex:none;background:var(--bl);overflow:hidden;transform-origin:center center}
+#lg{position:absolute;left:0;top:0;width:640px;height:360px;display:none;pointer-events:none}
 #cv{position:absolute;left:0;top:0;width:640px;height:360px;image-rendering:pixelated;image-rendering:crisp-edges;display:none;touch-action:none}
 #ui{position:absolute;inset:0;pointer-events:none}
 .screen{position:absolute;inset:0;pointer-events:auto;display:flex;flex-direction:column;gap:6px;padding:7px 10px 8px;background:var(--bl) repeating-linear-gradient(0deg,rgba(0,0,30,.06) 0 1px,transparent 1px 3px)}
@@ -133,7 +134,7 @@ body.mobile .bt{padding:8px 9px 7px}body.mobile .chip{padding:6px 7px 5px}
 </style>
 </head>
 <body>
-<div id="root"><div id="stage"><canvas id="cv" width="640" height="360"></canvas><div id="ui"></div></div></div>
+<div id="root"><div id="stage"><canvas id="cv" width="640" height="360"></canvas><canvas id="lg" width="640" height="360"></canvas><div id="ui"></div></div></div>
 <script>
 'use strict';
 /* =====================================================================
@@ -1032,8 +1033,8 @@ function lookFor(p,t,away,alt){
 const LOGO_MINI={};
 function logoMini(t,px){const img=NFL_FIELD_LOGOS[t];if(!img||!img.complete||!img.naturalWidth)return null;const k=t+'|'+px;if(LOGO_MINI[k])return LOGO_MINI[k];
  /* halve repeatedly with smoothing for a clean downscale */let src=img,w=img.naturalWidth,h=img.naturalHeight;
- while(w/2>=px*2){const cc=document.createElement('canvas');cc.width=Math.ceil(w/2);cc.height=Math.ceil(h/2);const g=cc.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,cc.width,cc.height);src=cc;w=cc.width;h=cc.height;}
- const out=document.createElement('canvas');out.width=px*2;out.height=px*2;const g=out.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,out.width,out.height);
+ while(w/2>=px){const cc=document.createElement('canvas');cc.width=Math.ceil(w/2);cc.height=Math.ceil(h/2);const g=cc.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,cc.width,cc.height);src=cc;w=cc.width;h=cc.height;}
+ const out=document.createElement('canvas');out.width=px;out.height=px;const g=out.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,out.width,out.height);
  return LOGO_MINI[k]=out;}
 function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
@@ -1088,11 +1089,6 @@ function drawMan(c,x,y,lk,o){
  r(J,3,6,6,4);r(J,2,6,8,2);r(TR,2,6,2,1);r(TR,8,6,2,1);r(TR,4,8,3,1);
  r(sk,5,5,3,1);
  r(H,4,0,4,1);r(H,3,1,6,1);r(H,2,2,7,2);r(H,3,4,5,1);r(lk.stripe,4,0,3,1);r(shade(H,40),4,1,2,1);r(shade(H,-45),4,2,1,1);
- /* Team logo decal on the side of the helmet (the side facing the camera). Drawn from a smoothed,
-    pre-shrunk copy so the logo reads as its real shape/colours instead of a few random pixels, and
-    un-mirrored when the player faces left so text logos aren't backwards. */
- if(o.logo&&lk.teamId!=null){const lm=logoMini(lk.teamId,Math.round(4*u));
-  if(lm){c.save();c.imageSmoothingEnabled=true;if(o.face<0){c.translate(8.4*u,0);c.scale(-1,1);}c.drawImage(lm,2.2*u,0.6*u,4*u,4*u);c.restore();}}
  r(sk,7,2,2,2);r('#111',8,2,1,1);r('#d3d7dd',9,2,1,3);r('#d3d7dd',7,4,3,1);
  if(o.pose)armP(1,o.pose.ra);
  else if(o.dive){r(J,2,4,2,2);r(J,8,4,2,2);r(sk,2,1,2,3);r(sk,8,1,2,3);if(o.ball){r('#7a3d12',3,-2,5,2);r('#fff',5,-2,1,1);}}
@@ -1112,7 +1108,7 @@ function sprite(lk,o){
  const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0)+(o.hurdle?1:0)+(o.pk||'')+(lk.teamId!=null&&NFL_FIELD_LOGOS[lk.teamId]?'L':'');
  let out=SPC.get(key);if(out)return out;
  const W=36*u,H=22*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
- const a=mk(),g=a.getContext('2d');drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr,logo:true}));/* helmet logos only on field sprites: ESPN images taint canvases, which would break toDataURL avatars */
+ const a=mk(),g=a.getContext('2d');drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr}));
  const sil=col=>{const b=mk(),gb=b.getContext('2d');gb.drawImage(a,0,0);gb.globalCompositeOperation='source-in';gb.fillStyle=col;gb.fillRect(0,0,W,H);return b;};
  out=mk();const go=out.getContext('2d');
  if(o.glow){const y=sil('#ffe600');for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]])go.drawImage(y,dx,dy);}
@@ -1185,8 +1181,8 @@ const SCR={},ACT={};
 function go(s,sub){UI.scr=s;UI.sub=sub||{};UI.modal=null;render();}
 function render(){
  const ui=$('#ui');
- if(UI.scr==='game'){$('#cv').style.display='block';return;}
- $('#cv').style.display='none';
+ if(UI.scr==='game'){$('#cv').style.display='block';$('#lg').style.display='block';return;}
+ $('#cv').style.display='none';$('#lg').style.display='none';
  const keep=UI.keepScroll?[...ui.querySelectorAll('.scroll')].map(e=>e.scrollTop):null;
  ui.innerHTML=SCR[UI.scr]()+(UI.modal?`<div class="modal" data-a="mbg">${UI.modal}</div>`:'');
  if(keep){[...ui.querySelectorAll('.scroll')].forEach((e,i)=>{if(keep[i])e.scrollTop=keep[i];});}
@@ -3458,9 +3454,33 @@ function plState(f,holder){
   return{x:f.x,y:f.y,jy:dp.jy,lk:f.lk,star:f.star,dn:dp.down,o:{u:2,face:f.face*M.dir,pose:dp.pose,pk:dp.pk,down:dp.down,glow:f.star,shadow:!dp.jy}};}
  return{x:f.x,y:f.y,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
 }
+/* Helmet logos are drawn on a separate full-resolution layer over the pixel-art canvas: at the game's
+   640x360 resolution a helmet is only ~14 px wide, far too small for a logo to read. The layer uses the
+   real screen resolution so logos stay crisp. ESPN images never touch the exported canvases. */
+const LOGO_Q=[];
+function drawLogoLayer(sh,maxY){
+ const lg=document.getElementById('lg');if(!lg)return;
+ const st=document.getElementById('stage'),sc=st?(st.getBoundingClientRect().width/640||1):1,dpr=window.devicePixelRatio||1;
+ const W=Math.round(640*sc*dpr),H=Math.round(360*sc*dpr);if(lg.width!==W||lg.height!==H){lg.width=W;lg.height=H;}
+ const g=lg.getContext('2d');g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,W,H);
+ if(!LOGO_Q.length)return;const k=W/640;g.setTransform(k,0,0,k,0,0);g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+ if(M&&M.night)g.filter='brightness(0.72)';
+ const Q=LOGO_Q;
+ for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||o.down||o.dive||o.pose||o.hurdle)continue;
+  const u=o.u||2,fr=o.run?Math.floor((o.t||0)*9)%4:-1,bob=(fr===1||fr===3)?-u:0;
+  const x=Math.round(q.sx),y=Math.round(q.sy),S=4.2*u,top=y-16*u+bob+0.5*u,left=o.face<0?x-0.3*u:x-6*u+2.1*u;
+  if(maxY!=null&&top+S>maxY)continue;
+  /* hidden if a player drawn in front covers the helmet */
+  const cxh=left+S/2,cyh=top+S/2;let hid=false;
+  for(let j=i+1;j<Q.length;j++){const p=Q[j],pu=(p.o&&p.o.u)||2;if(Math.abs(p.sx-cxh)<5*pu&&cyh>p.sy-15*pu&&cyh<p.sy){hid=true;break;}}
+  if(hid)continue;
+  const lm=logoMini(lk.teamId,Math.ceil(S*k));if(!lm)continue;
+  g.drawImage(lm,left+sh,top+sh*0.6,S,S);}
+ g.filter='none';
+}
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
- drawSpr(cx,sx,sy-st.jy,st.lk,st.o);
+ drawSpr(cx,sx,sy-st.jy,st.lk,st.o);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
  if(st.star&&!st.dn&&M.phase!=='kick')miniStar(sx,sy-40-st.jy);}
 function drawPlayers(){
  const all=[...M.O,...M.D].sort((a,b)=>a.y-b.y),holder=curHolder();
@@ -3548,9 +3568,9 @@ function drawKick(){
  }
 }
 function draw(){
- cx.imageSmoothingEnabled=false;
- if(M.phase==='kick'&&M.kick){drawKick();drawFX();return;}
- if(M.phase==='replay'&&M.rec){drawReplay();return;}
+ cx.imageSmoothingEnabled=false;LOGO_Q.length=0;
+ if(M.phase==='kick'&&M.kick){drawKick();drawFX();drawLogoLayer(0);return;}
+ if(M.phase==='replay'&&M.rec){drawReplay();drawLogoLayer(0,CH-42);return;}
  const sh=M.shake>0?(Math.random()-.5)*M.shake:0;
  cx.save();cx.translate(Math.round(sh),Math.round(sh*0.6));
  drawField();
@@ -3561,6 +3581,7 @@ function draw(){
  if(M.aim)drawAim();
  cx.restore();
  drawFX();
+ drawLogoLayer(Math.round(sh));
 }
 
 /* ---------- HUD ---------- */
