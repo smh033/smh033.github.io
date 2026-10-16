@@ -2836,7 +2836,7 @@ function dragPre(dt){const f=M.dragD;if(!f||!ptr.down||M.input!=='dctl'){M.dragD
    defender; before the snap it walks him (corners, linebackers, anyone) to a new spot.
    A second finger taps to dive / jump, or taps another defender to switch to him. */
 const JOY={x:62,y:284,r:30,hit:48};
-function joyOn(){return !!(M&&M.def&&!M.ov&&(M.phase==='pre'||(M.phase==='live'&&M.play!=='intret')));}
+function joyOn(){return !!(M&&M.def&&!M.ov&&(M.phase==='pre'||M.phase==='live'));}
 function joyHit(p){return joyOn()&&Math.hypot(p.x-JOY.x,p.y-JOY.y)<=JOY.hit;}
 function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.x,dy=ptr.y-JOY.y;const d=Math.hypot(dx,dy);if(d<4)return{x:0,y:0,m:0};const m=Math.min(1,d/JOY.r);return{x:dx/d,y:dy/d,m};}
 function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
@@ -3371,7 +3371,7 @@ function passPick(b,d){b.done=true;M.ball=null;M.intBy=d.pl;d.ball=true;creditD(
    Your players chase him; you steer the highlighted chaser (hold and drag toward
    where you want him to go) and tap to make him dive for the tackle. */
 function startIntReturn(d){
- M.play='intret';M.carrier=d;M.aim=null;M.steer=null;M.input=null;M.intX=d.x;M.big=null;M.intT=0;
+ M.play='intret';M.carrier=d;M.aim=null;M.steer=null;if(!(M.def&&(M.input==='dctl'||M.input==='joy')))M.input=null;   /* on defense keep the finger / joystick you're already holding */M.intX=d.x;M.big=null;M.intT=0;
  d.route=null;d.eng=null;d.hawk=false;d.ball=false;d.vx=Math.min(d.vx,0);
  for(const f of M.D){if(f.eng){f.eng=null;}f.blkDone=false;}
  for(const f of M.O){f.route=null;f.blk=null;f.tried=false;f.dove=false;}
@@ -3393,7 +3393,9 @@ function upIntRet(dt){
  for(const f of[...M.O,...M.D])tickF(f,dt);
  // returner: run for the end zone, slide away from tacklers in front of him
  if(!(c.down>0)){let ty=c.y;for(const o of M.O){if(o.stun>0||o.down>0)continue;const dx=c.x-o.x,dy=c.y-o.y,dd=Math.hypot(dx,dy);if(dd<7&&dx>-1.5)ty+=Math.sign(dy||1)*(7-dd)/7*5;}
-  ty=clamp(ty,2,51.3);if(M.def&&ptr.down&&M.input==='dctl'){const p=scrToField(ptr.x,ptr.y);steer(c,Math.min(c.x-1,p.x),clamp(p.y,2,51.3),c.spd*1.04,c.acc+10,dt);}else steer(c,c.x-6,ty,c.spd*1.02,c.acc+10,dt);c.face=-1;}
+  ty=clamp(ty,2,51.3);const jv=M.def?joyVec():null;
+  if(jv){if(jv.m)steer(c,c.x+jv.x*(M.dir<0?-1:1)*5,clamp(c.y+jv.y*5,0,53.3),c.spd*(0.4+0.64*jv.m),c.acc+10,dt);else steer(c,c.x,c.y,0,c.acc+10,dt);}
+  else if(M.def&&ptr.down&&M.input==='dctl'){const p=scrToField(ptr.x,ptr.y);steer(c,p.x,clamp(p.y,0,53.3),c.spd*1.04,c.acc+10,dt);}else{steer(c,c.x-6,ty,c.spd*1.02,c.acc+10,dt);c.face=-1;}}
  // his teammates block the nearest chasers
  for(const f of M.D){if(f===c||f.stun>0||f.down>0)continue;
   if(f.blkDone){steer(f,c.x-3,f.y,f.spd*0.7,14,dt);continue;}
