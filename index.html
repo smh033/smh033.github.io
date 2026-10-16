@@ -2118,15 +2118,27 @@ function buildField(flip){
 }
 /* End-zone stands (behind each end line): columns of fans in home colours behind a padded wall. */
 function buildEzStands(){
- const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],W=420,HH=FB+22-ST;   // runs all the way up to meet the sideline stands
+ /* End-zone stands, joined to the sideline stands as one L-shaped bowl: the top band uses the
+    same horizontal seat rows and front wall as the sideline stands, and that wall turns the
+    corner and runs down the end zone, so the two stands meet instead of overlapping. */
+ const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],W=420,HH=FB+22-ST,TH=FT-16-ST;
  for(let f=0;f<2;f++){const c=document.createElement('canvas');c.width=W;c.height=HH;const g=c.getContext('2d');
   g.fillStyle='#161830';g.fillRect(0,0,W,HH);
   let seed=29;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
   const misc=['#e8e8e8','#c04040','#3a6ac0','#d0b040','#40a060'];
-  for(let col=0;col*6<W-8;col++){const x=W-14-col*6;g.fillStyle=col%2?'#202346':'#262a55';g.fillRect(x-2,0,2,HH);   // aisle between rows of seats
-   for(let y=(col%2)*2;y<HH;y+=4){const r=R(),r2=R(),r3=R();if(r<0.08)continue;const cl=r<0.55?hc.c1:r<0.75?hc.c2:r<0.85?oc.c1:misc[Math.floor(r2*5)];
-    const up=f===1&&((y*7+col*13)%10)<4?1:0;g.fillStyle=cl;g.fillRect(x+up,y,3,3);g.fillStyle=SKIN[Math.floor(r3*6)];g.fillRect(x+3+up,y+1,2,2);}}
-  g.fillStyle=hc.c1;g.fillRect(W-8,0,8,HH);g.fillStyle='rgba(255,255,255,.25)';g.fillRect(W-8,0,1,HH);g.fillStyle='#8a8f9a';g.fillRect(W-3,0,3,HH);   // padded wall
+  const fan=r=>r<0.55?hc.c1:r<0.75?hc.c2:r<0.85?oc.c1:misc[Math.floor(R()*5)];
+  // corner/top band: rows exactly like the sideline stands so they continue straight across
+  for(let row=0;row<4;row++){const y=2+row*5;g.fillStyle=row%2?'#202346':'#262a55';g.fillRect(0,y+3,W,2);
+   for(let i=(row%2)*2;i<W;i+=4){const r=R(),r3=R();if(r<0.08)continue;const up=f===1&&((i*7+row*13)%10)<4?1:0;
+    g.fillStyle=fan(r);g.fillRect(i,y+1-up,3,3);g.fillStyle=SKIN[Math.floor(r3*6)];g.fillRect(i+1,y-1-up,2,2);}}
+  // end-zone section below it: seat columns facing the field
+  for(let col=0;col*6<W-14;col++){const x=W-14-col*6;g.fillStyle=col%2?'#202346':'#262a55';g.fillRect(x-2,TH,2,HH-TH);
+   for(let y=TH+(col%2)*2;y<HH;y+=4){const r=R(),r3=R();if(r<0.08)continue;const up=f===1&&((y*7+col*13)%10)<4?1:0;
+    g.fillStyle=fan(r);g.fillRect(x+up,y,3,3);g.fillStyle=SKIN[Math.floor(r3*6)];g.fillRect(x+3+up,y+1,2,2);}}
+  // one continuous wall: along the sideline stands' front, then around the corner and down the end zone
+  g.fillStyle='#8a8f9a';g.fillRect(0,TH-3,W,3);
+  g.fillStyle=hc.c1;g.fillRect(W-8,TH,8,HH-TH);g.fillStyle='rgba(255,255,255,.25)';g.fillRect(W-8,TH,1,HH-TH);
+  g.fillStyle='#8a8f9a';g.fillRect(W-3,TH-3,3,HH-TH+3);
   fr.push(c);}
  return fr;
 }
