@@ -2851,6 +2851,14 @@ function drawJoy(){if(!joyOn())return;const v=joyVec(),kx=JOY.x+(v?v.x*v.m*JOY.r
  cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.stroke();
  cx.fillStyle='#fff';for(const[a,b]of[[0,-1],[0,1],[-1,0],[1,0]]){const tx=JOY.x+a*(JOY.r+1),ty=JOY.y+b*(JOY.r+1);cx.fillRect(tx-2+(a?a:0),ty-2+(b?b:0),4,4);}
  cx.globalAlpha=v?0.95:0.7;cx.fillStyle='#ffe94a';cx.beginPath();cx.arc(kx,ky,13,0,Math.PI*2);cx.fill();cx.strokeStyle='#000';cx.stroke();cx.restore();}
+/* Your defender breaking on a thrown ball after you tapped DIVE: sprint to where it's coming down
+   and launch so you arrive with it - a jump if you're already under it, a full-out dive if not. */
+function ballDive(f,dt){const b=M.ball;if(!b||!b.F||b.done||f.eng||f.stun>0||f.down>0){f.diveQ=false;return false;}
+ const F=b.F,u=Math.min(1.6,F.d*0.25),px=F.x1-F.ux*u,py=F.y1-F.uy*u,rem=F.T-u/F.v-b.t,dl=Math.hypot(f.x-px,f.y-py);   /* undercut: meet the ball just in front of the receiver */
+ if(rem<=0.42){f.diveQ=false;
+  if(dl<1.6){f.jump=0.45;f.reach=0.35;sfx('juke');steer(f,px,py,f.spd,f.acc+12,dt);return true;}
+  const T=Math.max(0.3,Math.min(0.45,rem+0.05)),v=Math.min(dl/T,f.spd*2.2);f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dl*v;f.vy=(py-f.y)/dl*v;f.dtk=false;f.reach=T;sfx('juke');return true;}
+ steer(f,px,py,dl<1.2?Math.min(f.spd,dl*4):f.spd*1.06,f.acc+14,dt);return true;}   /* get there and wait for it */
 function ctlActive(){return M.def&&M.ctl&&((ptr.down&&(M.input==='dctl'||M.input==='joy'))||keys.up||keys.down||keys.left||keys.right);}
 function ctlMove(f,dt){
  if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
@@ -2868,7 +2876,9 @@ function ctlTap(){
  const f=M.ctl;if(!f||M.phase!=='live')return;
  if(M.play==='intret'){if(M.carrier&&M.carrier.side==='D'){dive(M.carrier);}return;}
  if(f.stun>0||f.down>0||f.dive>0||f.dove)return;
- const b=M.ball;if(b&&b.F&&!b.done&&Math.hypot(f.x-b.x1,f.y-b.y1)<4){if(!(f.jump>0)){f.jump=0.45;f.reach=0.3;sfx('juke');}return;}
+ const b=M.ball;if(b&&b.F&&!b.done){const F=b.F,lx=F.x1,ly=F.y1,dl=Math.hypot(f.x-lx,f.y-ly);
+  if(dl<2.2){if(!(f.jump>0)){f.jump=0.45;f.reach=0.3;sfx('juke');}return;}
+  if(dl<11&&!f.eng){f.diveQ=true;return;}}   /* break on the ball and lay out for it at the right moment (ballDive) */
  const c=M.carrier||(M.play==='pass'&&!M.thrown?M.qb:null);
  if(c&&d2(f,c)<4.2&&!f.eng){const lead=0.3,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y)||1,T=0.38,v=Math.min(dp/T,f.spd*1.9);
   f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;sfx('juke');return;}
@@ -3261,14 +3271,15 @@ function posAt(f,a){return f._px==null?{x:f.x,y:f.y}:{x:lerp(f._px,f.x,a),y:lerp
 const HB={half:12,top:36,foot:5,jump:10,djump:5,depth:2.6,ddepth:1.4};
 function curJy(f){if(f.dive>0&&f.dv)return Math.round(Math.sin((1-f.dive/f.dv)*Math.PI)*9)+3;return f.jump>0?Math.round(Math.sin((0.45-f.jump)/0.45*Math.PI)*12):0;}
 function spriteHit(f,bp,def,a,P){
- P=P||posAt(f,a==null?1:a);const dy=bp.y-P.y,dep=def?HB.ddepth:HB.depth;
+ P=P||posAt(f,a==null?1:a);const big=def&&M.def&&f===M.ctl;   /* the defender you control gets a receiver-sized reach for the ball */
+ const dy=bp.y-P.y,dep=big?HB.depth:def?HB.ddepth:HB.depth;
  if(Math.abs(dy)>dep)return{h:0,s:0};
  const dxp=(bp.x-P.x)*PXY,rel=dy*PYY-bp.z*PZ+curJy(f);   // rel: px below the feet (negative = above)
  if(f.dive>0){const fw=(f.vx>=0?1:-1),q=dxp*fw;
   if(q>-14&&q<32&&rel>-30&&rel<HB.foot+2)return{h:1,s:clamp(1-Math.max(Math.abs(q-9)/23,Math.abs(rel+12)/18,Math.abs(dy)/dep),0,1)};
   return{h:0,s:0};}
- const half=def?HB.half-1:HB.half;if(Math.abs(dxp)>half||rel>HB.foot)return{h:0,s:0};
- const top=-HB.top-((f.jump>0||f.down>0)?0:(def?HB.djump:HB.jump));
+ const half=big?HB.half+3:def?HB.half-1:HB.half;if(Math.abs(dxp)>half||rel>HB.foot)return{h:0,s:0};
+ const top=-HB.top-((f.jump>0||f.down>0)?0:(def&&!big?HB.djump:HB.jump));
  if(rel<top)return{h:0,s:0};
  const mid=(top+HB.foot)/2,hv=(HB.foot-top)/2;
  const s=clamp(1-Math.max(Math.abs(dxp)/half,Math.abs(rel-mid)/hv,Math.abs(dy)/dep),0,1);
@@ -3290,7 +3301,7 @@ function scanContact(f,b,bp,def,a,maxDt){
  return best;
 }
 function eligO(f){return SKILL.includes(f.role)&&!f.tried&&!(f.stun>0)&&!(f.down>0&&!(f.dive>0));}
-function eligD(f){return f.role!=='DL'&&!f.tried&&!(f.stun>0)&&!f.eng&&!(f.down>0);}
+function eligD(f){return (f.role!=='DL'||(M.def&&f===M.ctl))&&!f.tried&&!(f.stun>0)&&!f.eng&&!(f.down>0);}
 /* Outcome rules (all spatial first, ratings second):
    - only a receiver reaches it  -> catch; a drop is rare and more likely
      when the ball only clips the edge of his reach or he's a poor catcher
@@ -3347,16 +3358,17 @@ function resolveContact(b,bp,p){
  }
  if(o&&d){
   const sr=oh.s+0.04*(A(o,'cat')-6)+(b.tip?-0.05:0),sd=dh.s+0.04*(A(d,'cov')-6),noise=(R()-0.5)*0.24;
-  if(sr+noise>sd){if(!oneHand(o,oh,true)){pop(oh.h===2?'LEAPING CATCH!':'CONTESTED CATCH!',o.x,o.y,'#ffe94a');if(oh.h===2)M.leap=true;}return doCatch(o,bp);}
+  if(sr+noise>sd+(M.def&&d===M.ctl?0.12:0)){if(!oneHand(o,oh,true)){pop(oh.h===2?'LEAPING CATCH!':'CONTESTED CATCH!',o.x,o.y,'#ffe94a');if(oh.h===2)M.leap=true;}return doCatch(o,bp);}
   o.tried=true;d.tried=true;
-  if(dh.s>0.45&&R()<0.5+0.03*(A(d,'cov')-6))return passPick(b,d);
+  if(dh.s>0.45&&R()<0.5+0.03*(A(d,'cov')-6)+(M.def&&d===M.ctl?0.25:0))return passPick(b,d);
   if(!b.tip&&R()<0.45){tipBall(b,bp,d);o.tried=true;return;}
   b.done=true;M.ball=null;looseFrom(b,bp,1);return endPlay('inc',M.los,M.ballY,'BROKEN UP!');
  }
  // defender alone
  d.tried=true;
  const cov=A(d,'cov');
- if(dh.s>0.3){const pi=clamp(0.35+dh.s*0.45+0.03*(cov-6)-(dh.h===2?0.1:0)+(b.tip?0.1:0),0.2,0.9);if(R()<pi)return passPick(b,d);}
+ const mine=M.def&&d===M.ctl;   /* the defender you control: get to the ball and you usually come down with it */
+ if(dh.s>(mine?0.12:0.3)){const pi=clamp(0.35+dh.s*0.45+0.03*(cov-6)-(dh.h===2?0.1:0)+(b.tip?0.1:0)+(mine?0.3:0),0.2,mine?0.95:0.9);if(R()<pi)return passPick(b,d);}
  if(!b.tip&&R()<0.55)return tipBall(b,bp,d);
  b.done=true;M.ball=null;looseFrom(b,bp,1);return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':'BROKEN UP!');
 }
@@ -3469,6 +3481,7 @@ function upLive(dt){
  for(const f of M.D){tickF(f,dt);
   if(f.dive>0){if(stepDefDive(f,dt))return;continue;}
   if(f.stun>0)continue;
+  if(f===M.ctl&&f.diveQ&&ballDive(f,dt))continue;
   if(f===M.ctl&&ctlActive()){ctlMove(f,dt);continue;}
   upDef(f,dt);if(!(M.def&&f===M.ctl))maybeDefDive(f,dt);}
  separate(M.O);separate(M.D);
