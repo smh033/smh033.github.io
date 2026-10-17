@@ -329,7 +329,7 @@ function arcadeHTML(back){const a=Object.assign({},ARC_DEF,L.settings.arc||{}),r
  ${opt('wind','WIND',[['auto','AUTO'],['none','NONE'],['strong','STRONG']])}
  ${opt('turbo','TURBO SPEED',[[false,'OFF'],[true,'ON']])}</div>
  <div class="row"><div class="sp"></div><button class="bt y" data-a="${back==='h2h'?'close':'settings'}">DONE</button></div></div>`;}
-function diffLvl(){const d=L.settings.diff;return d===0?-1:d===1?0:d===2?1:d===4?1.6:clamp((L.dyn-10)/8,-1.25,1.25);}   /* EXTREME (4) is past hard and past dynamic at 20 */
+function diffLvl(){const d=L.settings.diff;return d===0?-1:d===1?0:d===2?1:d===4?2.2:clamp((L.dyn-10)/8,-1.25,1.25);}   /* EXTREME (4) is past hard and past dynamic at 20 */
 function diffMult(){return 1+diffLvl()*0.14;}          // opponent team strength (sims + their drives)
 function diffAdj(){return diffLvl()*1.6;}              // in-game defender ratings (speed, tackling, coverage)
 const starsTen=v=>clamp(Math.round((v-2)/1.15*2)/2,0.5,5);
@@ -3060,8 +3060,11 @@ function ballDive(f,dt){const b=M.ball;if(!b||!b.F||b.done||f.eng||f.stun>0||f.d
   if(dl<1.6){f.jump=0.45;f.reach=0.35;sfx('juke');steer(f,px,py,f.spd,f.acc+12,dt);return true;}
   const T=Math.max(0.3,Math.min(0.45,rem+0.05)),v=Math.min(dl/T,f.spd*2.2);f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dl*v;f.vy=(py-f.y)/dl*v;f.dtk=false;f.reach=T;sfx('juke');return true;}
  steer(f,px,py,dl<1.2?Math.min(f.spd,dl*4):f.spd*1.06,f.acc+14,dt);return true;}   /* get there and wait for it */
+/* the hands-on bonuses (reach, picks) only count while YOU are actually steering him / diving with him */
+function userCtl(f){return !!(M&&M.def&&f===M.ctl&&(f.diveQ||f.dove||ctlActive()||M.pt-(M.ctlAt==null?-9:M.ctlAt)<1.0));}
 function ctlActive(){return M.def&&M.ctl&&((ptr.down&&(M.input==='dctl'||M.input==='joy'))||keys.up||keys.down||keys.left||keys.right);}
 function ctlMove(f,dt){
+ M.ctlAt=M.pt;
  if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  let tx,ty;
  const jv=joyVec();
@@ -3141,7 +3144,8 @@ function aiQB(q,dt){
  if(S.t>0&&press>2.0)return;
  let best=null;
  for(const r of M.O){if(r===q||!SKILL.includes(r.role)||r.down>0||r.stun>0)continue;
-  const T=Math.hypot(r.x-q.x,r.y-q.y)/20+0.25,px=r.x+r.vx*T,py=r.y+r.vy*T;if(px<M.los-1.5||py<1.5||py>51.8)continue;
+  if(r.x>119.3)continue;   /* already out the back of the end zone */
+  const T=Math.hypot(r.x-q.x,r.y-q.y)/20+0.25,px=Math.min(r.x+r.vx*T,118.3),py=clamp(r.y+r.vy*T,1.5,51.8);if(px<M.los-1.5)continue;   /* lead him, but never past the end line or sideline */
   let open=9;for(const d of M.D){if(d.stun>0||(d.down>0&&!(d.dive>0)))continue;open=Math.min(open,Math.hypot(d.x+d.vx*T*0.6-px,d.y+d.vy*T*0.6-py));}
   const gain=px-M.los;if(gain>16&&open<3.4)continue;   // only takes a deep shot when the receiver is clearly open
   const sc=open*1.25+clamp(gain,-3,30)*0.1+(px>=M.fdX?1.1:0)+(px>=110?2:0)+rnd(-0.8,0.8);
@@ -3472,7 +3476,7 @@ function posAt(f,a){return f._px==null?{x:f.x,y:f.y}:{x:lerp(f._px,f.x,a),y:lerp
 const HB={half:12,top:36,foot:5,jump:10,djump:5,depth:2.6,ddepth:1.4};
 function curJy(f){if(f.dive>0&&f.dv)return Math.round(Math.sin((1-f.dive/f.dv)*Math.PI)*9)+3;return f.jump>0?Math.round(Math.sin((0.45-f.jump)/0.45*Math.PI)*12):0;}
 function spriteHit(f,bp,def,a,P){
- P=P||posAt(f,a==null?1:a);const big=def&&M.def&&f===M.ctl;   /* the defender you control gets a receiver-sized reach for the ball */
+ P=P||posAt(f,a==null?1:a);const big=def&&userCtl(f);   /* the defender you control gets a receiver-sized reach for the ball */
  const dy=bp.y-P.y,dep=big?HB.depth:def?HB.ddepth:HB.depth;
  if(Math.abs(dy)>dep)return{h:0,s:0};
  const dxp=(bp.x-P.x)*PXY,rel=dy*PYY-bp.z*PZ+curJy(f);   // rel: px below the feet (negative = above)
@@ -3502,7 +3506,7 @@ function scanContact(f,b,bp,def,a,maxDt){
  return best;
 }
 function eligO(f){return SKILL.includes(f.role)&&!f.tried&&!(f.stun>0)&&!(f.down>0&&!(f.dive>0));}
-function eligD(f){return (f.role!=='DL'||(M.def&&f===M.ctl))&&!f.tried&&!(f.stun>0)&&!f.eng&&!(f.down>0);}
+function eligD(f){return (f.role!=='DL'||userCtl(f))&&!f.tried&&!(f.stun>0)&&!f.eng&&!(f.down>0);}
 /* Outcome rules (all spatial first, ratings second):
    - only a receiver reaches it  -> catch; a drop is rare and more likely
      when the ball only clips the edge of his reach or he's a poor catcher
@@ -3559,16 +3563,16 @@ function resolveContact(b,bp,p){
  }
  if(o&&d){
   const sr=oh.s+0.04*(A(o,'cat')-6)+(b.tip?-0.05:0),sd=dh.s+0.04*(A(d,'cov')-6),noise=(R()-0.5)*0.24;
-  if(sr+noise>sd+(M.def&&d===M.ctl?0.12:0)){if(!oneHand(o,oh,true)){pop(oh.h===2?'LEAPING CATCH!':'CONTESTED CATCH!',o.x,o.y,'#ffe94a');if(oh.h===2)M.leap=true;}return doCatch(o,bp);}
+  if(sr+noise>sd+(userCtl(d)?0.12:0)){if(!oneHand(o,oh,true)){pop(oh.h===2?'LEAPING CATCH!':'CONTESTED CATCH!',o.x,o.y,'#ffe94a');if(oh.h===2)M.leap=true;}return doCatch(o,bp);}
   o.tried=true;d.tried=true;
-  if(dh.s>0.45&&R()<(0.5+0.03*(A(d,'cov')-6)+(M.def&&d===M.ctl?0.25:0))*arcM('int'))return passPick(b,d);
+  if(dh.s>0.45&&R()<(0.5+0.03*(A(d,'cov')-6)+(userCtl(d)?0.25:0))*arcM('int'))return passPick(b,d);
   if(!b.tip&&R()<0.45){tipBall(b,bp,d);o.tried=true;return;}
   b.done=true;M.ball=null;looseFrom(b,bp,1);return endPlay('inc',M.los,M.ballY,'BROKEN UP!');
  }
  // defender alone
  d.tried=true;
  const cov=A(d,'cov');
- const mine=M.def&&d===M.ctl;   /* the defender you control: get to the ball and you usually come down with it */
+ const mine=userCtl(d);   /* the defender you control: get to the ball and you usually come down with it */
  if(dh.s>(mine?0.12:0.3)){const pi=clamp(0.35+dh.s*0.45+0.03*(cov-6)-(dh.h===2?0.1:0)+(b.tip?0.1:0)+(mine?0.3:0),0.2,mine?0.95:0.9)*arcM('int');if(R()<pi)return passPick(b,d);}
  if(!b.tip&&R()<0.55)return tipBall(b,bp,d);
  b.done=true;M.ball=null;looseFrom(b,bp,1);return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':'BROKEN UP!');
@@ -3786,7 +3790,7 @@ function upDef(f,dt){
   if(M.thrown&&M.ball&&M.ball.F){if(M.ball.t>(f.react||0.3))steer(f,M.ball.x1,M.ball.y1,f.spd,f.acc+4,dt);else steer(f,f.x,f.y,0,10,dt);return;}
   let r=null,bd=8;for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}}
   const tx=r?lerp(z.x,r.x+1,0.7):z.x,ty=r?lerp(z.y,r.y,0.7):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95,f.acc,dt);return;}
- if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,1));
+ if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,2.2));
   if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
   const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
   // receiver sitting down in a curl: defender recovers to a spot behind him, he doesn't teleport onto his hip
@@ -3908,7 +3912,7 @@ function stepDefDive(f,dt){
 function tackleAttempt(d,c){
  if(c.jk>0&&Math.random()<0.45+A(c,'spd')*0.035){d.stun=0.9;d.down=0.9;c.jk=0;pop('JUKE!',c.x,c.y,'#7fffd4');xpG(c.pl,2);M.shake=2;return;}
  const str=A(c,'str'),tk=A(d,'tkl'),gang=M.D.filter(x=>x!==d&&x.stun<=0&&!x.eng&&d2(x,c)<1.6).length;
- let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,1))*arcM('brk');if(c.role==='QB'&&!M.scramble)pb*=0.5;
+ let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,2.2))*arcM('brk');if(c.role==='QB'&&!M.scramble)pb*=0.5;
  if(Math.random()<pb){d.stun=0.9;d.down=0.9;c.vx*=0.55;c.vy*=0.55;c.slow=0.3;pop('BROKEN TACKLE!',c.x,c.y,'#7fffd4');M.shake=3;sfx('hit');xpG(c.pl,3);return;}
  // HIT STICK: defensive backs sometimes lay the runner out (10%); 30% of those knock the ball loose.
  const stick=(d.role==='DB'||d.role==='S'||d.role==='LB')&&Math.random()<0.10*arcM('hit');   // linebackers too, on anyone (QB scrambles included)
