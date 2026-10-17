@@ -1901,12 +1901,11 @@ ACT.hire=d=>{const list=L.staff[d.s],c=list.find(x=>x.id===+d.id);if(!c||L.cc<c.
 /* =====================================================================
    SETTINGS / EDIT TEAM
    ===================================================================== */
-function settingsHTML(){const s=L.settings;if(s.play==null)s.play='both';const ch=(k,v,l)=>`<span class="chip ${s[k]===v?'on':''}" data-a="set" data-k="${k}" data-v="${v}">${l}</span>`;
+function settingsHTML(){const s=L.settings;const ch=(k,v,l)=>`<span class="chip ${s[k]===v?'on':''}" data-a="set" data-k="${k}" data-v="${v}">${l}</span>`;
  return`<div class="mp" style="width:440px">${ttl('SETTINGS',true)}
  <div class="row"><span style="width:130px">SOUND</span>${ch('sound',true,'ON')}${ch('sound',false,'OFF')}</div>
  <div class="row"><span style="width:130px">BIG-PLAY REPLAYS</span>${ch('replay',true,'ON')}${ch('replay',false,'OFF')}</div>
  <div class="row"><span style="width:130px">QUARTER LENGTH</span>${[120,180,240,300].map(q=>ch('qlen',q,q/60+':00')).join('')}</div>
- <div class="row"><span style="width:130px">PLAY</span>${ch('play','both','OFFENSE + DEFENSE')}${ch('play','off','OFFENSE ONLY')}${ch('play','def','DEFENSE ONLY')}</div>
  <div class="row"><span style="width:130px">DIFFICULTY</span>${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',3,'DYNAMIC')}</div>
  <div class="row"><span style="width:130px">FIELD DIRECTION</span>${ch('dir','R','LEFT TO RIGHT')}${ch('dir','L','RIGHT TO LEFT')}${ch('dir','S','SWITCH HALVES')}</div>
  <div class="row"><span style="width:130px">ROSTER SIZE</span><span>${s.rmax} PLAYERS</span></div>
@@ -2778,7 +2777,7 @@ function oppPuntLand(x){if(M.def)endDefDrive();if(!playOffense())return simUserD
    jump, and SWITCH to the defender nearest the ball. The view is mirrored so the field,
    end zones and stands look the same as when you have the ball.
    ===================================================================== */
-const gameMode=()=>(L&&L.settings&&L.settings.play)||'both';   /* you play both sides by default */
+const gameMode=()=>'off';   /* defense removed: opponent drives are always simulated (Retro Bowl style) */
 const playDefense=()=>gameMode()!=='off';
 const playOffense=()=>gameMode()!=='def';
 const offT=()=>M&&M.def?M.op:L.user,defT=()=>M&&M.def?L.user:M.op;
