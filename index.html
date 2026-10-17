@@ -3160,6 +3160,11 @@ function aiQB(q,dt){
  }
 }
 function aiThrow(q,tx,ty,open,away){
+ /* real QBs miss: now and then the throw sails long or wide (more for inaccurate QBs and under pressure),
+    which near the end zone or sideline means out of bounds */
+ if(!away){let press=9;for(const d of M.D){if(d.eng||d.stun>0||d.down>0)continue;press=Math.min(press,d2(d,q));}
+  const bad=clamp(0.09-(A(q,'acc')-6)*0.012+(press<2.2?0.05:0),0.03,0.18);
+  if(Math.random()<bad){const k=Math.random();if(k<0.6){tx+=rnd(3,7);ty+=rnd(-2,2);}else{ty+=(ty<26.67?-1:1)*rnd(3,7);tx+=rnd(0,3);}}}
  M.passBullet=!away&&Math.hypot(tx-q.x,ty-q.y)<15&&open<3.2;
  let best=null;const gx0=wx(tx)-wx(q.x),gy0=wy(ty)-wy(q.y),l0=Math.hypot(gx0,gy0)||1;
  for(let pull=PASS.PULL_MIN;pull<=PASS.PULL_MAX+10;pull+=3){const a={sx:320,sy:200,cx:320-gx0/l0*pull,cy:200-gy0/l0*pull};const ai=aimInfo(a);if(ai.run)continue;const e=Math.hypot(ai.tx-tx,ai.ty-ty);if(!best||e<best.e)best={e,ai};}
