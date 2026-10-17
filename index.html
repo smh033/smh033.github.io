@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#2f63e6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Retro Football">
+<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Retro Football</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1375,7 +1377,12 @@ document.addEventListener('pointerup',e=>{
 },true);
 ACT.mbg=()=>closeModal();ACT.close=()=>closeModal();ACT.go=d=>go(d.s,d.t!=null?{t:+d.t}:{});
 function goFS(){const d=document.documentElement;const f=d.requestFullscreen||d.webkitRequestFullscreen;if(f){try{const pr=f.call(d);if(pr&&pr.then)pr.then(()=>{try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}}).catch(()=>{});}catch(e){}}}
-ACT.fs=()=>goFS();
+const IS_IPHONE=/iPhone|iPod/.test(navigator.userAgent),IS_STANDALONE=!!(navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches));
+ACT.fs=()=>{if(IS_IPHONE&&!IS_STANDALONE){modal(`<div class="mp" style="width:440px;align-items:center;text-align:center;gap:8px">${ttl('FULL SCREEN ON IPHONE',true)}
+ <div class="s10">SAFARI ON IPHONE CAN'T MAKE WEBSITES FULL SCREEN.</div>
+ <div class="s10 yl">1. TAP THE SHARE BUTTON <span style="font-family:sans-serif">⬆︎</span><br>2. TAP "ADD TO HOME SCREEN"<br>3. OPEN RETRO FOOTBALL FROM YOUR HOME SCREEN</div>
+ <div class="s7 dim">IT OPENS FULL SCREEN WITH NO ADDRESS BAR.</div>
+ <button class="bt y" data-a="close">GOT IT</button></div>`);return;}goFS();};
 function pcard(p,t,o){
  o=o||{};const side=sideOf(p.pos),c=teamCol(t>=0?t:L.user);
  const tag=p.inj>0?`<span class="tg inj">INJ</span>`:p.bench&&p.team===L.user?`<span class="tg ex">BENCH</span>`:p.sp>0&&p.team===L.user?`<span class="tg sp">+${p.sp}</span>`:o.tag||'';
@@ -1987,11 +1994,13 @@ SCR.fo=()=>{
    ${box('DRAFT PICKS','<div style="text-align:center">'+(L.picks||[1,1,1]).join(' - ')+'</div>')}
   </div>
  </div>
- <div class="row" style="gap:7px"><button class="bt ico" data-a="go" data-s="hub">${ICON.home}</button><button class="bt grow" data-a="capUp" ${L.cap>=CFG.capMax||L.cc<CFG.capCost?'disabled':''}>RAISE CAP · ${CFG.capCost} <i class="cc"></i></button><div class="sp"></div><button class="bt" data-a="trOpen" ${tradesOpen()?'':'disabled'}>${tradesOpen()?'TRADES':'DEADLINE PASSED'}</button><button class="bt" data-a="go" data-s="fa">FREE AGENTS</button><button class="bt" data-a="go" data-s="staff">STAFF HIRES</button></div></div>`;
+ <div class="row" style="gap:7px"><button class="bt ico" data-a="go" data-s="hub">${ICON.home}</button><button class="bt" style="display:inline-flex;align-items:center;gap:6px;flex:none;padding-left:10px;padding-right:10px" data-a="capUp" ${L.cc<capCost()?'disabled':''}><span>RAISE CAP · ${capCost()}</span><i class="cc" style="flex:none;vertical-align:0"></i></button><div class="sp"></div><button class="bt" data-a="trOpen" ${tradesOpen()?'':'disabled'}>${tradesOpen()?'TRADES':'DEADLINE PASSED'}</button><button class="bt" data-a="go" data-s="fa">FREE AGENTS</button><button class="bt" data-a="go" data-s="staff">STAFF HIRES</button></div></div>`;
 };
 ACT.fup=d=>{const lv=L.fac[d.k],c=facCost(lv);if(lv>=10||L.cc<c)return;L.cc-=c;L.fac[d.k]++;sfx('coin');save();render();};
 ACT.finfo=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl(FAC[d.k][0],true)}<div style="line-height:2">${FAC[d.k][1]}</div><div>LEVEL ${L.fac[d.k]}/10</div><button class="bt" data-a="close">OK</button></div>`);
-ACT.capUp=()=>{if(L.cc<CFG.capCost||L.cap>=CFG.capMax)return;L.cc-=CFG.capCost;L.cap+=CFG.capStep;sfx('coin');save();render();toast('SALARY CAP IS NOW '+L.cap+'M');};
+/* No cap limit, but every raise costs 5 more coins than the last one (10, 15, 20, ...). */
+function capCost(){return CFG.capCost+5*(L.capBuys||0);}
+ACT.capUp=()=>{const k=capCost();if(L.cc<k)return;L.cc-=k;L.capBuys=(L.capBuys||0)+1;L.cap+=CFG.capStep;sfx('coin');save();render();toast('SALARY CAP IS NOW '+L.cap+'M');};
 function ensureFA(){if(!L)return;let n=faList().length,k=0;if(n>=24)return;while(n<34&&k<60){addFA();n=faList().length;k++;}save();}
 SCR.fa=()=>{ensureFA();
  const f=UI.sub.f||'ALL',pg=UI.sub.pg||0;let r=faList();const cut=p=>p.rel&&p.rel.y>=L.year-1;if(f==='CUT')r=r.filter(cut);else if(f!=='ALL')r=r.filter(p=>p.pos===f);
