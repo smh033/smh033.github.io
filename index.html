@@ -3742,7 +3742,7 @@ function engage(b,d){
  const run=M.play!=='pass'||!!M.carrier,bk=A(b,'blk'),st=A(d,'str');
  // pass protection holds noticeably longer than run blocks: ~3-4 s of pocket on average
  let h=b.role==='OL'?(run?0.9+(bk-st)*0.16+rnd(0,0.9):2.0+(bk-st)*0.15+rnd(0,1.3)):0.7+(bk-st)*0.1+rnd(0,0.6);
- d.eng=b;d.engT=clamp(h,run?0.4:1.3,5);b.blk=d;
+ d.eng=b;d.engT=clamp(h,run?0.4:1.3,run?RUNBLK:5);b.blk=d;   /* even a dominant line only holds a run block so long */
 }
 function holdBlock(f,d,dt){const h=M.carrier||M.qb||f;const dx=h.x-d.x,dy=h.y-d.y,l=Math.hypot(dx,dy)||1;steer(f,d.x+dx/l*0.95,d.y+dy/l*0.95,4.5,30,dt);}
 function upOL(f,dt){
@@ -3770,15 +3770,15 @@ function upChase(f,dt){
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
-function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8;steer(f,c.x+c.vx*lead,c.y+c.vy*lead,f.spd*(dist<3.5?1.07:1),f.acc+6,dt);}   // a final burst when he's right on the runner
+function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D'&&!M.def;steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,c.spd*CATCHUP):f.spd)*(dist<3.5?1.07:1),f.acc+6,dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
 function upDef(f,dt){
  if(f.eng){const h=M.carrier||M.qb||f.eng;const dx=h.x-f.x,dy=h.y-f.y,l=Math.hypot(dx,dy)||1;f.vx=dx/l*0.8;f.vy=dy/l*0.8;f.x+=f.vx*dt;f.y+=f.vy*dt;return;}
  const c=M.carrier;
- if(c){if(M.play==='run'&&M.pt<0.35&&f.role!=='DL'){steer(f,f.x,f.y,0,10,dt);return;}pursue(f,c,dt);return;}
+ if(c){if(M.play==='run'&&M.pt<0.35&&f.role!=='DL'&&c.role!=='QB'){steer(f,f.x,f.y,0,10,dt);return;}pursue(f,c,dt);return;}
  if(M.play==='ret'){steer(f,M.land.x+2,M.land.y+(f.lane||0),f.spd,18,dt);return;}
  const b=M.ball;
  if(b&&f.hawk&&b.t>f.react){steer(f,b.x1,b.y1,f.spd,f.acc+4,dt);return;}
- if(f.role==='DL'||f.blitz){const tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
+ if(f.role==='DL'||f.blitz){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&!M.def&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
  if(f.role==='S'){
   // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
   // running vertically against a slower linebacker - instead of just floating in the middle.
@@ -3821,7 +3821,7 @@ function upCarrier(c,dt){
     commands: up/down = one side-step, back = slow/hesitate, forward = dive. */
  if(M.def&&c.side==='O')aiRun(c,dt);
  const fat=1-clamp(((c.runT||0)-3.0)*0.07*(1.35-A(c,'stm')*0.06),0,0.28);   /* long sprints (route + run after catch) wear him down */
- const sp=c.spd*(c.slow>0?0.55:1)*fat*(M.def&&c.side==='O'?0.92:1),vmax=sp*1.4;   // side-steps are quick, like Retro Bowl
+ const sp=c.spd*(c.slow>0?0.55:1)*fat*(M.def&&c.side==='O'?0.92:1)*(M.play==='run'&&c.side==='O'&&!M.def?RUN_SP*(c.role==='QB'?0.95:1):1),vmax=sp*1.1;   /* designed runs: a back carrying it into traffic isn't at full sprint */   // side-steps are quick, like Retro Bowl
  if(c.ty==null)c.ty=c.y;
  const vyT=clamp((c.ty-c.y)*14,-vmax,vmax),vxT=sp*(1-0.28*Math.abs(vyT)/vmax);
  let ax=vxT-c.vx,ay=vyT-c.vy,mx=135*dt,am=Math.hypot(ax,ay);
@@ -3859,8 +3859,10 @@ function startCeleb(f){if(!f||f.side!=='O')return;/* clear any dive/jump/catch p
 const HURDLE_T=0.42;
 function hurdle(c){if(!c||c.dive>0||c.down>0||c.hurdle>0)return;c.hurdle=HURDLE_T;c.jk=0;sfx('juke');}
 function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.42;c.dv=0.42;c.vx=M&&M.play==='intret'&&c.side==='D'?Math.min(-c.spd*1.25,(c.vx||0)*1.1):Math.max(c.spd*1.25,(c.vx||0)*1.1);c.vy=(c.vy||0)*0.35;c.ty=null;sfx('juke');}
-const STEP=4.4;
-function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,-3,56.3);/* side-stepping past the sideline runs you out of bounds */c.jk=0.3;sfx('juke');}
+const STEP=3.6;
+/* run game balance (designed runs on your offense): carrier pace, arm tackles off blocks, pursuit, how long a run block holds */
+let RUN_SP=0.93,ARM_R=1.3,ARM_P=0.45,PURS=1.1,RUNBLK=1.4,CATCHUP=0.9;
+function stepC(c,s){/* legacy nudge, kept for compatibility */if(!c||c.dive>0||c.down>0)return;if(c.ty==null)c.ty=c.y;c.ty=clamp(c.ty+s*STEP,-3,56.3);/* side-stepping past the sideline runs you out of bounds */const now=M.pt;if(now-(c.jkLast==null?-9:c.jkLast)>0.7)c.jk=0.3;c.jkLast=now;sfx('juke');}   /* spamming steps doesn't keep a juke window open */
 function takeKnee(){if(M&&M.tbOK&&M.carrier&&M.phase==='live')endPlay('tb',M.carrier.x,M.carrier.y);}
 function fairCatch(){if(M&&M.play==='ret'&&M.retKind==='punt'&&!M.caught){M.fair=true;banner('FAIR CATCH','','#fff',0.9);}}
 function contacts(dt){
@@ -3874,13 +3876,15 @@ function contacts(dt){
  if(c){if(c.dive>0||c.hurdle>0)return;
   // A defender held by a blocker who ends up right on (or behind) the runner sheds the block.
   for(const d of M.D){if(d.eng&&(d2(d,c)<1.0||d.x<c.x-0.6)){if(d.eng.blk===d)d.eng.blk=null;d.eng=null;d.shed=0;}}
+  /* a blocked defender can still reach off the block and grab a runner going right past him (once a play) */
+  for(const d of M.D){if(!d.eng||d.stun>0||d.armT||c.role==='QB'&&!M.scramble)continue;const dd=d2(d,c);if(dd<ARM_R){d.armT=true;if(Math.random()<clamp(ARM_P*A(d,'tkl')/7,0.15,0.8)){if(d.eng.blk===d)d.eng.blk=null;d.eng=null;pop('SHED!',d.x,d.y,'#ff8a8a');tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;}}}
   for(const d of M.D){if(d.stun>0||d.eng||d.dive>0)continue;const dd=d2(d,c);
-  const tr=M.def?0.95:0.8;
+  const tr=0.95;   /* arm's reach: a side-step right past a defender doesn't slip a tackle */
   if(M.def&&d===M.ctl&&c===M.qb&&!M.thrown&&c.x<=M.los+0.5&&dd<1.0){/* you got to the QB behind the line: sack */c.down=1;M.aim=null;sfx('hit');M.shake=5;cr(c.pl,'sacked',1);pop('SACK!',c.x,c.y,'#ff8a8a');creditD(d,'sck',8);creditD(d,'tkl',0);return endPlay('sack',c.x,c.y);}
   if(dd<tr){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;continue;}
   // Chasing right on his heels: after a moment in arm's reach he gets a hand on him
   // (otherwise an equally fast defender could trail a runner forever without tackling).
-  if(dd<(M.def?1.55:1.35)){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>(M.def?0.2:0.3)){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;}}else d.trail=0;}}
+  if(dd<1.55){d.trail=(d.trail||0)+(dt||1/60);if(d.trail>0.2){d.trail=0;tackleAttempt(d,c);if(M.phase!=='live'||M.fum)return;}}else d.trail=0;}}
  else if(M.play==='pass'&&!M.thrown&&M.qb){const q=M.qb;for(const d of M.D){if(d.stun>0||d.eng)continue;const mine=M.def&&d===M.ctl;if(d2(d,q)<(mine?1.0:0.85)){if(mine||Math.random()<clamp(0.66+(A(d,'tkl')-A(q,'spd'))*0.03,0.45,0.85)){M.aim=null;q.down=1;sfx('hit');M.shake=4;cr(q.pl,'sacked',1);
    // a blitzing linebacker / DB can hit-stick the QB: 30% of those strip the ball
    if((d.role==='LB'||d.role==='DB'||d.role==='S')&&Math.random()<0.10*arcM('hit')){M.shake=10;pop('HIT STICK!',q.x,q.y,'#ff5c5c');if(Math.random()<0.5)popHelmet(q,-1);
@@ -3915,7 +3919,11 @@ function stepDefDive(f,dt){
  return false;
 }
 function tackleAttempt(d,c){
- if(c.jk>0&&Math.random()<0.45+A(c,'spd')*0.035){d.stun=0.9;d.down=0.9;c.jk=0;pop('JUKE!',c.x,c.y,'#7fffd4');xpG(c.pl,2);M.shake=2;return;}
+ /* juke: a well-timed side-step can make a tackler miss - but it's a skill move, not a cheat code:
+    better for fast backs vs. poor tacklers, harder every time you've already juked someone this play,
+    and much harder near the goal line where everyone's packed in */
+ if(c.jk>0){const n=c.jkN||0,gl=110-c.x<6?0.55:1,pj=clamp(0.22+(A(c,'spd')-A(d,'tkl'))*0.035,0.08,0.45)*Math.pow(0.55,n)*gl*(1-0.15*clamp(diffLvl(),-1,2.2));c.jk=0;
+  if(Math.random()<pj){c.jkN=n+1;d.stun=0.9;d.down=0.9;pop('JUKE!',c.x,c.y,'#7fffd4');xpG(c.pl,2);M.shake=2;return;}}
  const str=A(c,'str'),tk=A(d,'tkl'),gang=M.D.filter(x=>x!==d&&x.stun<=0&&!x.eng&&d2(x,c)<1.6).length;
  let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,2.2))*arcM('brk');if(c.role==='QB'&&!M.scramble)pb*=0.5;
  if(Math.random()<pb){d.stun=0.9;d.down=0.9;c.vx*=0.55;c.vy*=0.55;c.slow=0.3;pop('BROKEN TACKLE!',c.x,c.y,'#7fffd4');M.shake=3;sfx('hit');xpG(c.pl,3);return;}
