@@ -171,7 +171,7 @@ const TEAM_DATA=[
  ['Atlanta','Falcons','ATL','#A71930','#000000'],['Carolina','Panthers','CAR','#0085CA','#101820'],['New Orleans','Saints','NO','#D3BC8D','#101820'],['Tampa Bay','Buccaneers','TB','#D50A0A','#34302B'],
  ['Arizona','Cardinals','ARI','#97233F','#000000'],['Los Angeles','Rams','LA','#003594','#FFA300'],['San Francisco','49ers','SF','#AA0000','#B3995D'],['Seattle','Seahawks','SEA','#002244','#69BE28'],
 ];
-const TEAMS=TEAM_DATA.map((d,i)=>({id:i,city:d[0],nickname:d[1],name:d[0]+' '+d[1],abbr:d[2],c1:d[3],c2:d[4],conf:i<16?'AFC':'NFC',div:DIVS[Math.floor(i/4)%4],di:Math.floor(i/4)}));
+const TEAMS=TEAM_DATA.map((d,i)=>({id:i,city:d[0],nickname:d[1],name:d[0]+' '+d[1],city0:d[0],nick0:d[1],abbr:d[2],c1:d[3],c2:d[4],conf:i<16?'AFC':'NFC',div:DIVS[Math.floor(i/4)%4],di:Math.floor(i/4)}));
 
 /* ---------- NFL midfield stadium logos ----------
    The midfield badge is always the home franchise's logo: the user's team for
@@ -182,7 +182,9 @@ const NFL_LOGO_ESPN_SLUGS={LA:'lar',WAS:'wsh'};
 const NFL_FIELD_LOGOS=Object.create(null);
 const NFL_FIELD_LOGO_PENDING=new Set();
 const NFL_FIELD_LOGO_FAILED=new Set();
+const CUST_LOGO={team:null,src:null};
 function loadFieldLogo(teamId){
+ if(CUST_LOGO.team===teamId&&CUST_LOGO.src){const im=NFL_FIELD_LOGOS[teamId];return im&&im.complete&&im.naturalWidth?im:null;}   /* your own uploaded logo */
  if(NFL_FIELD_LOGOS[teamId]&&NFL_FIELD_LOGOS[teamId].complete&&NFL_FIELD_LOGOS[teamId].naturalWidth)return NFL_FIELD_LOGOS[teamId];
  if(NFL_FIELD_LOGO_PENDING.has(teamId)||NFL_FIELD_LOGO_FAILED.has(teamId))return null;
  const team=TEAMS[teamId];if(!team)return null;
@@ -208,8 +210,8 @@ function loadFieldLogo(teamId){
 function drawLocalMidfieldMark(ctx,teamId,x,y){
  const team=TEAMS[teamId];if(!team)return;
  ctx.save();ctx.globalAlpha=0.9;ctx.font='bold 18px "Press Start 2P",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.lineJoin='round';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(team.abbr,x,y);
- ctx.fillStyle=team.c1;ctx.fillText(team.abbr,x,y);ctx.restore();
+ ctx.lineJoin='round';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(abbr(teamId),x,y);
+ ctx.fillStyle=teamCol(teamId).c1;ctx.fillText(abbr(teamId),x,y);ctx.restore();
 }
 const FN=['James','Michael','Chris','Marcus','Tyler','Jordan','Brandon','Derrick','Andre','Malik','Jalen','Darius','Trevor','Kyle','Ryan','Josh','Cody','Austin','Devin','Terrell','Isaiah','Elijah','Caleb','Mason','Logan','Hunter','Garrett','Cole','Blake','Drew','Shane','Trey','Dante','Xavier','Jamal','Rashad','Corey','Lamar','Deshawn','Tavon','Keenan','Quincy','Reggie','Victor','Omar','Luis','Nate','Sam','Ben','Luke','Jake','Zach','Connor','Brett','Grant','Mitch','Wes','Spencer','Tanner','Bryce','Chase','Colby','Dalton','Eli','Felix','Gavin','Hayden','Ian','Jace','Kendall','Lance','Miles','Noah','Owen','Preston','Quentin','Reid','Seth','Troy','Ty','Vince','Wade','Zane','Aaron','Brady','Carson','Damon','Emmett','Gus','Hank','Ivan','Jerome','Kareem','Leon','Mario','Nico','Otis','Percy','Roman','Tre','Jaylen','Cam','Desmond','Rico','Andy','Brock'];
 const LN=['Smith','Johnson','Williams','Brown','Jones','Miller','Davis','Garcia','Wilson','Moore','Taylor','Anderson','Thomas','Jackson','White','Harris','Martin','Thompson','Robinson','Clark','Lewis','Walker','Hall','Allen','Young','King','Wright','Scott','Green','Baker','Adams','Nelson','Hill','Campbell','Mitchell','Roberts','Carter','Phillips','Evans','Turner','Parker','Collins','Edwards','Stewart','Morris','Murphy','Cook','Rogers','Morgan','Cooper','Peterson','Reed','Bailey','Bell','Kelly','Howard','Ward','Cox','Richardson','Wood','Watson','Brooks','Bennett','Gray','Hughes','Price','Sanders','Myers','Long','Ross','Foster','Powell','Jenkins','Perry','Russell','Sullivan','Barnes','Fisher','Henderson','Coleman','Simmons','Patterson','Reynolds','Hamilton','Graham','Wallace','Woods','Cole','West','Owens','Marshall','Ellis','Hayes','Gibson','Bryant','Stone','Holmes','Burke','Fuller','Lane','Banks','Dixon','Pierce','Hunt','Webb','Tucker','Porter','Hicks','Crawford','Boyd','Mason','Warren','Dunn','Black','Rice','Wagner','Knight','Weaver','Holt','Cross','Shaw','Vaughn','Steele','Frost','Rhodes','Quinn','Blair','Nash','Barrett','Booker','Calloway','Darby','Ewing','Gaines','Hollins','Ivory','Kearse','Mabry','Newsome','Oakes','Pruitt','Sutton','Tatum','Upshaw','Vance','Whitfield','Yates'];
@@ -351,9 +353,22 @@ function balanceLeague(init){
    if(up&&p.a[k]<10)p.a[k]++;else if(!up&&p.a[k]>1)p.a[k]--;
    p.peak=Math.max(p.peak||0,ovr(p));if(n%3===2)g=gap(t);}}
 }
-function teamName(t){const d=T(t);if(L&&t===L.user&&L.custom&&L.custom.nick)return d.city+' '+L.custom.nick;return d.name||d.city;}
+function teamName(t){const d=T(t);return d.name||d.city;}
+/* Your team's custom identity (EDIT TEAM): city, nickname, abbreviation, colours, logo photo and uniforms.
+   Names are applied straight onto TEAMS so every screen shows them; T(t).abbr stays the real code for data lookups. */
+function applyCustomTeam(){
+ for(const t of TEAMS){t.city=t.city0;t.nickname=t.nick0;t.name=t.city+' '+t.nickname;}
+ const c=L&&L.custom,u=L?L.user:null,t=u!=null?TEAMS[u]:null;
+ if(c&&t){if(c.city)t.city=c.city;if(c.nick)t.nickname=c.nick;t.name=t.city+' '+t.nickname;}
+ const src=c&&c.logo||null,team=src?u:null;
+ if(CUST_LOGO.team===team&&CUST_LOGO.src===src)return;
+ const old=CUST_LOGO.team;if(old!=null){delete NFL_FIELD_LOGOS[old];NFL_FIELD_LOGO_FAILED.delete(old);for(const k in LOGO_MINI)if(k.startsWith(old+'|'))delete LOGO_MINI[k];}
+ CUST_LOGO.team=team;CUST_LOGO.src=src;
+ if(team!=null){for(const k in LOGO_MINI)if(k.startsWith(team+'|'))delete LOGO_MINI[k];const im=new Image();im.onload=()=>{for(const k in LOGO_MINI)if(k.startsWith(team+'|'))delete LOGO_MINI[k];if(M&&M.fieldCvs)M.fieldCvs=[];};im.src=src;NFL_FIELD_LOGOS[team]=im;}
+ if(M&&M.fieldCvs)M.fieldCvs=[];
+}
 function teamCol(t){if(L&&t===L.user&&L.custom&&L.custom.c1)return{c1:L.custom.c1,c2:L.custom.c2};return{c1:T(t).c1,c2:T(t).c2};}
-const abbr=t=>T(t).abbr;
+const abbr=t=>L&&t===L.user&&L.custom&&L.custom.abbr?L.custom.abbr:T(t).abbr;
 function zeroRec(){return{w:0,l:0,t:0,pf:0,pa:0,dw:0,dl:0,dt:0,cw:0,cl:0,ct:0,strk:0};}
 function pct(w,l,t){const g=w+l+t;return g?(w+t*.5)/g:0;}
 const tpct=R=>pct(R.w,R.l,R.t);
@@ -1108,6 +1123,7 @@ TB:[['HOME','#5c5752','#d50a0a','#d50a0a','#f2f2f2','#f2f2f2','#d50a0a'],['CREAM
 TEN:[['HOME','#0c2340','#4b92db','#0c2340','#f2f2f2','#f2f2f2','#0c2340'],['OILERS','#f2f2f2','#4b92db','#4b92db','#d50a0a','#f2f2f2','#4b92db'],['TITAN BLUE','#0c2340','#4b92db','#4b92db','#0c2340','#4b92db','#4b92db']],
 WAS:[['HOME','#5a1414','#ffb612','#5a1414','#ffb612','#ffb612','#5a1414'],['THROWBACK','#5a1414','#ffb612','#5a1414','#f2f2f2','#ffb612','#5a1414'],['ALT BLACK','#111111','#ffb612','#111111','#ffb612','#111111','#111111']]};
 function uniformsFor(t){
+ if(L&&t===L.user&&L.custom&&Array.isArray(L.custom.unis)&&L.custom.unis.length)return L.custom.unis.map(u=>Object.assign({},u));
  const ab=T(t).abbr,c=teamCol(t);let raw=UNI_RAW[ab];
  if(!raw||(t===L?.user&&L?.custom&&L.custom.c1))raw=[['HOME',c.c1,c.c2,c.c1,c.c2,'#e2e2e2',c.c1],['COLOR RUSH',c.c1,c.c2,c.c1,c.c2,c.c1,c.c1],['BLACKOUT','#111111',c.c1,'#111111',c.c1,'#111111','#111111']];
  const mk=r=>({n:r[0],helm:r[1],stripe:r[2],jersey:r[3],trim:r[4],pants:r[5],socks:r[6]});
@@ -1122,8 +1138,8 @@ function defaultUnis(g){const H=uniformsFor(g.h),A=uniformsFor(g.a);let ua=1;
  return g.h===L.user?{uU:0,uO:ua}:{uU:ua,uO:0};}
 function lookFor(p,t,away,alt){
  if(typeof away==='number'){const U=uniformsFor(t),u=U[((away%U.length)+U.length)%U.length];
-  const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,skin:SKIN[p?p.skin:2],teamId:t};
-  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;}
+  const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,mask:u.mask||null,skin:SKIN[p?p.skin:2],teamId:t};
+  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;}
  let c=teamCol(t);if(alt)c={c1:c.c2,c2:c.c1};const pl=lum(c.c2);
  const lk={helm:c.c1,stripe:c.c2,jersey:away?'#f0f0f0':c.c1,trim:away?c.c1:c.c2,pants:away?'#d9d9d9':(pl>70&&pl<215?c.c2:'#e2e2e2'),socks:c.c1,skin:SKIN[p?p.skin:2],teamId:t};
  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;
@@ -1188,7 +1204,7 @@ function drawMan(c,x,y,lk,o){
  r(J,3,6,6,4);r(J,2,6,8,2);r(TR,2,6,2,1);r(TR,8,6,2,1);r(TR,4,8,3,1);
  r(sk,5,5,3,1);
  r(H,4,0,4,1);r(H,3,1,6,1);r(H,2,2,7,2);r(H,3,4,5,1);r(lk.stripe,4,0,3,1);r(shade(H,40),4,1,2,1);r(shade(H,-45),4,2,1,1);
- r(sk,7,2,2,2);r('#111',8,2,1,1);if(lk.nohelm){r(sk,7,4,2,1);r(sk,9,2,1,2);r(shade(sk,-30),9,3,1,1);}else{r('#d3d7dd',9,2,1,3);r('#d3d7dd',7,4,3,1);}   /* no facemask once the helmet's gone */
+ r(sk,7,2,2,2);r('#111',8,2,1,1);if(lk.nohelm){r(sk,7,4,2,1);r(sk,9,2,1,2);r(shade(sk,-30),9,3,1,1);}else{const MK=lk.mask||'#d3d7dd';r(MK,9,2,1,3);r(MK,7,4,3,1);}   /* no facemask once the helmet's gone */
  if(o.pose)armP(1,o.pose.ra);
  else if(o.dive){r(J,2,4,2,2);r(J,8,4,2,2);r(sk,2,1,2,3);r(sk,8,1,2,3);if(o.ball){r('#7a3d12',3,-2,5,2);r('#fff',5,-2,1,1);}}
  else if(o.oneh){/* one-handed snag: right arm stretched high with the ball, left arm out for balance */r(J,8,3,2,3);r(sk,9,0,1,3);r(sk,10,-1,1,1);r('#7a3d12',9,-3,3,2);r('#fff',10,-3,1,1);r(J,2,6,1,2);r(sk,0,6,2,1);}
@@ -1279,6 +1295,7 @@ const UI={scr:'title',sub:{},modal:null};
 const SCR={},ACT={};
 function go(s,sub){UI.scr=s;UI.sub=sub||{};UI.modal=null;render();}
 function render(){
+ applyCustomTeam();
  const ui=$('#ui');
  if(UI.scr==='game'){$('#cv').style.display='block';$('#lg').style.display='block';return;}
  $('#cv').style.display='none';$('#lg').style.display='none';
@@ -1553,7 +1570,7 @@ SCR.pregame=()=>{
  <div class="row grow" style="gap:6px;align-items:flex-start;justify-content:center;width:100%">
   ${side(t,A,s.uU,true)}
   <div class="col" style="gap:12px;width:150px;align-items:stretch;margin-top:14px">
-   ${box('UNIFORMS',`<div class="col" style="gap:6px">${picker(esc(T(t).abbr),UU,s.uU,'uU')}${picker(esc(T(op).abbr),UO,s.uO,'uO')}${clash?'<div class="s7 rdt" style="text-align:center">COLORS CLASH!</div>':''}</div>`)}
+   ${box('UNIFORMS',`<div class="col" style="gap:6px">${picker(esc(abbr(t)),UU,s.uU,'uU')}${picker(esc(abbr(op)),UO,s.uO,'uO')}${clash?'<div class="s7 rdt" style="text-align:center">COLORS CLASH!</div>':''}</div>`)}
    ${box('BALL '+(bi+1),`<button class="bt" style="width:100%;padding:6px 0 5px" data-a="pgBall" title="${BALLS[bi].n}"><img src="${ballIcon(BALLS[bi],3)}" width="33" height="21" style="image-rendering:pixelated"></button><div class="s7 dim" style="text-align:center;margin-top:4px">${BALLS[bi].n}</div>`)}
    <div class="s7 dim" style="text-align:center">${home?'HOME GAME':'AWAY GAME'} · CONDITION ${teamCond(t)}%</div>
   </div>
@@ -1754,7 +1771,7 @@ ACT.trBack=()=>go(UI.sub.back||'roster');
 ACT.trGo=()=>{
  const s=UI.sub,t=s.t,E=trEval(t,s.give,s.get,s.pk);if(!E.rosOk||!E.capOk)return;
  if(!tradesOpen())return toast('TRADE DEADLINE HAS PASSED (AFTER WEEK '+TRADE_DEADLINE+')');
- if(!E.ok){sfx('bad');return toast(E.ratio>0.8?T(t).abbr+' SAY NO · ALMOST THERE':T(t).abbr+' REJECT THE OFFER');}
+ if(!E.ok){sfx('bad');return toast(E.ratio>0.8?abbr(t)+' SAY NO · ALMOST THERE':abbr(t)+' REJECT THE OFFER');}
  const G=s.give.map(P).filter(Boolean),R=s.get.map(P).filter(Boolean);
  for(const p of G){p.team=t;p.bench=false;p.mor=clamp(p.mor-5,0,100);}
  for(const p of R){p.team=L.user;p.mor=clamp(p.mor+5,0,100);p.yrs=Math.max(1,p.yrs);}
@@ -1944,16 +1961,82 @@ ACT.saveq=()=>{save();go('title');};
 ACT.wipe=()=>modal(`<div class="mp" style="width:330px;align-items:center;text-align:center">${ttl('DELETE SAVE',true)}<div>THIS CANNOT BE UNDONE.</div><div class="row"><button class="bt" data-a="settings">CANCEL</button><button class="bt r" data-a="wipe2">DELETE</button></div></div>`);
 ACT.wipe2=()=>{try{localStorage.removeItem(slotKey(SLOT));}catch(e){}L=null;go('title');};
 const SWATCH=['#c8102e','#e23a3a','#f26722','#f58a2a','#ffc22e','#d4af37','#c4a46a','#38b86a','#1c6b3e','#24493c','#0f9a9a','#1a92d6','#1f4fbf','#14284b','#5a2e96','#a3264a','#5a2d14','#1c1c1c','#8a8f96','#ffffff'];
-function editHTML(){const e=UI.edit;const sw=k=>SWATCH.map(c=>`<span class="sw ${e[k]===c?'on':''}" style="background:${c}" data-a="esw" data-k="${k}" data-c="${c}"></span>`).join('');
- const lk=away=>({helm:e.c1,stripe:e.c2,jersey:away?'#f0f0f0':e.c1,trim:away?e.c1:e.c2,pants:away?'#d9d9d9':'#e2e2e2',socks:e.c1,skin:SKIN[2],key:'e'+e.c1+e.c2+away});
- const img=away=>{const cc=document.createElement('canvas');cc.width=48;cc.height=68;drawMan(cc.getContext('2d'),24,67,lk(away),{u:4,shadow:false,face:1});return`<img class="ava" src="${cc.toDataURL()}" width="48" height="68">`;};
- return`<div class="mp" style="width:520px">${ttl('EDIT TEAM',true)}<div class="row stretch" style="gap:12px"><div class="col ctr" style="align-items:center;width:130px"><div class="row">${img(false)}${img(true)}</div><div class="s7">${esc(teamName(L.user).toUpperCase())}</div></div>
- <div class="col grow" style="gap:6px"><div>NICKNAME</div><input class="txt" maxlength="12" value="${esc(e.nick)}" oninput="UI.edit.nick=this.value" placeholder="OPTIONAL"><div>PRIMARY</div><div class="row" style="flex-wrap:wrap;gap:3px">${sw('c1')}</div><div>SECONDARY</div><div class="row" style="flex-wrap:wrap;gap:3px">${sw('c2')}</div></div></div>
- <div class="row end"><button class="bt" data-a="eReset">RESET</button><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="eSave">SAVE</button></div></div>`;}
-ACT.editTeam=()=>{const c=teamCol(L.user);UI.edit={nick:L.custom&&L.custom.nick||'',c1:c.c1,c2:c.c2};modal(editHTML());};
-ACT.esw=d=>{UI.edit[d.k]=d.c;modal(editHTML());};
-ACT.eReset=()=>{L.custom=null;save();closeModal();};
-ACT.eSave=()=>{const e=UI.edit;L.custom={nick:(e.nick||'').trim().toUpperCase().slice(0,12),c1:e.c1,c2:e.c2};PRC.clear();save();closeModal();};
+/* ---------- EDIT TEAM: name, colours, logo photo, and full uniform editor ---------- */
+const UPARTS=[['helm','HELMET'],['stripe','STRIPE'],['mask','FACEMASK'],['jersey','JERSEY'],['trim','SLEEVES'],['pants','PANTS'],['socks','SOCKS']];
+const UNI_NAMES=['HOME','AWAY','ALT'];
+function uniFromColors(c1,c2){const pl=lum(c2);return[
+ {n:'HOME',helm:c1,stripe:c2,mask:'#d3d7dd',jersey:c1,trim:c2,pants:pl>70&&pl<215?c2:'#e2e2e2',socks:c1},
+ {n:'AWAY',helm:c1,stripe:c2,mask:'#d3d7dd',jersey:'#f0f0f0',trim:c1,pants:'#d9d9d9',socks:c1},
+ {n:'ALT',helm:'#111111',stripe:c1,mask:'#111111',jersey:'#111111',trim:c1,pants:'#111111',socks:'#111111'}];}
+function eLook(u){const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,mask:u.mask,skin:SKIN[2]};lk.key='ed'+[u.helm,u.stripe,u.mask,u.jersey,u.trim,u.pants,u.socks].join('');return lk;}
+function eMan(u,sc,face){const cc=document.createElement('canvas');cc.width=12*sc;cc.height=17*sc;drawMan(cc.getContext('2d'),6*sc,17*sc-1,eLook(u),{u:sc,shadow:false,face:face||1});return cc.toDataURL();}
+function editHTML(){const e=UI.edit,tab=e.tab||'team';
+ const sw=(k,cur,act)=>SWATCH.map(c=>`<span class="sw ${cur===c?'on':''}" style="background:${c}" data-a="${act}" data-k="${k}" data-c="${c}"></span>`).join('');
+ const logoBox=sz=>e.logo?`<img src="${e.logo}" width="${sz}" height="${sz}" style="object-fit:contain;background:repeating-conic-gradient(#3a4a8a 0 25%,#2b3a74 0 50%) 0 0/12px 12px;border:2px solid #fff">`
+   :`<div style="width:${sz}px;height:${sz}px;border:2px solid #fff;display:flex;align-items:center;justify-content:center;background:${e.c1};color:${e.c2};font-size:12px">${esc((e.abbr||abbr(L.user)).slice(0,4))}</div>`;
+ const tabs=`<div class="row" style="gap:4px">${[['team','TEAM'],['uni','UNIFORMS']].map(([k,l])=>`<span class="chip ${tab===k?'on':''}" data-a="eTab" data-k="${k}">${l}</span>`).join('')}</div>`;
+ let body;
+ if(tab==='team'){
+  body=`<div class="row stretch" style="gap:10px"><div class="col" style="align-items:center;gap:5px;width:110px">${logoBox(72)}
+   <label class="bt" style="padding:5px 6px 4px;text-align:center;width:100%">UPLOAD PHOTO<input type="file" accept="image/*" style="display:none" onchange="logoFile(this)"></label>
+   ${e.logo?`<button class="bt" style="padding:4px 4px 3px;width:100%" data-a="eCut">REMOVE BACKGROUND</button><button class="bt r" style="padding:4px 4px 3px;width:100%" data-a="eNoLogo">NO LOGO</button>`:'<div class="s7 dim" style="text-align:center">PICK ANY PHOTO OR LOGO FROM YOUR LIBRARY</div>'}</div>
+   <div class="col grow" style="gap:5px">
+    <div class="row" style="gap:5px"><div class="col" style="flex:5;gap:2px"><span class="s7">CITY</span><input class="txt" maxlength="14" value="${esc(e.city)}" oninput="UI.edit.city=this.value"></div>
+     <div class="col" style="flex:5;gap:2px"><span class="s7">NICKNAME</span><input class="txt" maxlength="12" value="${esc(e.nick)}" oninput="UI.edit.nick=this.value"></div>
+     <div class="col" style="flex:2;gap:2px"><span class="s7">ABBR</span><input class="txt" maxlength="4" value="${esc(e.abbr)}" oninput="UI.edit.abbr=this.value"></div></div>
+    <span class="s7">PRIMARY</span><div class="row" style="flex-wrap:wrap;gap:3px">${sw('c1',e.c1,'esw')}<input type="color" value="${e.c1}" onchange="ACT.esw({k:'c1',c:this.value})" style="width:22px;height:19px;padding:0;border:2px solid #fff;background:none"></div>
+    <span class="s7">SECONDARY</span><div class="row" style="flex-wrap:wrap;gap:3px">${sw('c2',e.c2,'esw')}<input type="color" value="${e.c2}" onchange="ACT.esw({k:'c2',c:this.value})" style="width:22px;height:19px;padding:0;border:2px solid #fff;background:none"></div>
+   </div></div>`;
+ }else{
+  const ui=e.ui||0,u=e.unis[ui],part=e.part||'jersey';
+  body=`<div class="row stretch" style="gap:10px"><div class="col" style="align-items:center;gap:4px;width:150px">
+    <div class="row" style="gap:2px;align-items:flex-end"><img src="${eMan(u,6,1)}" width="72" height="102" style="image-rendering:pixelated"><img src="${eMan(u,6,-1)}" width="72" height="102" style="image-rendering:pixelated"></div>
+    <div class="row" style="gap:4px">${e.unis.map((x,i)=>`<img src="${eMan(x,2,1)}" width="24" height="34" style="image-rendering:pixelated;cursor:pointer;${i===ui?'outline:2px solid #ffe94a':''}" data-a="eUni" data-i="${i}">`).join('')}</div>
+    <span class="chip ${e.helmLogo!==false?'on':''}" data-a="eHL">HELMET LOGO ${e.helmLogo!==false?'ON':'OFF'}</span></div>
+   <div class="col grow" style="gap:5px">
+    <div class="row" style="gap:4px">${UNI_NAMES.map((n,i)=>`<span class="chip ${ui===i?'on':''}" data-a="eUni" data-i="${i}">${n}</span>`).join('')}<div class="sp"></div><span class="chip" data-a="eUniReset">USE TEAM COLORS</span></div>
+    <div class="row" style="gap:3px;flex-wrap:wrap">${UPARTS.map(([k,l])=>`<span class="chip ${part===k?'on':''}" data-a="ePart" data-k="${k}"><span style="display:inline-block;width:7px;height:7px;background:${u[k]};border:1px solid #000;margin-right:3px"></span>${l}</span>`).join('')}</div>
+    <div class="row" style="flex-wrap:wrap;gap:3px">${sw(part,u[part],'eUC')}<input type="color" value="${u[part]}" onchange="ACT.eUC({c:this.value})" style="width:22px;height:19px;padding:0;border:2px solid #fff;background:none"></div>
+    <div class="s7 dim">TAP A PART, THEN A COLOR (OR THE LAST BOX FOR ANY COLOR)</div>
+   </div></div>`;
+ }
+ return`<div class="mp" style="width:560px;gap:6px"><div class="row">${ttl('EDIT TEAM',true)}<div class="sp"></div>${tabs}</div>${body}
+ <div class="row end" style="gap:6px"><button class="bt" data-a="eReset">RESET ALL</button><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="eSave">SAVE</button></div></div>`;}
+ACT.editTeam=()=>{const c=teamCol(L.user),cu=L.custom||{},t=T(L.user);const U=uniformsFor(L.user);
+ const unis=Array.isArray(cu.unis)&&cu.unis.length?cu.unis.map(u=>Object.assign({},u)):[U[0],U[1],U[2]||uniFromColors(c.c1,c.c2)[2]].map((u,i)=>({n:UNI_NAMES[i],helm:u.helm,stripe:u.stripe,mask:u.mask||'#d3d7dd',jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks}));
+ UI.edit={tab:'team',city:cu.city||t.city0,nick:cu.nick||t.nick0,abbr:cu.abbr||t.abbr,c1:c.c1,c2:c.c2,logo:cu.logo||null,unis,ui:0,part:'jersey',helmLogo:cu.helmLogo!==false,uniTouched:!!(cu.unis&&cu.unis.length)};modal(editHTML());};
+ACT.eTab=d=>{UI.edit.tab=d.k;modal(editHTML());};
+ACT.esw=d=>{const e=UI.edit;e[d.k]=d.c;if(!e.uniTouched)e.unis=uniFromColors(e.c1,e.c2);modal(editHTML());};
+ACT.eUni=d=>{UI.edit.ui=+d.i;modal(editHTML());};
+ACT.ePart=d=>{UI.edit.part=d.k;modal(editHTML());};
+ACT.eUC=d=>{const e=UI.edit;e.unis[e.ui||0][e.part||'jersey']=d.c;e.uniTouched=true;modal(editHTML());};
+ACT.eUniReset=()=>{const e=UI.edit;e.unis=uniFromColors(e.c1,e.c2);e.uniTouched=false;modal(editHTML());};
+ACT.eHL=()=>{UI.edit.helmLogo=UI.edit.helmLogo===false;modal(editHTML());};
+ACT.eNoLogo=()=>{UI.edit.logo=null;modal(editHTML());};
+ACT.eCut=()=>{if(UI.edit.logo)cutLogoBg(UI.edit.logo).then(u=>{if(u){UI.edit.logo=u;modal(editHTML());}});};
+ACT.eReset=()=>{L.custom=null;applyCustomTeam();PRC.clear();SPC.clear();save();closeModal();};
+ACT.eSave=()=>{const e=UI.edit,t=T(L.user),clean=(v,n)=>String(v||'').trim().toUpperCase().slice(0,n);
+ const city=clean(e.city,14),nick=clean(e.nick,12),ab=clean(e.abbr,4).replace(/[^A-Z0-9]/g,'');
+ L.custom={city:city&&city!==t.city0.toUpperCase()?city:'',nick:nick&&nick!==t.nick0.toUpperCase()?nick:'',abbr:ab&&ab!==t.abbr?ab:'',c1:e.c1!==t.c1||e.c2!==t.c2?e.c1:null,c2:e.c1!==t.c1||e.c2!==t.c2?e.c2:null,logo:e.logo||null,unis:e.uniTouched||e.c1!==T(L.user).c1||e.c2!==T(L.user).c2?e.unis.map((u,i)=>Object.assign({},u,{n:UNI_NAMES[i]})):null,helmLogo:e.helmLogo!==false};
+ if(L.custom.city)L.custom.city=e.city.trim().slice(0,14);if(L.custom.nick)L.custom.nick=e.nick.trim().slice(0,12);
+ applyCustomTeam();PRC.clear();SPC.clear();for(const k in AVC)delete AVC[k];save();closeModal();toast('TEAM SAVED');};
+/* photo from the library -> square 160px logo (keeps transparency, letterboxed) */
+function logoFile(inp){const f=inp&&inp.files&&inp.files[0];if(!f)return;const url=URL.createObjectURL(f),im=new Image();
+ im.onload=()=>{const S=160,c=document.createElement('canvas');c.width=S;c.height=S;const g=c.getContext('2d');const k=Math.min(S/im.naturalWidth,S/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;
+  g.imageSmoothingQuality='high';g.drawImage(im,(S-w)/2,(S-h)/2,w,h);URL.revokeObjectURL(url);UI.edit.logo=c.toDataURL('image/png');modal(editHTML());};
+ im.onerror=()=>{URL.revokeObjectURL(url);toast('COULD NOT OPEN THAT PHOTO');};im.src=url;}
+/* remove a plain background: flood-fill from the edges with the corner colour, then trim and re-centre */
+function cutLogoBg(src){return new Promise(res=>{const im=new Image();im.onload=()=>{const S=im.naturalWidth,H=im.naturalHeight,c=document.createElement('canvas');c.width=S;c.height=H;const g=c.getContext('2d');g.drawImage(im,0,0);
+ const D=g.getImageData(0,0,S,H),d=D.data,at=(x,y)=>(y*S+x)*4;
+ /* background colour = the corners of the photo itself (inside any transparent letterbox) */
+ let bx0=S,by0=H,bx1=-1,by1=-1;for(let y=0;y<H;y++)for(let x=0;x<S;x++)if(d[at(x,y)+3]>10){if(x<bx0)bx0=x;if(x>bx1)bx1=x;if(y<by0)by0=y;if(y>by1)by1=y;}
+ if(bx1<0)return res(null);const cs=[[bx0,by0],[bx1,by0],[bx0,by1],[bx1,by1],[(bx0+bx1)>>1,by0],[(bx0+bx1)>>1,by1],[bx0,(by0+by1)>>1],[bx1,(by0+by1)>>1]].map(([x,y])=>at(x,y)).filter(i=>d[i+3]>10);
+ if(!cs.length)return res(null);const bg=[0,1,2].map(k=>cs.reduce((a,i)=>a+d[i+k],0)/cs.length),tol=62;
+ const near=i=>d[i+3]>10&&Math.abs(d[i]-bg[0])+Math.abs(d[i+1]-bg[1])+Math.abs(d[i+2]-bg[2])<tol;
+ const seen=new Uint8Array(S*H),st=[];for(let x=0;x<S;x++){st.push(x,0,x,H-1);}for(let y=0;y<H;y++){st.push(0,y,S-1,y);}
+ while(st.length){const y=st.pop(),x=st.pop();if(x<0||y<0||x>=S||y>=H)continue;const p=y*S+x;if(seen[p])continue;seen[p]=1;const i=p*4;if(d[i+3]<=10||near(i)){d[i+3]=0;st.push(x+1,y,x-1,y,x,y+1,x,y-1);}}
+ g.putImageData(D,0,0);let x0=S,y0=H,x1=-1,y1=-1;for(let y=0;y<H;y++)for(let x=0;x<S;x++)if(d[at(x,y)+3]>10){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+ if(x1<0)return res(null);const w=x1-x0+1,h=y1-y0+1,o=document.createElement('canvas');o.width=160;o.height=160;const k=Math.min(152/w,152/h);o.getContext('2d').drawImage(c,x0,y0,w,h,(160-w*k)/2,(160-h*k)/2,w*k,h*k);res(o.toDataURL('image/png'));};im.onerror=()=>res(null);im.src=src;});}
 
 /* =====================================================================
    DRAFT (founding + yearly)
@@ -2207,7 +2290,7 @@ function buildField(flip){
  const uc=teamCol(L.user),oc=teamCol(M.op);
  // Both end zones belong to the HOME team (like a real stadium). Letters are sized to fill
  // the end zone: as tall as ~60% of its depth and spanning most of the field's width.
- const hT=M.g.h,hcol=teamCol(hT),st=(L.custom&&hT===L.user)?null:EZ_STYLE[T(hT).abbr];
+ const hT=M.g.h,hcol=teamCol(hT),st=(L.custom&&hT===L.user&&(L.custom.c1||L.custom.nick||L.custom.city))?null:EZ_STYLE[T(hT).abbr];
  const S=st||[hcol.c1,txtCol(hcol.c1,hcol.c2),'#ffffff',(T(hT).nickname||T(hT).city).toUpperCase(),(T(hT).nickname||T(hT).city).toUpperCase()];
  const ez=(x0,rot,label)=>{R(S[0],x0,0,10*PXY,H);
   const fs=Math.max(14,Math.min(Math.floor(10*PXY*0.6),Math.floor(H*0.86/(label.length*1.02))));
@@ -2426,7 +2509,7 @@ const STYLES={
  'BALANCED':{tags:['bal','wc','vert'],rv:['dive','toss','power','draw'],np:10,pass:0,deep:0,cp:0}
 };
 const STYLE_N=Object.keys(STYLES);
-function teamHash(t){const s=T(t).abbr+T(t).nickname;let h=7;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%99991;return h;}
+function teamHash(t){const s=T(t).abbr+(T(t).nick0||T(t).nickname);let h=7;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%99991;return h;}
 function teamStyle(t){if(L&&t===L.user&&L.style)return L.style;return STYLE_N[teamHash(t)%STYLE_N.length];}
 const PB_CACHE={};
 function playbook(t){
@@ -2553,7 +2636,7 @@ function tickF(f,dt){
 function separate(list){for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){const a=list[i],b=list[j];const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d<0.7&&d>0.001){const p=(0.7-d)/2;if(a!==M.carrier){a.x-=dx/d*p;a.y-=dy/d*p;}if(b!==M.carrier){b.x+=dx/d*p;b.y+=dy/d*p;}}}}
 
 /* ---------- match lifecycle ---------- */
-function startMatch(g,uAway){
+function startMatch(g,uAway){applyCustomTeam();
  const home=g.h===L.user,op=home?g.a:g.h,ha=abbr(g.h);
  const late=L.phase==='PO'||L.week>=12;
  const wxr=pickWeather(g.h);void late;
@@ -4161,7 +4244,7 @@ function drawLogoLayer(sh,maxY){
   if(o.face<0)m=m.scale(-1,1);
   m=m.translate(-6*u,-16*u+bob);if(o.pose)m=m.translate((o.pose.dx||0)*u,(o.pose.dy||0)*u);return m;};
  const boxes=Q.map(q=>{const o=q.o||{},u=o.u||2;return{x0:q.sx-5*u,x1:q.sx+5*u,y0:q.sy-(o.down?7:15)*u,y1:q.sy};});
- for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||lk.nohelm)continue;
+ for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||lk.nohelm)continue;if(L&&lk.teamId===L.user&&L.custom&&L.custom.helmLogo===false)continue;
   const u=o.u||2,S=4.2*u,m=mat(q),c=m.transformPoint(new DOMPoint(4.2*u,2.6*u));
   if(maxY!=null&&c.y+S/2>maxY)continue;
   /* hidden if a player drawn in front covers the helmet */
