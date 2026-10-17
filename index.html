@@ -78,6 +78,8 @@ body{font-family:"Press Start 2P",ui-monospace,Menlo,Consolas,monospace;color:va
 .tile.dk{background:var(--dk);border-color:#3c3f52;color:#5d6079;cursor:default}
 .tile.dk .stars i.f,.tile.dk .stars i.h{opacity:.55}
 .chip{font:inherit;font-size:7px;padding:4px 5px 3px;border:2px solid #fff;background:var(--bl);color:#fff;cursor:pointer;touch-action:manipulation}
+.mp.cmp{gap:6px;padding-top:10px;padding-bottom:10px}.mp.cmp .row{gap:4px}.mp.cmp .row>span:first-child{width:118px!important;flex:none}.mp.cmp .chip{padding:3px 5px 2px;white-space:nowrap}.mp.cmp .bt{padding:5px 7px 4px}
+body.mobile .mp.cmp .chip{padding:5px 6px 4px}body.mobile .mp.cmp .bt{padding:6px 8px 5px}
 .chip.on{background:var(--yl);text-shadow:1px 1px 0 #7a7300}
 .modal{position:absolute;inset:0;background:rgba(0,0,30,.6);display:flex;align-items:center;justify-content:center;z-index:60;pointer-events:auto}
 .mp{background:var(--bl);border:2px solid #fff;box-shadow:0 4px 0 rgba(0,0,40,.5);padding:10px;display:flex;flex-direction:column;gap:7px;max-width:620px;max-height:350px}
@@ -1151,6 +1153,9 @@ SEA:[['HOME','#002244','#69be28','#002244','#f2f2f2','#002244','#002244'],['THRO
 TB:[['HOME','#5c5752','#d50a0a','#d50a0a','#f2f2f2','#f2f2f2','#d50a0a'],['CREAMSICLE','#f2f2f2','#d50a0a','#f78e1e','#d50a0a','#f2f2f2','#f78e1e'],['PEWTER','#5c5752','#d50a0a','#34302b','#d50a0a','#34302b','#34302b']],
 TEN:[['HOME','#0c2340','#4b92db','#0c2340','#f2f2f2','#f2f2f2','#0c2340'],['OILERS','#f2f2f2','#4b92db','#4b92db','#d50a0a','#f2f2f2','#4b92db'],['TITAN BLUE','#0c2340','#4b92db','#4b92db','#0c2340','#4b92db','#4b92db']],
 WAS:[['HOME','#5a1414','#ffb612','#5a1414','#ffb612','#ffb612','#5a1414'],['THROWBACK','#5a1414','#ffb612','#5a1414','#f2f2f2','#ffb612','#5a1414'],['ALT BLACK','#111111','#ffb612','#111111','#ffb612','#111111','#111111']]};
+/* Colours of a team's HOME uniform (custom uniforms included): used for the fans in the stands and
+   for player portraits, so changing your jerseys changes them too. */
+function uniCol(t){try{const u=uniformsFor(t)[0],wh=c=>lum(c)>215;let c1=u.jersey;if(wh(c1))c1=wh(u.helm)?u.trim:u.helm;let c2=u.trim&&colDist(u.trim,c1)>40?u.trim:(u.helm&&colDist(u.helm,c1)>40?u.helm:teamCol(t).c2);return{c1,c2};}catch(e){return teamCol(t);}}
 function uniformsFor(t){
  if(L&&t===L.user&&L.custom&&Array.isArray(L.custom.unis)&&L.custom.unis.length)return L.custom.unis.map(u=>Object.assign({},u));
  const ab=T(t).abbr,c=teamCol(t);let raw=UNI_RAW[ab];
@@ -1288,7 +1293,7 @@ function drawPortrait(g,p,c1,c2,u,coach){
  R(p.beard===2?shade(hc,40):mouth,10,14,4,1);
 }
 const PRC=new Map();
-function portrait(p,t,u,coach){u=u||2;const c=teamCol(t);const key=(p.id||p.fn)+'|'+c.c1+c.c2+'|'+u+'|'+p.num+'|'+(coach?1:0)+'|'+p.skin+'.'+p.hair+'.'+p.hc+'.'+p.beard;let v=PRC.get(key);if(v)return v;const cv2=document.createElement('canvas');cv2.width=24*u;cv2.height=24*u;drawPortrait(cv2.getContext('2d'),p,c.c1,c.c2,u,coach);v=cv2.toDataURL();if(PRC.size>600)PRC.clear();PRC.set(key,v);return v;}
+function portrait(p,t,u,coach){u=u||2;const c=t>=0&&TEAMS[t]?uniCol(t):teamCol(t);const key=(p.id||p.fn)+'|'+c.c1+c.c2+'|'+u+'|'+p.num+'|'+(coach?1:0)+'|'+p.skin+'.'+p.hair+'.'+p.hc+'.'+p.beard;let v=PRC.get(key);if(v)return v;const cv2=document.createElement('canvas');cv2.width=24*u;cv2.height=24*u;drawPortrait(cv2.getContext('2d'),p,c.c1,c.c2,u,coach);v=cv2.toDataURL();if(PRC.size>600)PRC.clear();PRC.set(key,v);return v;}
 const FACEC={};
 function faceURL(m){
  const k=m>=80?4:m>=60?3:m>=40?2:m>=20?1:0;if(FACEC[k])return FACEC[k];
@@ -1414,7 +1419,7 @@ function h2hBuild(o){
  createLeague(o.you,'YOU',{rmax:12,diff:o.diff,dir:'R',rosterMode:nfl?'NFL':'CUSTOM',nflData:nfl||null});
  if(!nfl){for(const p of rosterOf(o.you).slice())removePlayer(p);L.teams[o.you].tq=L.teams[o.you].tq||5.6;fillAIRoster(o.you);}
  L.draft=null;L.phase='REG';L.week=1;L.exh=true;L.awardsShow=false;
- Object.assign(L.settings,{qlen:o.qlen,mode:o.mode,diff:o.diff,dir:'R',replay:true,arc:o.arc||L.settings.arc});
+ Object.assign(L.settings,{qlen:o.qlen,play:o.mode,mode:o.mode,diff:o.diff,dir:'R',replay:true,arc:o.arc||L.settings.arc});
  const g=o.home?{h:o.you,a:o.opp,hs:null,as:null}:{h:o.opp,a:o.you,hs:null,as:null};L.sched=[[g]];
  return g;}
 function h2hState(){const s=UI.sub;if(s.you==null)Object.assign(s,{you:13,opp:30,uU:0,uO:1,rm:'CUSTOM',diff:1,mode:'off',qlen:180,home:true,arc:null});return s;}
@@ -1449,7 +1454,7 @@ ACT.h2hBack=()=>{L=window.__franchL||null;window.__franchL=null;if(L)indexPlayer
 ACT.h2hSet=d=>{const s=h2hState(),v=d.v==='true'?true:d.v==='false'?false:isNaN(+d.v)?d.v:+d.v;s[d.k]=v;
  if(d.k==='rm'&&v==='NFL'&&!H2H_NFL){modal(`<div class="mp" style="width:320px;align-items:center;text-align:center">${ttl('NFL ROSTERS',true)}<div>LOADING...</div></div>`);
   loadNFLRosterData().then(dt=>{H2H_NFL=dt;UI.modal=null;s.arc=L&&L.settings.arc;h2hBuild(s);render();}).catch(()=>{s.rm='CUSTOM';UI.modal=null;toast('NFL DATA UNAVAILABLE');render();});return;}
- if(d.k==='rm'||d.k==='diff'){s.arc=L&&L.settings.arc;h2hBuild(s);}else if(L&&L.exh){L.settings.qlen=s.qlen;L.settings.mode=s.mode;}
+ if(d.k==='rm'||d.k==='diff'){s.arc=L&&L.settings.arc;h2hBuild(s);}else if(L&&L.exh){L.settings.qlen=s.qlen;L.settings.play=s.mode;}
  render();};
 ACT.h2hTeam=d=>{const s=h2hState(),ord=H2H_ORDER();let i=ord.indexOf(s[d.k]);do{i=(i+ +d.d+ord.length)%ord.length;}while(ord[i]===(d.k==='you'?s.opp:s.you));s[d.k]=ord[i];
  if(d.k==='you')s.uU=0;else s.uO=1;s.arc=L&&L.settings.arc;h2hBuild(s);render();};
@@ -1982,7 +1987,7 @@ SCR.fo=()=>{
    ${box('DRAFT PICKS','<div style="text-align:center">'+(L.picks||[1,1,1]).join(' - ')+'</div>')}
   </div>
  </div>
- <div class="row" style="gap:7px"><button class="bt ico" data-a="go" data-s="hub">${ICON.home}</button><button class="bt grow" data-a="capUp" ${L.cap>=CFG.capMax||L.cc<CFG.capCost?'disabled':''}>INCREASE SALARY CAP · ${CFG.capCost} <i class="cc"></i></button><div class="sp"></div><button class="bt" data-a="trOpen" ${tradesOpen()?'':'disabled'}>${tradesOpen()?'TRADES':'DEADLINE PASSED'}</button><button class="bt" data-a="go" data-s="fa">FREE AGENTS</button><button class="bt" data-a="go" data-s="staff">STAFF HIRES</button></div></div>`;
+ <div class="row" style="gap:7px"><button class="bt ico" data-a="go" data-s="hub">${ICON.home}</button><button class="bt grow" data-a="capUp" ${L.cap>=CFG.capMax||L.cc<CFG.capCost?'disabled':''}>RAISE CAP · ${CFG.capCost} <i class="cc"></i></button><div class="sp"></div><button class="bt" data-a="trOpen" ${tradesOpen()?'':'disabled'}>${tradesOpen()?'TRADES':'DEADLINE PASSED'}</button><button class="bt" data-a="go" data-s="fa">FREE AGENTS</button><button class="bt" data-a="go" data-s="staff">STAFF HIRES</button></div></div>`;
 };
 ACT.fup=d=>{const lv=L.fac[d.k],c=facCost(lv);if(lv>=10||L.cc<c)return;L.cc-=c;L.fac[d.k]++;sfx('coin');save();render();};
 ACT.finfo=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl(FAC[d.k][0],true)}<div style="line-height:2">${FAC[d.k][1]}</div><div>LEVEL ${L.fac[d.k]}/10</div><button class="bt" data-a="close">OK</button></div>`);
@@ -2017,14 +2022,14 @@ ACT.hire=d=>{const list=L.staff[d.s],c=list.find(x=>x.id===+d.id);if(!c||L.cc<c.
    SETTINGS / EDIT TEAM
    ===================================================================== */
 function settingsHTML(){const s=L.settings;if(s.play==null)s.play='both';const ch=(k,v,l)=>`<span class="chip ${s[k]===v?'on':''}" data-a="set" data-k="${k}" data-v="${v}">${l}</span>`;
- return`<div class="mp" style="width:440px">${ttl('SETTINGS',true)}
+ return`<div class="mp cmp" style="width:620px">${ttl('SETTINGS',true)}
  <div class="row"><span style="width:130px">SOUND</span>${ch('sound',true,'ON')}${ch('sound',false,'OFF')}</div>
- <div class="row"><span style="width:130px">BIG-PLAY REPLAYS</span>${ch('replay',true,'ON')}${ch('replay',false,'OFF')}</div>
+ <div class="row"><span style="width:130px">REPLAYS</span>${ch('replay',true,'ON')}${ch('replay',false,'OFF')}</div>
  <div class="row"><span style="width:130px">QUARTER LENGTH</span>${[120,180,240,300].map(q=>ch('qlen',q,q/60+':00')).join('')}</div>
  <div class="row"><span style="width:130px">ARCADE MODE</span><button class="bt" data-a="arcade">${arc()?'ON':'OFF'} · EDIT</button></div>
- <div class="row"><span style="width:130px">PLAY</span>${ch('play','both','OFFENSE + DEFENSE')}${ch('play','off','OFFENSE ONLY')}${ch('play','def','DEFENSE ONLY')}</div>
+ <div class="row"><span style="width:130px">PLAY</span>${ch('play','both','BOTH')}${ch('play','off','OFFENSE ONLY')}${ch('play','def','DEFENSE ONLY')}</div>
  <div class="row"><span style="width:130px">DIFFICULTY</span>${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',3,'DYNAMIC')}${ch('diff',4,'EXTREME')}</div>
- <div class="row"><span style="width:130px">FIELD DIRECTION</span>${ch('dir','R','LEFT TO RIGHT')}${ch('dir','L','RIGHT TO LEFT')}${ch('dir','S','SWITCH HALVES')}</div>
+ <div class="row"><span style="width:130px">DIRECTION</span>${ch('dir','R','LEFT TO RIGHT')}${ch('dir','L','RIGHT TO LEFT')}${ch('dir','S','SWITCH HALVES')}</div>
  <div class="row"><span style="width:130px">ROSTER SIZE</span><span>${s.rmax} PLAYERS</span></div>
  <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:4px"><button class="bt" data-a="editTeam">EDIT TEAM</button>${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}<button class="bt" data-a="saveq">SAVE &amp; QUIT</button><button class="bt r" data-a="wipe">DELETE SAVE</button><div class="sp"></div><button class="bt y" data-a="close">DONE</button></div></div>`;}
 ACT.settings=()=>modal(settingsHTML());
@@ -2064,7 +2069,7 @@ function editHTML(){const e=UI.edit,tab=e.tab||'team';
  if(tab==='team'){
   body=`<div class="row stretch" style="gap:10px"><div class="col" style="align-items:center;gap:5px;width:110px">${logoBox(72)}
    <label class="bt" style="padding:5px 6px 4px;text-align:center;width:100%">UPLOAD PHOTO<input type="file" accept="image/*" style="display:none" onchange="logoFile(this)"></label>
-   ${e.logo?`<button class="bt" style="padding:4px 4px 3px;width:100%" data-a="eCut">REMOVE BACKGROUND</button><button class="bt r" style="padding:4px 4px 3px;width:100%" data-a="eNoLogo">NO LOGO</button>`:'<div class="s7 dim" style="text-align:center">PICK ANY PHOTO OR LOGO FROM YOUR LIBRARY</div>'}</div>
+   ${e.logo?`<button class="bt" style="padding:4px 2px 3px;width:100%;font-size:7px;white-space:normal;line-height:1.5" data-a="eCut">REMOVE<br>BACKGROUND</button><button class="bt r" style="padding:4px 4px 3px;width:100%" data-a="eNoLogo">NO LOGO</button>`:'<div class="s7 dim" style="text-align:center">PICK ANY PHOTO OR LOGO FROM YOUR LIBRARY</div>'}</div>
    <div class="col grow" style="gap:5px">
     <div class="row" style="gap:5px"><div class="col" style="flex:5;gap:2px"><span class="s7">CITY</span><input class="txt" maxlength="14" value="${esc(e.city)}" oninput="UI.edit.city=this.value"></div>
      <div class="col" style="flex:5;gap:2px"><span class="s7">NICKNAME</span><input class="txt" maxlength="12" value="${esc(e.nick)}" oninput="UI.edit.nick=this.value"></div>
@@ -2409,10 +2414,12 @@ function buildField(flip){
  const person=(px,lk,face)=>drawMan(x,px,TOP-1,lk,{u:1,shadow:false,face});
  const coach={helm:'#3a2a1a',stripe:'#3a2a1a',jersey:'#f0f0f0',trim:'#f0f0f0',pants:'#c8b48a',socks:'#c8b48a',skin:SKIN[1]};
  const camL={helm:'#444',stripe:'#444',jersey:'#707a88',trim:'#707a88',pants:'#333',socks:'#333',skin:SKIN[2]};
- const team=(c,s)=>({helm:c.c1,stripe:c.c2,jersey:c.c1,trim:c.c2,pants:'#e2e2e2',socks:c.c1,skin:SKIN[s%6]});
+ /* sideline players wear the same uniform their team wears in this game (custom uniforms included) */
+ const gUni=t=>{try{return lookFor(null,t,t===L.user?M.uU:M.uO);}catch(e){const c=teamCol(t);return{helm:c.c1,stripe:c.c2,jersey:c.c1,trim:c.c2,pants:'#e2e2e2',socks:c.c1};}};
+ const hU=gUni(M.g.h),aU=gUni(M.g.a),team=(u,s)=>Object.assign({},u,{skin:SKIN[s%6]});
  R('#1d2a6b',30*PXY,TOP-5,28*PXY,3);R('#1d2a6b',62*PXY,TOP-5,28*PXY,3);
- for(let yd=31;yd<58;yd+=1.6)person(yd*PXY,team(hc,Math.floor(yd*7)),Math.random()<.5?1:-1);
- for(let yd=63;yd<90;yd+=1.6)person(yd*PXY,team(ac,Math.floor(yd*5)),Math.random()<.5?1:-1);
+ for(let yd=31;yd<58;yd+=1.6)person(yd*PXY,team(hU,Math.floor(yd*7)),Math.random()<.5?1:-1);
+ for(let yd=63;yd<90;yd+=1.6)person(yd*PXY,team(aU,Math.floor(yd*5)),Math.random()<.5?1:-1);
  person(45*PXY,coach,1);person(75*PXY,coach,-1);
  for(const yd of[22,98]){person(yd*PXY,camL,yd<60?1:-1);R('#111',yd*PXY+(yd<60?3:-9),TOP-13,6,4);}
  for(const yd of[29,59,91]){R('#f08a24',yd*PXY,TOP-7,6,6);R('#fff',yd*PXY+1,TOP-7,4,1);}
@@ -2424,7 +2431,7 @@ function buildEzStands(only){
  /* End-zone stands, joined to the sideline stands as one L-shaped bowl: the top band uses the
     same horizontal seat rows and front wall as the sideline stands, and that wall turns the
     corner and runs down the end zone, so the two stands meet instead of overlapping. */
- const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],W=420,HH=FB+22-ST,TH=FT-16-ST;
+ const hc=uniCol(M.g.h),oc=uniCol(M.g.a),fr=[],W=420,HH=FB+22-ST,TH=FT-16-ST;
  for(let f=0;f<2;f++){if(only!=null&&f!==only){fr.push(null);continue;}const c=document.createElement('canvas');c.width=W;c.height=HH;const g=c.getContext('2d');
   g.fillStyle='#161830';g.fillRect(0,0,W,HH);
   let seed=29;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
@@ -2446,7 +2453,7 @@ function buildEzStands(only){
  return fr;
 }
 function buildCrowd(){
- const hc=teamCol(M.g.h),oc=teamCol(M.g.a),fr=[],HH=FT-16-ST;
+ const hc=uniCol(M.g.h),oc=uniCol(M.g.a),fr=[],HH=FT-16-ST;
  for(let f=0;f<2;f++){const c=document.createElement('canvas');c.width=640;c.height=HH;const g=c.getContext('2d');
   g.fillStyle='#161830';g.fillRect(0,0,640,HH);
   let seed=11;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
@@ -2734,7 +2741,7 @@ function startMatch(g,uAway){applyCustomTeam();
  {const du=defaultUnis(g);M.uU=uAway&&uAway.uU!=null?uAway.uU:du.uU;M.uO=uAway&&uAway.uO!=null?uAway.uO:du.uO;}M.uAway=M.uU===1;M.oalt=false;
  M.dir=L.settings.dir==='L'?-1:1;M.udir=M.dir;M.def=false;M.fieldLogoTeam=home?L.user:op;M.fieldCvs=[];
  if(document.fonts&&document.fonts.load&&!(document.fonts.check&&document.fonts.check('16px "Press Start 2P"')))document.fonts.load('16px "Press Start 2P"').then(()=>{if(M&&M.g===g)M.fieldCvs=[];}).catch(()=>{});
- {const ck=[M.g.h,M.g.a,teamCol(M.g.h).c1,teamCol(M.g.h).c2,teamCol(M.g.a).c1,teamCol(M.g.a).c2].join('|');if(!STANDS_CACHE[ck])STANDS_CACHE={[ck]:{crowd:buildCrowd(),ez:null}};const SC=STANDS_CACHE[ck];M.crowd=SC.crowd;M.ezStands=SC.ez;
+ {const ck=[M.g.h,M.g.a,uniCol(M.g.h).c1,uniCol(M.g.h).c2,uniCol(M.g.a).c1,uniCol(M.g.a).c2].join('|');if(!STANDS_CACHE[ck])STANDS_CACHE={[ck]:{crowd:buildCrowd(),ez:null}};const SC=STANDS_CACHE[ck];M.crowd=SC.crowd;M.ezStands=SC.ez;
   /* the end-zone stands are only seen near the goal lines: build them a moment after kickoff instead of during the load */
   if(!SC.ez){const gm=M;setTimeout(()=>{if(M!==gm||SC.ez)return;const a=buildEzStands(0)[0];SC.ez=[a,a];M.ezStands=SC.ez;
    setTimeout(()=>{SC.ez[1]=buildEzStands(1)[1];},500);},700);}}
@@ -4208,7 +4215,7 @@ function drawStands(){
  const beat=M.rival?(M.tt*1.82)%1:0,jump=M.rival&&beat<0.22;
  const fr=M.crowd[M.hype>0?Math.floor(M.tt*8)%2:jump?1:0],ox=-((((viewDir()<0?120-viewCam():viewCam())*PXY*0.6)%640+640)%640);cx.drawImage(fr,Math.round(ox),ST);cx.drawImage(fr,Math.round(ox)+640,ST);
  /* Stadium pulse (division games): the stands throb in the home team's color on the beat. */
- if(M.rival){const hc=teamCol(M.g.h).c1,a=0.1+0.38*Math.pow(1-beat,3)+(M.hype>0?0.1:0),HH=FT-16-ST;
+ if(M.rival){const hc=uniCol(M.g.h).c1,a=0.1+0.38*Math.pow(1-beat,3)+(M.hype>0?0.1:0),HH=FT-16-ST;
   cx.globalAlpha=a;rect(0,ST,CW,HH,hc);cx.globalAlpha=Math.min(1,a*2.4);rect(0,ST+HH-3,CW,3,hc);cx.globalAlpha=1;}}
 /* Rival-game crowd chant: stomp, stomp, clap. Only between plays, quietly. */
 function stadiumBeat(dt){
@@ -4241,7 +4248,7 @@ function drawChain(){const C=M.chain;if(!C||M.play==='ret'||M.phase==='kick')ret
 let STANDS_CACHE={};const FIELD_CACHE=new Map();
 function fieldCv(i){if(M.fieldCvs[i])return M.fieldCvs[i];
  const lg=NFL_FIELD_LOGOS[M.fieldLogoTeam],fr=!document.fonts||!document.fonts.check||document.fonts.check('16px "Press Start 2P"');
- const key=[i,M.g.h,M.g.a,M.fieldLogoTeam,lg&&lg.complete&&lg.naturalWidth?1:0,fr?1:0,teamName(M.g.h),teamName(M.g.a),teamCol(M.g.h).c1,teamCol(M.g.a).c1].join('|');
+ const key=[i,M.g.h,M.g.a,M.fieldLogoTeam,lg&&lg.complete&&lg.naturalWidth?1:0,fr?1:0,teamName(M.g.h),teamName(M.g.a),teamCol(M.g.h).c1,teamCol(M.g.a).c1,uniCol(M.g.h).c1,M.uU,M.uO,JSON.stringify(uniformsFor(L.user)[M.uU%uniformsFor(L.user).length]||'')].join('|');
  let c=FIELD_CACHE.get(key);if(!c){c=buildField(i===1);if(FIELD_CACHE.size>6)FIELD_CACHE.clear();FIELD_CACHE.set(key,c);}
  return M.fieldCvs[i]=c;}
 function drawField(){
@@ -4253,7 +4260,7 @@ function drawField(){
   // stands start ~3 yards behind the end line, on both ends
   if(M.ezStands){const beat=M.rival?(M.tt*1.82)%1:0,jump=M.rival&&beat<0.22,st=M.ezStands[M.hype>0?Math.floor(M.tt*8)%2:jump?1:0],gap=30,top=ST;
    /* stadium pulse: the end-zone stands flash in the home colour on the same beat as the sideline stands */
-   const pa=M.rival?0.1+0.38*Math.pow(1-beat,3)+(M.hype>0?0.1:0):0,hc=M.rival?teamCol(M.g.h).c1:null;
+   const pa=M.rival?0.1+0.38*Math.pow(1-beat,3)+(M.hype>0?0.1:0):0,hc=M.rival?uniCol(M.g.h).c1:null;
    const TH=FT-16-ST,tint=(x,right)=>{if(!pa)return;cx.globalAlpha=pa;rect(x,top,st.width,st.height,hc);
     /* the wall flashes hard, exactly like the sideline stands' wall, all the way around the corner */
     cx.globalAlpha=Math.min(1,pa*2.4);rect(x,top+TH-3,st.width,3,hc);rect(right?x:x+st.width-3,top+TH,3,st.height-TH,hc);cx.globalAlpha=1;};
