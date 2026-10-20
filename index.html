@@ -789,14 +789,14 @@ function applyResult(g){
  add(H,res);add(A,-res);
 }
 function curGames(){if(L.phase==='REG')return L.sched[L.week-1]||[];if(L.phase==='PO')return L.po.rounds[L.po.cur]||[];return[];}
-function userGame(){return curGames().find(g=>(g.h===L.user||g.a===L.user)&&g.hs==null)||null;}
+function userGame(){if(L.seats&&L.phase==='REG'&&L.wk!=null){const w=L.sched[L.wk-1]||[];return w.find(g=>(g.h===L.user||g.a===L.user)&&g.hs==null)||null;}return curGames().find(g=>(g.h===L.user||g.a===L.user)&&g.hs==null)||null;}
 function finishGame(g,hs,as){g.hs=hs;g.as=as;if(L.phase==='REG')applyResult(g);}
 function simWeekOthers(){for(const g of curGames())if(g.hs==null){const[hs,as]=simScore(g.h,g.a,L.phase==='PO');finishGame(g,hs,as);}}
 function weeklyUpkeep(bye){
- for(const p of L.players){if(p.inj>0)p.inj--;p.cond=Math.min(100,p.cond+(bye?26:13)+L.fac.rehab*1.6);}
+ for(const p of L.players){if(L.seats&&p.team>=0&&isHuman(p.team))continue;if(p.inj>0)p.inj--;p.cond=Math.min(100,p.cond+(bye?26:13)+L.fac.rehab*1.6);}
  for(const p of L.players)if(p.team>=0&&!isHuman(p.team)&&Math.random()<0.005)p.inj=ri(1,3);
  if(L.rosterMode!=='NFL'){const fa=faList().filter(p=>!p.rel);for(let i=0;i<3&&fa.length>30;i++){const x=pick(fa);if(x)removePlayer(x);}for(let i=0;i<3;i++)addFA();}
- for(const p of L.players)if(p.team>=0&&isHuman(p.team))p.mor=clamp(p.mor+(65-p.mor)*0.06,0,100);
+ if(!L.seats)for(const p of rosterOf(L.user))p.mor=clamp(p.mor+(65-p.mor)*0.06,0,100);
  // other teams shake up their rosters: cut a player now and then and sign a replacement
  if(L.phase==='REG')for(const t of L.teams){if(isHuman(t.id)||Math.random()>=0.025)continue;aiRelease(t.id,true);}
  if(L.phase==='REG')aiFreeAgency(false);
@@ -839,7 +839,7 @@ function aiRelease(t,refill){
    Like the NFL: trades are open in the offseason and up to week 9, then locked
    until the season ends. Other teams also trade with each other. */
 const TRADE_DEADLINE=9;
-function tradesOpen(){return L.phase==='OFF'||L.phase==='FOUND'||(L.phase==='REG'&&L.week<=TRADE_DEADLINE);}
+function tradesOpen(){return L.phase==='OFF'||L.phase==='FOUND'||(L.phase==='REG'&&myWk()<=TRADE_DEADLINE);}
 function aiTrade(){
  const ids=L.teams.map(t=>t.id).filter(t=>!isHuman(t));
  for(let tries=0;tries<12;tries++){
@@ -862,7 +862,7 @@ function advanceWeek(){
   const wk=L.week,ug=teamGame(wk,L.user);
   const big=L.sched[wk-1].filter(g=>g!==ug).sort((x,y)=>Math.abs(x.hs-x.as)-Math.abs(y.hs-y.as))[0];
   if(big)news('WK'+wk+': '+abbr(big.h)+' '+big.hs+', '+abbr(big.a)+' '+big.as);
-  weeklyUpkeep(!ug);if(wk<=TRADE_DEADLINE){const n=Math.random()<0.55?1:Math.random()<0.5?2:0;for(let i=0;i<n;i++)aiTrade();}
+  weeklyUpkeep(!L.seats&&!ug);if(wk<=TRADE_DEADLINE){const n=Math.random()<0.55?1:Math.random()<0.5?2:0;for(let i=0;i<n;i++)aiTrade();}
   L.week++;
   if(L.week>18)startPlayoffs();
  }else if(L.phase==='PO'){weeklyUpkeep(false);advancePO();}
@@ -1153,7 +1153,7 @@ function switchTeam(t){
 }
 function startNewSeason(){
  for(let d=0;d<8;d++)L.divRank[d]=divStand(d);
- L.season++;L.year++;L.week=1;L.phase='REG';L.po=null;olEach(()=>{L.off=null;L.jobs=null;});
+ L.season++;L.year++;L.week=1;L.phase='REG';L.po=null;olEach(()=>{L.off=null;L.jobs=null;if(L.seats)L.wk=1;});
  for(const t of L.teams)Object.assign(t,zeroRec());
  balanceLeague(false);
  refreshStaff();buildSchedule();
@@ -1618,7 +1618,7 @@ function avatarT(t,u,away){const c={c1:T(t).c1,c2:T(t).c2};const lk={helm:c.c1,s
 function tlNodes(){
  const t=L.user,nodes=[];
  const wk=w=>{const g=teamGame(w,t);if(!g)return{a:'WEEK '+w,b:'BYE',res:null,w};const home=g.h===t,op=home?g.a:g.h;let res=null;if(g.hs!=null){const us=home?g.hs:g.as,th=home?g.as:g.hs;res={c:us>th?'w':us<th?'l':'t',txt:(us>th?'W':us<th?'L':'T')+' '+us+'-'+th};}return{a:'WEEK '+w,b:(home?'vs ':'at ')+T(op).name.toUpperCase(),res,w};};
- if(L.phase==='REG'){const w=L.week;nodes.push(w>1?wk(w-1):null,wk(w),w<18?wk(w+1):{a:L.cfbTeams?ROUNDS[0]:T(t).conf+' WILD CARD',b:'',res:null});}
+ if(L.phase==='REG'){const w=myWk();nodes.push(w>1?wk(w-1):null,wk(w),w<18?wk(w+1):{a:L.cfbTeams?ROUNDS[0]:T(t).conf+' WILD CARD',b:'',res:null});}
  else if(L.phase==='PO'){const r=L.po.cur,g=L.po.rounds[r].find(x=>x.h===t||x.a===t);
   const pr=r>0?L.po.rounds[r-1].find(x=>x.h===t||x.a===t):null;
   const lbl=i=>i===3?champName():L.cfbTeams?ROUNDS[i]:T(t).conf+' '+ROUNDS[i];
@@ -1637,7 +1637,7 @@ function tlAll(){
   if(!gg){nodes.push({a:lbl(r),b:'',res:null});continue;}
   const home=gg.h===t,op=home?gg.a:gg.h;let res=null;if(gg.hs!=null){const us=home?gg.hs:gg.as,th=home?gg.as:gg.hs;res={c:us>th?'w':'l',txt:(us>th?'W ':'L ')+us+'-'+th};}
   nodes.push({a:lbl(r),b:(home?'vs ':'at ')+T(op).name.toUpperCase(),res});}
- const cur=L.phase==='PO'&&L.po?L.sched.length+L.po.cur:Math.min(L.sched.length,L.week)-1;
+ const cur=L.phase==='PO'&&L.po?L.sched.length+L.po.cur:Math.min(L.sched.length,myWk())-1;
  return{nodes,cur};
 }
 /* Existing NFL saves: pull the headshot-based looks from the site's roster file once. */
@@ -1781,7 +1781,7 @@ function ballIcon(b,u){const cc=document.createElement('canvas');cc.width=11*u;c
 SCR.pregame=()=>{
  const g=userGame();if(!g)return SCR.hub();const t=L.user,home=g.h===t,op=home?g.a:g.h,A=teamRatings(t),B=teamRatings(op),s=UI.sub;
  if(s.uU==null)Object.assign(s,defaultUnis(g));const UU=uniformsFor(t),UO=uniformsFor(op);s.uU%=UU.length;s.uO%=UO.length;
- const clash=colDist(UU[s.uU].jersey,UO[s.uO].jersey)<80;const lab=L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():(L.cfbTeams?'':T(t).conf+' ')+ROUNDS[L.po.cur]);
+ const clash=colDist(UU[s.uU].jersey,UO[s.uO].jersey)<80;const lab=L.phase==='REG'?'WEEK '+myWk():(g.conf==='SB'?champName():(L.cfbTeams?'':T(t).conf+' ')+ROUNDS[L.po.cur]);
  const nm=x=>esc((T(x).nickname||T(x).city).toUpperCase()),bi=(L.settings.ball||0)%BALLS.length;
  const picker=(lbl,U,i,k)=>`<div class="col" style="gap:3px;align-items:stretch"><span class="s7 dim" style="text-align:center">${lbl}</span><div class="row" style="gap:4px;align-items:center"><button class="bt" style="padding:4px 6px 3px" data-a="pgUni" data-k="${k}" data-d="-1">&lt;</button><span class="s7 grow" style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U[i].n}</span><button class="bt" style="padding:4px 6px 3px" data-a="pgUni" data-k="${k}" data-d="1">&gt;</button></div><div class="row ctr" style="gap:3px">${[U[i].helm,U[i].jersey,U[i].trim,U[i].pants].map(x=>`<i style="display:block;width:9px;height:4px;background:${x};border:1px solid #000"></i>`).join('')}</div></div>`;
  const side=(x,R,away,left)=>`<div class="col" style="align-items:center;gap:3px;width:180px">
@@ -1800,7 +1800,7 @@ SCR.pregame=()=>{
   </div>
   ${side(op,B,s.uO,false)}
  </div>
- <div class="row" style="width:100%;gap:8px"><button class="bt ico" data-a="go" data-s="hub">${ICON.back}</button><div class="sp"></div>${olH2H(g)?`<span class="s7 yl">LIVE vs COACH ${esc((seatOf(op)||{}).coach||'')} · ${(OL.on||[]).includes(op)?'<span class="grt">ON THE SITE</span>':'<span class="rdt">NOT ON THE SITE</span>'}</span><button class="bt y" style="width:170px;padding:8px 0 7px" data-a="play">PLAY LIVE &gt;</button>`:`<button class="bt" data-a="simg">SIM GAME</button><button class="bt y" style="width:130px;padding:8px 0 7px" data-a="play">PLAY &gt;</button>`}</div>
+ <div class="row" style="width:100%;gap:8px"><button class="bt ico" data-a="go" data-s="hub">${ICON.back}</button><div class="sp"></div>${olH2H(g)&&olWkOf(op)<myWk()?`<span class="s7 yl" style="max-width:420px;line-height:1.7">COACH ${esc((seatOf(op)||{}).coach||'')} IS ON WEEK ${olWkOf(op)} · THIS GAME WAITS UNTIL THEY GET HERE</span>`:olH2H(g)?`<span class="s7 yl">LIVE vs COACH ${esc((seatOf(op)||{}).coach||'')} · ${(OL.on||[]).includes(op)?'<span class="grt">ON THE SITE</span>':'<span class="rdt">NOT ON THE SITE</span>'}</span><button class="bt y" style="width:170px;padding:8px 0 7px" data-a="play">PLAY LIVE &gt;</button>`:`<button class="bt" data-a="simg">SIM GAME</button><button class="bt y" style="width:130px;padding:8px 0 7px" data-a="play">PLAY &gt;</button>`}</div>
  </div>`;};
 ACT.pgUni=d=>{const s=UI.sub,g=userGame();if(!g)return;const t=d.k==='uU'?L.user:(g.h===L.user?g.a:g.h),n=uniformsFor(t).length;s[d.k]=((s[d.k]||0)+ +d.d+n)%n;render();};
 ACT.awOk=()=>{L.awardsShow=false;save();UI.modal=null;render();};
@@ -1808,7 +1808,7 @@ ACT.awOk=()=>{L.awardsShow=false;save();UI.modal=null;render();};
 ACT.pgBall=()=>{L.settings.ball=((L.settings.ball||0)+1)%BALLS.length;save();render();};
 function pregameHTML(g){
  const t=L.user,home=g.h===t,op=home?g.a:g.h,A=teamRatings(t),B=teamRatings(op);
- const lab=L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():(L.cfbTeams?'':T(t).conf+' ')+ROUNDS[L.po.cur]);
+ const lab=L.phase==='REG'?'WEEK '+myWk():(g.conf==='SB'?champName():(L.cfbTeams?'':T(t).conf+' ')+ROUNDS[L.po.cur]);
  const blk=(x,R,aw)=>`<div class="col" style="align-items:center;gap:5px;width:150px">${avatar(null,x,3,aw)}<div style="${fitS(T(x).name,10,148)}">${esc(T(x).name.toUpperCase())}</div><div>${recStr(x)}</div><div class="row">${stars(R.offS,'o xs')} ${stars(R.defS,'d xs')}</div></div>`;
  return`<div class="mp" style="width:440px;align-items:center;text-align:center">${ttl(lab,true)}<div class="row ctr" style="gap:10px">${blk(t,A,!home)}<div class="s16">${home?'VS':'AT'}</div>${blk(op,B,home)}</div>
  <div class="s7 dim">TEAM CONDITION ${teamCond(t)}% · DIFFICULTY ${DIFFN()}</div>
@@ -1916,7 +1916,7 @@ SCR.player=()=>{
  const ln=(k,v)=>`<div class="row" style="gap:6px"><span>${k}:</span><span>${v}</span></div>`;
  if(isMaxed(p)&&p.sp)p.sp=0;
  const attrs=POSDEF[p.pos].map(k=>`<div class="col" style="gap:3px"><div class="row"><span>${ATTR[k]}</span><div class="sp"></div>${mine&&p.sp>0?(canRaise(p,k)?`<button class="bt" style="padding:2px 6px 1px" data-a="pSp" data-k="${k}">+</button>`:'<span class="s7 dim">MAX</span>'):''}</div><div class="bar" style="height:16px;position:relative"><i style="width:${p.a[k]*10}%"></i>${attrCap(p,k)<10?`<b style="position:absolute;left:${attrCap(p,k)*10}%;top:-2px;bottom:-2px;width:2px;background:#ff5c5c" title="POTENTIAL CAP"></b>`:''}</div></div>`).join('');
- const met=p.met===L.season*100+L.week;
+ const met=p.met===L.season*100+myWk();
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl(p.pos+' - '+esc(fullname(p).toUpperCase()),true)}</div>${mine?`<button class="bt ico" data-a="pRename">${PENCIL}</button>`:'<div style="width:32px"></div>'}</div>
  <div class="row grow stretch" style="gap:8px;margin-top:6px">
@@ -1943,7 +1943,7 @@ ACT.pBack=()=>go(UI.sub.back||'roster',UI.sub.bs||{});
 ACT.pnav=d=>{const p=P(UI.sub.id),l=plist(p.team>=0?p.team:L.user),i=l.indexOf(p);if(i<0||!l.length)return;UI.sub.id=l[(i+ +d.d+l.length)%l.length].id;render();};
 ACT.pSp=d=>{const p=P(UI.sub.id);if(p.sp>0&&canRaise(p,d.k)){p.a[d.k]++;p.sp--;p.peak=Math.max(p.peak||0,ovr(p));sfx('coin');save();render();}};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
-ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+L.week;const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
+ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+myWk();const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
 ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`;
  const R=[['GAMES',x=>x.gp]];if(p.pos==='QB')R.push(['COMPLETIONS',x=>x.cmp],['ATTEMPTS',x=>x.att],['PASS YARDS',x=>x.pyd],['PASS TDS',x=>x.ptd],['INTERCEPTIONS',x=>x.pint],['RUSH YARDS',x=>x.ryd]);
  else if(['RB','WR','TE'].includes(p.pos))R.push(['CARRIES',x=>x.car],['RUSH YARDS',x=>x.ryd],['RUSH TDS',x=>x.rtd],['RECEPTIONS',x=>x.rec],['REC YARDS',x=>x.wyd],['REC TDS',x=>x.wtd],['FUMBLES',x=>x.fum]);
@@ -1982,7 +1982,7 @@ SCR.trade=()=>{
  const pkHave=a=>a.map((n,i)=>n?'R'+(i+1)+(n>1?'×'+n:''):'').filter(Boolean).join(' ')||'NONE';
  const pct=hum?100:clamp(E.ratio*100,0,100),col=hum?'var(--yl)':E.ok?'var(--gr)':E.ratio>0.8?'var(--yl)':'var(--rd)';
  const msg=!s.give.length&&!s.get.length&&!s.pk.some(x=>x)&&!s.gpk.some(x=>x)?'PICK PLAYERS ON BOTH SIDES':!E.rosOk?'YOUR ROSTER WOULD BE OVER '+rmax():!E.capOk?'OVER YOUR SALARY CAP':hum?'COACH '+((seatOf(t)||{}).coach||'')+' DECIDES · THE OFFER WAITS FOR THEM':E.ok?'THEY WILL ACCEPT':E.ratio>0.8?'CLOSE · ADD A LITTLE MORE':'THEY WANT MORE';
- return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('TRADE')}</div><div class="coin">CAP ${fmtM(L.cap-E.cap)}</div></div>${L.phase==='REG'?`<div class="s7 ${L.week>=TRADE_DEADLINE-1?'yl':'dim'}" style="text-align:center;margin-top:-4px">TRADE DEADLINE: AFTER WEEK ${TRADE_DEADLINE}${L.week===TRADE_DEADLINE?' · LAST WEEK TO TRADE':''}</div>`:''}
+ return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('TRADE')}</div><div class="coin">CAP ${fmtM(L.cap-E.cap)}</div></div>${L.phase==='REG'?`<div class="s7 ${myWk()>=TRADE_DEADLINE-1?'yl':'dim'}" style="text-align:center;margin-top:-4px">TRADE DEADLINE: AFTER WEEK ${TRADE_DEADLINE}${myWk()===TRADE_DEADLINE?' · LAST WEEK TO TRADE':''}</div>`:''}
  <div class="row stretch grow" style="gap:8px">
   <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GIVE · ${esc(abbr(L.user))}</span><div class="scroll grow"><table class="tbl s7">${mine.map(p=>row(p,s.give.includes(p.id),'trG')).join('')}</table></div>${L.cfbTeams?'':`<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(have)})</span>${pks}</div>`}</div>
   <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GET</span>
@@ -2042,9 +2042,9 @@ SCR.standings=()=>{
 ACT.sc=d=>{UI.sub.c=d.c;render();};
 SCR.schedule=()=>{
  const t=L.user;let rows='';
- for(let w=1;w<=18;w++){const g=teamGame(w,t);if(!g){rows+=`<tr class="${w===L.week&&L.phase==='REG'?'me':''}"><td>WEEK ${w}</td><td colspan="2" class="dim">BYE</td></tr>`;continue;}
+ for(let w=1;w<=18;w++){const g=teamGame(w,t);if(!g){rows+=`<tr class="${w===myWk()&&L.phase==='REG'?'me':''}"><td>WEEK ${w}</td><td colspan="2" class="dim">BYE</td></tr>`;continue;}
   const home=g.h===t,op=home?g.a:g.h;let res='';if(g.hs!=null){const us=home?g.hs:g.as,th=home?g.as:g.hs;res=`<span class="${us>th?'grt':us<th?'rdt':'yl'}">${us>th?'W':us<th?'L':'T'} ${us}-${th}</span>`;}
-  rows+=`<tr class="${w===L.week&&L.phase==='REG'?'me':''}"><td>WEEK ${w}</td><td>${home?'VS':'AT'} ${esc(T(op).name.toUpperCase())} <span class="dim">${recStr(op)}</span></td><td class="r">${res}</td></tr>`;}
+  rows+=`<tr class="${w===myWk()&&L.phase==='REG'?'me':''}"><td>WEEK ${w}</td><td>${home?'VS':'AT'} ${esc(T(op).name.toUpperCase())} <span class="dim">${recStr(op)}</span></td><td class="r">${res}</td></tr>`;}
  return`<div class="screen"><div class="row"><button class="bt ico" data-a="go" data-s="hub">${ICON.back}</button><div class="grow">${ttl(L.year+' SCHEDULE')}</div><div style="width:32px"></div></div><div class="box grow scroll" style="padding:4px 8px"><table class="tbl">${rows}</table></div></div>`;
 };
 SCR.bracket=()=>{
@@ -2415,7 +2415,7 @@ function postGame(g,R){
  news((res==='W'?'WIN':res==='L'?'LOSS':'TIE')+' '+(home?'vs ':'at ')+abbr(R.op)+' '+us+'-'+th+'.');
  let press=-1,pp=null;
  if(!R.simmed&&Math.random()<0.7){const pool=PRESS.map((q,i)=>i).filter(i=>PRESS[i].w==='any'||(PRESS[i].w==='win'&&res==='W')||(PRESS[i].w==='loss'&&res==='L'));press=pick(pool);if(PRESS[press].pl){const c=rows.filter(r=>r.played).sort((a,b)=>(b.rat==='-'?0:b.rat)-(a.rat==='-'?0:a.rat)).slice(0,4);pp=c.length?pick(c).id:null;if(!pp)press=-1;}}
- const lab=L.phase==='REG'?'END OF WEEK '+L.week:'END OF '+(g.conf==='SB'?CFG.champ:ROUNDS[L.po.cur]);
+ const lab=L.phase==='REG'?'END OF WEEK '+myWk():'END OF '+(g.conf==='SB'?CFG.champ:ROUNDS[L.po.cur]);
  L.lastPost={lab,us,th,res,op:R.op,home,rows,cc,press,pp,simmed:!!R.simmed,recs};
  save();go('endweek');
 }
@@ -2437,7 +2437,7 @@ ACT.ewGo=()=>{
  else finishPost();
 };
 ACT.press=d=>{const R=L.lastPost,q=PRESS[R.press],pp=R.pp?P(R.pp):null;q.a[+d.i][1](pp);finishPost();};
-function finishPost(){L.lastPost=null;UI.modal=null;if(L.online){save();return olTx(olGates).then(olResume);}advanceWeek();resumeFlow();}
+function finishPost(){L.lastPost=null;UI.modal=null;if(L.online){save();return olTx(()=>{olMyWeekDone();olGates();}).then(olResume);}advanceWeek();resumeFlow();}
 
 /* =====================================================================
    CHAMPIONS SCREEN (fireworks)
@@ -2544,7 +2544,7 @@ const SNOWBELT=['BUF','GB','CLE','PIT','CHI','DEN','NE'],MIDCOLD=['CIN','KC','NY
 function pickWeather(home){
  {const a=arc();if(a&&a.wx!=='auto')return a.wx;}
  const ab=abbr(home);if(DOME.includes(ab)&&!T(home).college)return'dome';
- const wk=L.phase==='PO'?19+(L.po?L.po.cur:0):L.week,late=clamp((wk-9)/9,0,1);   // 0 until week 9, 1 by the playoffs
+ const wk=L.phase==='PO'?19+(L.po?L.po.cur:0):myWk(),late=clamp((wk-9)/9,0,1);   // 0 until week 9, 1 by the playoffs
  const snowP=SNOWBELT.includes(ab)?(late>0?0.08+0.5*late:0):MIDCOLD.includes(ab)?0.03+0.3*late:(ab==='SEA'||ab==='TEN')?0.08*late:0;
  const rainP=ab==='SEA'?0.32:COLD.includes(ab)?0.14+0.08*late:['MIA','TB','JAX','CAR'].includes(ab)?0.16:0.1;
  const r=Math.random();return r<snowP?'snow':r<snowP+rainP?'rain':'clear';
@@ -2934,7 +2934,7 @@ function separate(list){for(let i=0;i<list.length;i++)for(let j=i+1;j<list.lengt
 /* ---------- match lifecycle ---------- */
 function startMatch(g,uAway){applyCustomTeam();
  const home=g.h===L.user,op=home?g.a:g.h,ha=abbr(g.h);
- const late=L.phase==='PO'||L.week>=12;
+ const late=L.phase==='PO'||myWk()>=12;
  const wxr=pickWeather(g.h);void late;
  M={g,home,op,sc:[0,0],qtr:1,clock:L.settings.qlen,to:3,ps:{},ts:{pyd:0,cmp:0,att:0,ryd:0,td:0,to:0},
   dep:lineup(L.user),odep:lineup(op),dAdj:diffAdj(),cam:45,phase:'ov',O:[],D:[],ov:null,
@@ -2951,7 +2951,7 @@ function startMatch(g,uAway){applyCustomTeam();
  if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
- const lab=L.college?'COLLEGE FOOTBALL':L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
+ const lab=L.college?'COLLEGE FOOTBALL':L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+myWk():(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
  const wxTxt=M.wx==='dome'?'INDOORS':M.wx==='snow'?'SNOW':M.wx==='rain'?'RAIN':'CLEAR SKIES';
  const UR=teamRatings(L.user),OR=teamRatings(op);
  ovMsg(lab,`<div class="row ctr" style="gap:14px;align-items:center;margin:2px 0 6px"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,!home)}<span style="${fitS(teamName(L.user),10,190)}">${esc(teamName(L.user).toUpperCase())}</span><span>${stars(UR.offS,'o xs')} ${stars(UR.defS,'d xs')}</span></div><span class="s16">${home?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,home)}<span style="${fitS(T(op).name,10,190)}">${esc(T(op).name.toUpperCase())}</span><span>${stars(OR.offS,'o xs')} ${stars(OR.defS,'d xs')}</span></div></div>
@@ -5543,7 +5543,7 @@ function collegeMakePlayer(r,team){
    the host can do: difficulty, quarter length and arcade rules are set when the league is made
    and are the same for everyone, and coach vs coach games always play at neutral difficulty.
    ===================================================================== */
-const OL_SEAT_KEYS=['coach','custom','cc','fan','fac','oc','dc','hist','dyn','off','lastPost','lastOffer','jobs','jobWhy','titles','champShow','career','picks','cap','capBuys','style','awardsShow'];
+const OL_SEAT_KEYS=['wk','coach','custom','cc','fan','fac','oc','dc','hist','dyn','off','lastPost','lastOffer','jobs','jobWhy','titles','champShow','career','picks','cap','capBuys','style','awardsShow'];
 const OL_SET_KEYS=['sound','replay','play','dir','ball'];   /* everything else in settings is the host's and shared */
 const OL_STEPS=['sum','prog','con','dwait','draft','jobs','new','swait'];
 const OL_DW=OL_STEPS.indexOf('dwait'),OL_SW=OL_STEPS.indexOf('swait');
@@ -5564,7 +5564,7 @@ function olAs(t,fn){
  finally{for(const k of OL_SEAT_KEYS)S[k]=L[k]===undefined?null:L[k];S.set=S.set||{};for(const k of OL_SET_KEYS)S.set[k]=L.settings[k];
   for(const k of OL_SEAT_KEYS)L[k]=mine[k];for(const k of OL_SET_KEYS)L.settings[k]=ms[k];L.user=me;}}
 function olEach(fn){for(const t of humans())olAs(t,()=>fn(t));}
-function olSeatNew(name,tkh,pinh){return{coach:String(name||'COACH').trim().toUpperCase().slice(0,14)||'COACH',tkh,pinh,custom:null,cc:L.rosterMode==='NFL'?30:20,fan:50,fac:{stad:1,train:1,rehab:1},oc:null,dc:null,hist:[],dyn:10,off:null,lastPost:null,lastOffer:0,jobs:null,jobWhy:null,titles:0,champShow:false,career:[],picks:[1,1,1],cap:L.online?L.online.cap0:L.cap,capBuys:0,style:null,awardsShow:false,set:{sound:true,replay:true,play:'both',dir:'S'}};}
+function olSeatNew(name,tkh,pinh){return{wk:1,coach:String(name||'COACH').trim().toUpperCase().slice(0,14)||'COACH',tkh,pinh,custom:null,cc:L.rosterMode==='NFL'?30:20,fan:50,fac:{stad:1,train:1,rehab:1},oc:null,dc:null,hist:[],dyn:10,off:null,lastPost:null,lastOffer:0,jobs:null,jobWhy:null,titles:0,champShow:false,career:[],picks:[1,1,1],cap:L.online?L.online.cap0:L.cap,capBuys:0,style:null,awardsShow:false,set:{sound:true,replay:true,play:'both',dir:'S'}};}
 /* ---------- the stored league: canonical form (no coach mounted) <-> this device ---------- */
 const olClone=o=>JSON.parse(JSON.stringify(o));
 function olCanon(){
@@ -5573,7 +5573,8 @@ function olCanon(){
  S.set={};for(const k of OL_SET_KEYS){if(c.settings[k]!==undefined)S.set[k]=c.settings[k];delete c.settings[k];}
  c.cap=c.online.cap0;delete c.user;delete c.net;delete c.exh;delete c.savedAt;return c;}
 function olMount(c){
- L=c;const S=L.seats[OL.me],D=olSeatNew(S.coach,S.tkh,S.pinh);for(const k in D)if(S[k]===undefined)S[k]=D[k];
+ L=c;const S=L.seats[OL.me];if(S.wk==null)S.wk=L.phase==='REG'?L.week:1;   /* leagues from before play-ahead */
+ const D=olSeatNew(S.coach,S.tkh,S.pinh);for(const k in D)if(S[k]===undefined)S[k]=D[k];
  for(const k of OL_SEAT_KEYS)L[k]=S[k];const ss=S.set||{};for(const k of OL_SET_KEYS)if(ss[k]!==undefined)L.settings[k]=ss[k];
  L.user=OL.me;indexPlayers();if(L.nflPower)NFL_POWER=L.nflPower;applyCustomTeam();}
 /* ---------- three-way merge: b = last synced, l = mine, s = the server's ---------- */
@@ -5671,7 +5672,8 @@ function olStepOf(t){const s=seatOf(t),o=s&&s.off;return o?OL_STEPS.indexOf(o.st
 function olGateReady(){
  if(!L||!L.seats||!L.online||L.online.st!=='on')return false;
  if(L.draft&&L.draft.q&&!L.draft.done){const it=L.draft.q[L.draft.qi];if(it&&it.t!=null&&!isHuman(it.t))return true;}
- if(L.phase==='REG'||L.phase==='PO'){if(L.phase==='PO'&&L.po.champ!=null)return false;return !curGames().some(g=>g.hs==null&&(isHuman(g.h)||isHuman(g.a)));}
+ if(L.phase==='REG')return humans().every(t=>olWkOf(t)>L.week);   /* the league week follows the coach who is furthest behind */
+ if(L.phase==='PO'){if(L.po.champ!=null)return false;return !curGames().some(g=>g.hs==null&&(isHuman(g.h)||isHuman(g.a)));}
  if(L.phase==='OFF'){const H=humans(),st=H.map(olStepOf);
   if(!L.draft&&L.offDraft!==L.year&&st.every(s=>s>=OL_DW))return true;
   if(st.every(s=>s>=OL_SW))return true;}
@@ -5690,7 +5692,12 @@ function olWaiting(){
  if(L.online.st==='lobby')return out;
  const D=L.draft;
  if(D&&D.q&&!D.done){const it=D.q[D.qi];if(it&&it.t!=null&&isHuman(it.t))out.push({t:it.t,what:'ON THE CLOCK IN THE DRAFT',k:'pick'});return out;}
- if(L.phase==='REG'||L.phase==='PO'){for(const g of curGames()){if(g.hs!=null)continue;const hh=isHuman(g.h),ha=isHuman(g.a);if(!hh&&!ha)continue;
+ if(L.phase==='REG'){for(const t of humans()){const w=olWkOf(t);if(w>18)continue;const g=teamGame(w,t);
+   if(!g){out.push({t,what:'WEEK '+w+' BYE',k:'sim'});continue;}
+   const op=g.h===t?g.a:g.h,hu=isHuman(op),ow=hu?olWkOf(op):w,bl=hu&&ow<w&&g.hs==null;
+   out.push({t,what:'WEEK '+w+(g.hs!=null?' DONE':bl?' · WAITING FOR '+abbr(op):(hu?' LIVE vs ':' vs ')+abbr(op)),k:'sim',g,blocked:bl});}
+  return out;}
+ if(L.phase==='PO'){for(const g of curGames()){if(g.hs!=null)continue;const hh=isHuman(g.h),ha=isHuman(g.a);if(!hh&&!ha)continue;
    const lab=(hh&&ha?'LIVE vs ':'vs ');if(hh)out.push({t:g.h,what:lab+abbr(g.a),k:'sim',g});if(ha)out.push({t:g.a,what:lab.replace('vs','at')+abbr(g.h),k:'sim',g});}
   return out;}
  if(L.phase==='OFF'){const H=humans(),st=H.map(olStepOf),needDraft=!L.draft&&L.offDraft!==L.year;
@@ -5725,7 +5732,8 @@ function olAutoOff(){const O=L.off;if(!O)return;const r=OL_STEPS.indexOf(O.step)
  if(O.step==='new'||O.step==='jobs'||(O.step==='draft'&&!L.draft)){L.jobs=null;const ro=rosterOf(L.user).sort((a,b)=>ovr(a)-ovr(b));while(rosterOf(L.user).length>rmax()){const p=ro.shift();p.team=-1;p.yrs=ri(1,2);}O.step='swait';}}
 function olForce(d){
  if(L.online.host!==L.user)return;const t=+d.t;
- if(d.k==='sim'){const g=curGames().find(x=>x.hs==null&&(x.h===t||x.a===t));if(!g)return;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');finishGame(g,hs,as);news('The commissioner simmed '+abbr(g.a)+' at '+abbr(g.h)+': '+as+'-'+hs+'.');}
+ if(d.k==='sim'&&L.phase==='REG')olAs(t,()=>{const g=userGame();if(g){const op=g.h===t?g.a:g.h;if(isHuman(op)&&olWkOf(op)<L.wk)return;const[hs,as]=simScore(g.h,g.a,false);finishGame(g,hs,as);news('The commissioner simmed '+abbr(g.a)+' at '+abbr(g.h)+': '+as+'-'+hs+'.');}olMyWeekDone();});
+ else if(d.k==='sim'){const g=curGames().find(x=>x.hs==null&&(x.h===t||x.a===t));if(!g)return;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');finishGame(g,hs,as);news('The commissioner simmed '+abbr(g.a)+' at '+abbr(g.h)+': '+as+'-'+hs+'.');}
  else if(d.k==='pick'){const D=L.draft;if(!D||!D.q||D.q[D.qi].t!==t)return;olAs(t,()=>{const p=autoPickTarget();while(olMyPick())draftPick(p&&rosterOf(t).length<rmax()+(D.founding?5:0)&&D.pool.includes(p.id)?p:null);});}
  else if(d.k==='off')olAs(t,olAutoOff);
  olGates();}
@@ -5829,7 +5837,7 @@ ACT.olClaim=async()=>{const s=UI.sub,name=String(s.coach||'').trim().toUpperCase
    if(S){S.tkh=tkh;delete S.tk;if(!S.pinh)S.pinh=pinh;}
    else{const keep=L;L=D;const seat=olSeatNew(name,tkh,pinh);
     if(D.phase==='OFF')seat.off={step:D.draft||D.offDraft===D.year?'new':'dwait',bonus:0,changes:[],retired:[],hof:[],expiring:[],keep:[]};
-    if(D.phase==='FOUND'||D.phase==='OFF')seat.hist=[];L=keep;D.seats[t]=seat;
+    if(D.phase==='FOUND'||D.phase==='OFF')seat.hist=[];if(D.phase==='REG')seat.wk=D.week;L=keep;D.seats[t]=seat;
     D.news=[{w:D.phase==='REG'?'WK '+D.week:D.phase==='PO'?'PLAYOFFS':'OFFSEASON',y:D.year,s:'Coach '+name+' takes over the '+TEAMS[t].name+'!'}].concat(D.news||[]).slice(0,40);}
    const r=await olPut(s.code,D,got.v);
    if(r.ok){olRemember({code:s.code,team:t,tk,name});olBegin(s.code,t,tk,{v:r.v,data:D});UI.modal=null;return olResume();}}
@@ -5884,8 +5892,8 @@ ACT.olForce2=d=>{UI.modal=null;olTx(()=>olForce(d)).then(()=>render());};
 ACT.olKickQ=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl('REMOVE COACH',true)}<div class="s7" style="line-height:1.9">${esc((seatOf(+d.t)||{}).coach||'')} LOSES ${esc(abbr(+d.t))} AND THE AI TAKES OVER.</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt r" data-a="olKick2" data-t="${d.t}">REMOVE</button></div></div>`);
 ACT.olKick2=d=>{UI.modal=null;const t=+d.t;olTx(()=>{if(L.online.host!==L.user||t===L.user||!L.seats[t])return;news('Coach '+L.seats[t].coach+' is out; the AI takes over the '+T(t).name+'.');delete L.seats[t];olGates();}).then(()=>render());};
 /* ---------- hub bits ---------- */
-function olHubBar(){const W=olWaiting(),mine=W.some(x=>x.t===L.user),others=W.filter(x=>x.t!==L.user).length,n=(OL.on||[]).filter(t=>t!==L.user&&isHuman(t)).length;
- const st=OL.err?`<span class="rdt">${OL.err==='OFFLINE'?'OFFLINE · RETRYING':'SYNCING'}</span>`:mine?'<span class="yl">YOUR MOVE</span>':others?`<span>WAITING ON ${others}</span>`:'<span class="grt">ALL DONE</span>';
+function olHubBar(){const W=olWaiting(),me=W.find(x=>x.t===L.user),mine=!!me&&!me.blocked,others=W.filter(x=>x.t!==L.user).length,n=(OL.on||[]).filter(t=>t!==L.user&&isHuman(t)).length;
+ const st=OL.err?`<span class="rdt">${OL.err==='OFFLINE'?'OFFLINE · RETRYING':'SYNCING'}</span>`:mine?'<span class="yl">YOUR MOVE</span>':me?`<span>${esc(me.what)}</span>`:others?`<span>WAITING ON ${others}</span>`:'<span class="grt">ALL DONE</span>';
  const inc=olOffers().filter(x=>x.st==='open'&&x.to===L.user).length;
  return`<div class="row ctr" style="gap:8px;cursor:pointer" data-a="go" data-s="olcoaches"><span class="s10 yl" style="letter-spacing:3px">${esc(L.online.code)}</span><span class="s7">${st}</span>${inc?`<span class="s7 yl blink" data-a="go" data-s="oltrades">TRADE OFFER${inc>1?'S':''} (${inc})</span>`:''}<span class="s7 grt">● ${n} ON</span><span class="s7 dim">COACHES &gt;</span></div>`;}
 function olWaitHTML(title,sub){const W=olWaiting().filter(x=>x.t!==L.user);
@@ -5896,22 +5904,24 @@ function olHubGo(){
  if(L.phase==='FOUND')return go('draft');
  const g=userGame();if(g)return go('pregame',defaultUnis(g));
  const mine=curGames().find(x=>x.h===L.user||x.a===L.user);
- if(L.phase==='REG')return modal(olWaitHTML(mine?'WEEK '+L.week+' DONE':'WEEK '+L.week+' · BYE',mine?'YOUR GAME IS IN. THE WEEK ENDS WHEN EVERY COACH HAS PLAYED.':'YOUR PLAYERS REST. THE WEEK ENDS WHEN EVERY COACH HAS PLAYED.'));
+ if(L.phase==='REG'){const mg=teamGame(L.wk,L.user);if(L.wk<=18)return modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl('WEEK '+L.wk,true)}<div class="s12">${mg?'GAME IS IN':'BYE WEEK'}</div><div class="s7 dim">${mg?'':'YOUR PLAYERS REST AND RECOVER CONDITION.'}</div><button class="bt y big" data-a="olWkGo">CONTINUE</button></div>`);
+  return modal(olWaitHTML('REGULAR SEASON DONE','THE PLAYOFFS START WHEN EVERY COACH HAS FINISHED WEEK 18.'));}
  modal(olWaitHTML(ROUNDS[L.po.cur]||'PLAYOFFS',aliveInPO(L.user)?'YOUR GAME IS IN. THE ROUND ENDS WHEN EVERY COACH HAS PLAYED.':(inPlayoffs(L.user)?'ELIMINATED':'SEASON OVER')+' · THE PLAYOFFS CONTINUE AS COACHES PLAY.'));}
 const olH2H=g=>!!(g&&L&&L.seats&&isHuman(g.h)&&isHuman(g.a));
 /* a game against the AI: make sure it hasn't been simmed meanwhile, then play as usual */
 function olPlay(sim){olTx(null).then(()=>{const g=userGame();if(!g){toast('THAT GAME IS ALREADY IN');return olResume();}
+ if(olH2H(g)&&olWkOf(g.h===L.user?g.a:g.h)<myWk()){toast('WAITING FOR THEM TO REACH WEEK '+myWk());return render();}
  if(olH2H(g))return olRoomOpen(g,UI.scr==='pregame'&&UI.sub.uU!=null?{uU:UI.sub.uU,uO:UI.sub.uO}:null);
  if(sim)return ACT.simg();if(olmTry())return;const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);});}
 /* ---------- coach vs coach: the home coach hosts an Online Head to Head game ---------- */
-function olGameCode(g){const s=L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:L.week)+'|'+g.h+'|'+g.a;let h=2166136261;
+function olGameCode(g){const s=L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:olGWk(g))+'|'+g.h+'|'+g.a;let h=2166136261;
  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}let c='';for(let i=0;i<4;i++){c+=String.fromCharCode(65+((h>>>0)%26));h=Math.imul(h^(h>>>13),2654435761);}return c;}
 function olRoomOpen(g,u){netReset();NET.err='';OLG={h:g.h,a:g.a,code:olGameCode(g),host:g.h===L.user,live:false,L:null,sv:null,u:u||null};go('olroom');
  if(OLG.host)ACT.netHost(null,OLG.code);else ACT.netJoin(null,OLG.code);}
 function olRoomClose(){OLG=null;}
 ACT.olRoomCancel=()=>{netSend({t:'bye'});netReset();olRoomClose();olResume();};
 SCR.olroom=()=>{if(!OLG||!olLive())return SCR.hub();const op=OLG.h===L.user?OLG.a:OLG.h,S=seatOf(op)||{},on=(OL.on||[]).includes(op),who=esc(S.coach||abbr(op));
- const g=userGame(),lab=L.phase==='REG'?'WEEK '+L.week:g&&g.conf==='SB'?champName():ROUNDS[L.po.cur];
+ const g=userGame(),lab=L.phase==='REG'?'WEEK '+myWk():g&&g.conf==='SB'?champName():ROUNDS[L.po.cur];
  const st=NET.connOpen?'CONNECTED · KICKOFF COMING UP...':OLG.host?'WAITING FOR '+who+' TO JOIN...':'CONNECTING TO '+who+'...';
  return`<div class="screen" style="align-items:center;justify-content:center;gap:10px">${ttl(lab+' · LIVE')}
  <div class="row ctr" style="gap:18px;align-items:center"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,OLG.h!==L.user)}<span>${esc(abbr(L.user))}</span><span class="s7 yl">YOU</span></div><span class="s16">${OLG.h===L.user?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,OLG.h===L.user)}<span>${esc(abbr(op))}</span><span class="s7">${who}</span></div></div>
@@ -5953,7 +5963,7 @@ function olOffers(){return(L&&L.trades)||[];}
 function olOffer(s){const t=s.t,o={id:Date.now()*100+ri(0,99),from:L.user,to:t,give:s.give.slice(),get:s.get.slice(),pk:s.pk.slice(),gpk:(s.gpk||[0,0,0]).slice(),st:'open',yr:L.year};
  olTx(()=>{L.trades=olOffers().filter(x=>x.st==='open'||x.yr>=L.year-1).slice(-40);L.trades.push(o);}).then(ok=>{if(!ok)return;sfx('coin');toast('OFFER SENT TO COACH '+((seatOf(t)||{}).coach||abbr(t)));s.give=[];s.get=[];s.pk=[0,0,0];s.gpk=[0,0,0];render();});}
 function olTradeCheck(o){
- if(!tradesOpen())return'THE TRADE DEADLINE HAS PASSED';if(!isHuman(o.from)||!isHuman(o.to))return'A COACH IS NO LONGER IN THE LEAGUE';
+ if(!tradesOpen()||(L.phase==='REG'&&Math.max(olWkOf(o.from),olWkOf(o.to))>TRADE_DEADLINE))return'THE TRADE DEADLINE HAS PASSED';if(!isHuman(o.from)||!isHuman(o.to))return'A COACH IS NO LONGER IN THE LEAGUE';
  const G=o.give.map(P),R=o.get.map(P);if(G.some(p=>!p||p.team!==o.from)||R.some(p=>!p||p.team!==o.to))return'A PLAYER IS NO LONGER ON THAT TEAM';
  const pf=olPk(o.from),pt=olPk(o.to);if(o.pk.some((n,i)=>n>pf[i])||o.gpk.some((n,i)=>n>pt[i]))return'A DRAFT PICK IS NO LONGER THERE';
  if(rosterOf(o.from).length-G.length+R.length>rmax()||rosterOf(o.to).length-R.length+G.length>rmax())return'A ROSTER WOULD GO OVER '+rmax()+' PLAYERS';
@@ -6000,7 +6010,7 @@ function olJobTx(t){UI.modal=null;
    PLAY and SIM GAME pick the same game back up). Coach vs coach games aren't kept: the live
    link has to start over. */
 const OLM_KEY='rf_olm';
-function olGameKey(g){return L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:L.week)+'|'+g.h+'|'+g.a;}
+function olGameKey(g){return L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:olGWk(g))+'|'+g.h+'|'+g.a;}
 function olmGet(){try{return JSON.parse(localStorage.getItem(OLM_KEY)||'null');}catch(e){return null;}}
 function olmClear(){try{localStorage.removeItem(OLM_KEY);}catch(e){}}
 function olmSave(act,who){
@@ -6029,6 +6039,20 @@ function olmResumeGame(c){const g=userGame(),m=c.m;if(!g)return false;
 function olmBoot(){const c=olmGet();if(!c)return;
  if(!olMine().some(y=>y.code===c.code&&y.team===c.team)||Date.now()-c.at>14*864e5){olmClear();return;}
  ACT.olOpen({c:c.code,resume:1});}
+/* ---------- play ahead: every coach has their own week in the regular season ----------
+   You keep playing until you reach a week where you meet another coach, who has to get there
+   too. The league week (AI games, news, AI moves) follows the coach who is furthest behind,
+   and the playoffs wait for everyone to finish week 18. */
+function olWkOf(t){const s=seatOf(t);return s&&s.wk!=null?s.wk:L.week;}
+function myWk(){return L&&L.seats&&L.phase==='REG'&&L.wk!=null?L.wk:L.week;}
+function olGWk(g){const i=L.sched.findIndex(w=>w.some(x=>x.h===g.h&&x.a===g.a));return i>=0?i+1:L.week;}
+/* this coach is done with their week (game in, or a bye): rest and recovery, then on to the next */
+function olMyWeekDone(){
+ if(!L.seats||L.phase!=='REG'||L.wk==null||L.wk>18)return false;
+ const g=(L.sched[L.wk-1]||[]).find(x=>x.h===L.user||x.a===L.user);if(g&&g.hs==null)return false;
+ for(const p of rosterOf(L.user)){if(p.inj>0)p.inj--;p.cond=Math.min(100,p.cond+(g?13:26)+L.fac.rehab*1.6);p.mor=clamp(p.mor+(65-p.mor)*0.06,0,100);}
+ L.wk++;return true;}
+ACT.olWkGo=()=>{UI.modal=null;olTx(()=>{olMyWeekDone();olGates();}).then(olResume);};
 /* ---------- offseason waiting screens, draft picks, trades ---------- */
 function olOffWait(){const O=L.off;if(!O)return null;
  if(O.step==='draft'&&!L.draft)olAfterDraftStep();
