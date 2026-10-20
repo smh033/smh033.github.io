@@ -4877,7 +4877,7 @@ const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:''
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
  buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100,NET_VER=5;   /* bump whenever the messages change: both players must run the same version */
+const NET_DELAY=100,NET_VER=6;   /* bump whenever the messages change: both players must run the same version */
 /* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
 const netDelay=()=>clamp(NET.jit*2,25,140);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
@@ -4928,7 +4928,7 @@ function netLost(msg){if(!NET.on&&NET.stage!=='lobby'&&NET.stage!=='game')return
    PeerJS server. Then the game is relayed through a public MQTT server over a normal secure web
    connection instead (the first one is on port 443, like any website). Same messages, a bit slower. */
 /* our own relay on Cloudflare (relay/ folder): fastest and on the normal web port, so it's tried first */
-const NET_CF='';
+const NET_CF='wss://retrofootball-relay.troypokyxle0524.workers.dev';
 const NET_BROKERS=(()=>{const q=(location.search.match(/[?&]mqtt=([^&]+)/)||[])[1];return q?decodeURIComponent(q).split(','):[...(NET_CF?['cf:'+NET_CF]:[]),'wss://mqtt.eclipseprojects.io:443/mqtt','wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];})();
 const NET_FORCE_RELAY=/[?&]relay(&|$)/.test(location.search),NET_RT='retrofootball1/';
 const netRelayOn=()=>!!(NET.conn&&NET.conn.mode==='relay');
