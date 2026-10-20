@@ -1,0 +1,168 @@
+{
+  "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1",
+  "athletic_year": "2025-26",
+  "season": 2025,
+  "not_live": true,
+  "no_auto_updates": true,
+  "roster_source": "https://raw.githubusercontent.com/Dharit13/NCAA_2025-26-Season-Dataset/main/by_sport/football/all.csv",
+  "license": "CC0-1.0",
+  "teams_with_rosters": 100,
+  "number_of_teams": 138,
+  "player_records": 10601,
+  "teams_with_fewer_than_12": [],
+  "missing_schools": [
+    {
+      "school": "Florida State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Florida Atlantic",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "South Florida",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Arizona State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Iowa State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Kansas State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Oklahoma State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Michigan State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Ohio State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Penn State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Jacksonville State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Kennesaw State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Middle Tennessee",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Missouri State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "New Mexico State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Western Kentucky",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Ball State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Central Michigan",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Eastern Michigan",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Kent State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Sacramento State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Western Michigan",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "North Dakota State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Northern Illinois",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "San José State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Boise State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Colorado State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Fresno State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Oregon State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "San Diego State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Texas State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Utah State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Washington State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Mississippi State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Arkansas State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Georgia Southern",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Georgia State",
+      "matchedPlayers": 0
+    },
+    {
+      "school": "Louisiana",
+      "matchedPlayers": 0
+    }
+  ],
+  "notes": "Roster names and positions are source facts; jersey numbers and player skill ratings in game are fictional/simulated."
+}
