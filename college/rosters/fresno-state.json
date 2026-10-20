@@ -1,105 +1,104 @@
 {
  "school": "Fresno State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "E.J.",
-   "last_name": "Warner",
+   "first_name": "Jayden",
+   "last_name": "Mandal",
    "position": "QB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.2
+   "year": 3,
+   "jersey": 7,
+   "rating": 5.9
   },
   {
-   "first_name": "Johnathan",
-   "last_name": "Arceneaux",
+   "first_name": "Rayshon",
+   "last_name": "Luke",
    "position": "RB",
    "year": 4,
-   "jersey": null,
+   "jersey": 2,
    "rating": 5.9
   },
   {
    "first_name": "Josiah",
    "last_name": "Freeman",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
+   "year": 5,
+   "jersey": 5,
+   "rating": 6.2
   },
   {
-   "first_name": "Jordan",
-   "last_name": "Brown",
+   "first_name": "Ezekiel",
+   "last_name": "Avit",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
+   "year": 3,
+   "jersey": 0,
+   "rating": 5.6
   },
   {
-   "first_name": "Kamron",
-   "last_name": "Beachem",
+   "first_name": "Jake",
+   "last_name": "Appleget",
    "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 87,
    "rating": 5.9
   },
   {
-   "first_name": "Campbell",
-   "last_name": "McHarg",
+   "first_name": "Brayden",
+   "last_name": "Walton",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
+   "year": 2,
+   "jersey": 76,
+   "rating": 5.3
   },
   {
-   "first_name": "Gino",
-   "last_name": "Quinones",
+   "first_name": "Oscar",
+   "last_name": "Weigel",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
-  },
-  {
-   "first_name": "Korey",
-   "last_name": "Foreman",
-   "position": "DL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
-  },
-  {
-   "first_name": "Jadon",
-   "last_name": "Pearson",
-   "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
-  },
-  {
-   "first_name": "Jakari",
-   "last_name": "Embry",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
-  },
-  {
-   "first_name": "Al'zillion",
-   "last_name": "Hamilton",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.9
+   "year": 3,
+   "jersey": 69,
+   "rating": 5.6
   },
   {
    "first_name": "Dylan",
-   "last_name": "Lynch",
+   "last_name": "Hampsten",
+   "position": "DL",
+   "year": 3,
+   "jersey": 11,
+   "rating": 5.6
+  },
+  {
+   "first_name": "Kvion",
+   "last_name": "Thunderbird",
+   "position": "LB",
+   "year": 3,
+   "jersey": 1,
+   "rating": 5.6
+  },
+  {
+   "first_name": "Loyall",
+   "last_name": "Mouzon",
+   "position": "DB",
+   "year": 2,
+   "jersey": 7,
+   "rating": 5.3
+  },
+  {
+   "first_name": "Taylor",
+   "last_name": "Powell",
+   "position": "DB",
+   "year": 2,
+   "jersey": 33,
+   "rating": 5.3
+  },
+  {
+   "first_name": "Manaki",
+   "last_name": "Watanabe",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
+   "year": 2,
+   "jersey": 38,
+   "rating": 5.1
   }
  ]
 }

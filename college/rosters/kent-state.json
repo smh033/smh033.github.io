@@ -1,105 +1,104 @@
 {
  "school": "Kent State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "CJ",
-   "last_name": "Montes",
+   "first_name": "Dru",
+   "last_name": "Deshields",
    "position": "QB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.8
-  },
-  {
-   "first_name": "Jordan",
-   "last_name": "Nubin",
-   "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
-  },
-  {
-   "first_name": "Sebastian",
-   "last_name": "Brown",
-   "position": "WR",
-   "year": 5,
-   "jersey": null,
-   "rating": 5.8
-  },
-  {
-   "first_name": "Ali",
-   "last_name": "Fisher",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
-  },
-  {
-   "first_name": "Christian",
-   "last_name": "Berry",
-   "position": "TE",
-   "year": 5,
-   "jersey": null,
-   "rating": 5.8
-  },
-  {
-   "first_name": "Matt",
-   "last_name": "Pajuste",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
-  },
-  {
-   "first_name": "Dustyn",
-   "last_name": "Morell",
-   "position": "OL",
    "year": 3,
-   "jersey": null,
-   "rating": 5.2
-  },
-  {
-   "first_name": "Mattheus",
-   "last_name": "Carroll",
-   "position": "DL",
-   "year": 5,
-   "jersey": null,
-   "rating": 5.8
+   "jersey": 12,
+   "rating": 5.5
   },
   {
    "first_name": "Mason",
-   "last_name": "Woods",
-   "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
-  },
-  {
-   "first_name": "Terrell",
-   "last_name": "Miller",
-   "position": "DB",
-   "year": 5,
-   "jersey": null,
-   "rating": 5.8
-  },
-  {
-   "first_name": "A'tiq",
-   "last_name": "Muhammad",
-   "position": "DB",
+   "last_name": "King",
+   "position": "RB",
    "year": 3,
-   "jersey": null,
+   "jersey": 0,
    "rating": 5.2
   },
   {
-   "first_name": "Will",
-   "last_name": "Hryszko",
-   "position": "K",
+   "first_name": "Darealyst",
+   "last_name": "Clark",
+   "position": "WR",
+   "year": 4,
+   "jersey": 8,
+   "rating": 5.5
+  },
+  {
+   "first_name": "Ardell",
+   "last_name": "Banks",
+   "position": "WR",
    "year": 3,
-   "jersey": null,
-   "rating": 5.0
+   "jersey": 1,
+   "rating": 5.2
+  },
+  {
+   "first_name": "Terik",
+   "last_name": "Mulder",
+   "position": "TE",
+   "year": 4,
+   "jersey": 89,
+   "rating": 5.5
+  },
+  {
+   "first_name": "Tyler",
+   "last_name": "Meadows",
+   "position": "OL",
+   "year": 2,
+   "jersey": 78,
+   "rating": 4.9
+  },
+  {
+   "first_name": "Ben",
+   "last_name": "Midea",
+   "position": "OL",
+   "year": 3,
+   "jersey": 50,
+   "rating": 5.2
+  },
+  {
+   "first_name": "Antonio",
+   "last_name": "Bottiggi",
+   "position": "DL",
+   "year": 2,
+   "jersey": 44,
+   "rating": 4.9
+  },
+  {
+   "first_name": "Hayden",
+   "last_name": "Dawahare",
+   "position": "LB",
+   "year": 4,
+   "jersey": 10,
+   "rating": 5.5
+  },
+  {
+   "first_name": "Angelo",
+   "last_name": "Stockstill",
+   "position": "DB",
+   "year": 3,
+   "jersey": 7,
+   "rating": 5.2
+  },
+  {
+   "first_name": "Norey",
+   "last_name": "Johnson",
+   "position": "DB",
+   "year": 4,
+   "jersey": 18,
+   "rating": 5.5
+  },
+  {
+   "first_name": "Sean",
+   "last_name": "Leonard",
+   "position": "K",
+   "year": 2,
+   "jersey": 96,
+   "rating": 4.7
   }
  ]
 }

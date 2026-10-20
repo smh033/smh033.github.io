@@ -1,105 +1,104 @@
 {
  "school": "Northern Illinois",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
    "first_name": "Jalen",
    "last_name": "Macon",
    "position": "QB",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.6
+   "year": 4,
+   "jersey": 14,
+   "rating": 5.9
   },
   {
-   "first_name": "Chavon",
-   "last_name": "Wright",
+   "first_name": "Telly",
+   "last_name": "Johnson Jr.",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 3,
+   "jersey": 45,
+   "rating": 5.3
   },
   {
-   "first_name": "Kenji",
-   "last_name": "Lewis",
+   "first_name": "Ladon",
+   "last_name": "Bryant",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 2,
+   "jersey": 0,
+   "rating": 5.0
   },
   {
-   "first_name": "Justin",
-   "last_name": "Lynch",
+   "first_name": "George",
+   "last_name": "Dimopoulos",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 3,
+   "jersey": 9,
+   "rating": 5.3
   },
   {
-   "first_name": "Pierce",
-   "last_name": "Oppong",
+   "first_name": "Jason",
+   "last_name": "Fowler",
    "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 2,
+   "jersey": 83,
+   "rating": 5.0
   },
   {
-   "first_name": "Izuchukwu",
-   "last_name": "Ozoh",
+   "first_name": "Ross",
+   "last_name": "Liegel",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 2,
+   "jersey": 58,
+   "rating": 5.0
   },
   {
-   "first_name": "Aidan",
-   "last_name": "Tweedy",
+   "first_name": "Landon",
+   "last_name": "Hron",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 3,
+   "jersey": 63,
+   "rating": 5.3
   },
   {
-   "first_name": "Ivan",
-   "last_name": "Davis",
+   "first_name": "Kole",
+   "last_name": "Sneed",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 90,
    "rating": 5.6
   },
   {
-   "first_name": "Danny",
-   "last_name": "Cronin",
+   "first_name": "Jashawn",
+   "last_name": "Nelson",
    "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 2,
+   "jersey": 6,
+   "rating": 5.0
   },
   {
-   "first_name": "Owen",
-   "last_name": "Belman",
+   "first_name": "Romelo",
+   "last_name": "Walker",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 2,
+   "jersey": 29,
+   "rating": 5.0
   },
   {
-   "first_name": "Donte",
-   "last_name": "Harrison",
+   "first_name": "Kyon",
+   "last_name": "Conyers",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.6
+   "year": 3,
+   "jersey": 16,
+   "rating": 5.3
   },
   {
-   "first_name": "Andrew",
-   "last_name": "Glass",
+   "first_name": "JJ",
+   "last_name": "Schlenhardt",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.4
+   "year": 2,
+   "jersey": 33,
+   "rating": 4.8
   }
  ]
 }

@@ -1,105 +1,104 @@
 {
  "school": "Coastal Carolina",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Samari",
-   "last_name": "Collier",
+   "first_name": "Deuce",
+   "last_name": "Bailey",
    "position": "QB",
+   "year": 2,
+   "jersey": 2,
+   "rating": 5.4
+  },
+  {
+   "first_name": "Jevon",
+   "last_name": "Edwards",
+   "position": "RB",
+   "year": 2,
+   "jersey": 20,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Tristian",
+   "last_name": "Gardner",
+   "position": "WR",
+   "year": 2,
+   "jersey": 3,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Karmello",
+   "last_name": "English",
+   "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 0,
+   "rating": 5.7
+  },
+  {
+   "first_name": "Zach",
+   "last_name": "Courtney",
+   "position": "TE",
+   "year": 4,
+   "jersey": 33,
+   "rating": 5.7
+  },
+  {
+   "first_name": "Daniel",
+   "last_name": "Jones",
+   "position": "OL",
+   "year": 3,
+   "jersey": 70,
+   "rating": 5.4
+  },
+  {
+   "first_name": "Kain",
+   "last_name": "McDonald",
+   "position": "OL",
+   "year": 2,
+   "jersey": 66,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Ibrahim",
+   "last_name": "Diawara",
+   "position": "DL",
+   "year": 4,
+   "jersey": 1,
+   "rating": 5.7
+  },
+  {
+   "first_name": "Jordan",
+   "last_name": "Thompson",
+   "position": "LB",
+   "year": 5,
+   "jersey": 18,
    "rating": 6.0
   },
   {
+   "first_name": "Damill",
+   "last_name": "Bostic Jr.",
+   "position": "DB",
+   "year": 2,
+   "jersey": 5,
+   "rating": 5.1
+  },
+  {
    "first_name": "Jalen",
-   "last_name": "John",
-   "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Malcolm",
-   "last_name": "Gillie",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Malick",
-   "last_name": "Meiga",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Cane",
-   "last_name": "Berrong",
-   "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Heston",
-   "last_name": "Edwards",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Zac",
-   "last_name": "Elam",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Darrion",
-   "last_name": "Henry-Young",
-   "position": "DL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Shane",
-   "last_name": "Bruce",
-   "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Ja'Marion",
-   "last_name": "Wayne",
+   "last_name": "Lee",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
+   "year": 5,
+   "jersey": 6,
+   "rating": 6.0
   },
   {
-   "first_name": "Lionell",
-   "last_name": "Whitaker",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Kian",
-   "last_name": "Afrookhteh",
+   "first_name": "Nico",
+   "last_name": "Cavanillas Alti",
    "position": "K",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.2
+   "year": 5,
+   "jersey": 30,
+   "rating": 5.8
   }
  ]
 }

@@ -1,104 +1,103 @@
 {
  "school": "South Alabama",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Bishop",
-   "last_name": "Davenport",
+   "first_name": "Jared",
+   "last_name": "Hollins",
    "position": "QB",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.4
+   "year": 2,
+   "jersey": 7,
+   "rating": 5.1
   },
   {
-   "first_name": "Kentrel",
-   "last_name": "Bullock",
+   "first_name": "PJ",
+   "last_name": "Martin",
    "position": "RB",
+   "year": 3,
+   "jersey": 0,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Anthony",
+   "last_name": "Eager",
+   "position": "WR",
+   "year": 3,
+   "jersey": 1,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Brendan",
+   "last_name": "Jenkins",
+   "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 12,
    "rating": 5.4
   },
   {
-   "first_name": "Devin",
-   "last_name": "Voisin",
-   "position": "WR",
-   "year": 5,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Micah",
-   "last_name": "Woods",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.4
-  },
-  {
-   "first_name": "Miller",
-   "last_name": "McCrumby",
+   "first_name": "Rod",
+   "last_name": "Gibbs",
    "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 9,
    "rating": 5.4
   },
   {
-   "first_name": "Amaury",
-   "last_name": "Wiggins",
+   "first_name": "Reese",
+   "last_name": "Osei-Wusu",
+   "position": "OL",
+   "year": 3,
+   "jersey": 68,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Kenton",
+   "last_name": "Jerido",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 69,
    "rating": 5.4
   },
   {
-   "first_name": "Sam",
-   "last_name": "Williams",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.4
-  },
-  {
-   "first_name": "Ed",
-   "last_name": "Smith IV",
+   "first_name": "Masey",
+   "last_name": "Lewis",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 18,
    "rating": 5.4
   },
   {
-   "first_name": "Dalton",
-   "last_name": "Hughes",
+   "first_name": "Parker",
+   "last_name": "Shattuck",
    "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.4
+   "year": 3,
+   "jersey": 11,
+   "rating": 5.1
   },
   {
-   "first_name": "Christopher",
-   "last_name": "Wallace Jr.",
+   "first_name": "Jaylen",
+   "last_name": "Moson",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.4
+   "year": 2,
+   "jersey": 12,
+   "rating": 4.8
   },
   {
-   "first_name": "Mike",
-   "last_name": "Harris",
+   "first_name": "Cole",
+   "last_name": "Blaylock",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.4
+   "year": 3,
+   "jersey": 14,
+   "rating": 5.1
   },
   {
-   "first_name": "Hamilton",
-   "last_name": "DiBoyan",
+   "first_name": "Davis",
+   "last_name": "Little",
    "position": "K",
    "year": 2,
-   "jersey": null,
+   "jersey": 35,
    "rating": 4.6
   }
  ]

@@ -1,104 +1,103 @@
 {
  "school": "Iowa State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Rocco",
-   "last_name": "Becht",
+   "first_name": "Jaylen",
+   "last_name": "Raynor",
    "position": "QB",
-   "year": 3,
-   "jersey": null,
-   "rating": 6.4
+   "year": 4,
+   "jersey": 1,
+   "rating": 6.7
   },
   {
-   "first_name": "Abu",
-   "last_name": "Sama III",
+   "first_name": "Aiden",
+   "last_name": "Flora",
    "position": "RB",
+   "year": 2,
+   "jersey": 21,
+   "rating": 5.8
+  },
+  {
+   "first_name": "Evan",
+   "last_name": "Boyd",
+   "position": "WR",
    "year": 3,
-   "jersey": null,
+   "jersey": 8,
    "rating": 6.1
   },
   {
-   "first_name": "Eli",
-   "last_name": "Green",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.4
-  },
-  {
-   "first_name": "Daniel",
+   "first_name": "Cody",
    "last_name": "Jackson",
    "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 2,
    "rating": 6.4
   },
   {
    "first_name": "Tyler",
-   "last_name": "Moore",
+   "last_name": "Fortenberry",
    "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 19,
    "rating": 6.4
   },
   {
-   "first_name": "Tyler",
-   "last_name": "Maro",
+   "first_name": "Jake",
+   "last_name": "Taylor",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 79,
    "rating": 6.4
   },
   {
-   "first_name": "Dylan",
-   "last_name": "Barrett",
+   "first_name": "Braden",
+   "last_name": "Smith",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.4
-  },
-  {
-   "first_name": "Myles",
-   "last_name": "Mendeszoon",
-   "position": "DL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.4
-  },
-  {
-   "first_name": "Zachary",
-   "last_name": "Lovett",
-   "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.4
-  },
-  {
-   "first_name": "Jeremiah",
-   "last_name": "Cooper",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.4
-  },
-  {
-   "first_name": "Jamison",
-   "last_name": "Patton",
-   "position": "DB",
    "year": 3,
-   "jersey": null,
+   "jersey": 63,
    "rating": 6.1
   },
   {
-   "first_name": "Jace",
-   "last_name": "T. Gilbert",
+   "first_name": "Isaac",
+   "last_name": "Terrell",
+   "position": "DL",
+   "year": 4,
+   "jersey": 88,
+   "rating": 6.4
+  },
+  {
+   "first_name": "Carson",
+   "last_name": "Willich",
+   "position": "LB",
+   "year": 4,
+   "jersey": 10,
+   "rating": 6.4
+  },
+  {
+   "first_name": "David",
+   "last_name": "Coffey",
+   "position": "DB",
+   "year": 2,
+   "jersey": 18,
+   "rating": 5.8
+  },
+  {
+   "first_name": "Drew",
+   "last_name": "Surges",
+   "position": "DB",
+   "year": 3,
+   "jersey": 6,
+   "rating": 6.1
+  },
+  {
+   "first_name": "Kyle",
+   "last_name": "Konrardy",
    "position": "K",
    "year": 3,
-   "jersey": null,
+   "jersey": 97,
    "rating": 5.9
   }
  ]

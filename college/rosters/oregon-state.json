@@ -1,104 +1,103 @@
 {
  "school": "Oregon State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Maalik",
-   "last_name": "Murphy",
+   "first_name": "Braden",
+   "last_name": "Atkinson",
    "position": "QB",
-   "year": 3,
-   "jersey": null,
-   "rating": 6.0
+   "year": 2,
+   "jersey": 2,
+   "rating": 5.7
   },
   {
-   "first_name": "Anthony",
-   "last_name": "Hankerson",
+   "first_name": "AJ",
+   "last_name": "Newberry",
    "position": "RB",
    "year": 4,
-   "jersey": null,
+   "jersey": 23,
    "rating": 6.0
   },
   {
-   "first_name": "Jimmy",
-   "last_name": "Valsin III",
+   "first_name": "Malachi",
+   "last_name": "Durant",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.0
+   "year": 2,
+   "jersey": 17,
+   "rating": 5.4
   },
   {
-   "first_name": "Darrius",
-   "last_name": "Clemons",
+   "first_name": "Jesse",
+   "last_name": "Legree",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.0
+   "year": 3,
+   "jersey": 12,
+   "rating": 5.7
   },
   {
-   "first_name": "Bryce",
-   "last_name": "Caufield",
+   "first_name": "Decorion",
+   "last_name": "Temple",
    "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 8,
    "rating": 6.0
+  },
+  {
+   "first_name": "Josiah",
+   "last_name": "Timoteo",
+   "position": "OL",
+   "year": 3,
+   "jersey": 71,
+   "rating": 5.7
   },
   {
    "first_name": "Van",
    "last_name": "Wells",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.0
+   "year": 5,
+   "jersey": 55,
+   "rating": 6.3
   },
   {
-   "first_name": "JT",
-   "last_name": "Hand",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.0
-  },
-  {
-   "first_name": "Tahjae",
-   "last_name": "Mullix",
+   "first_name": "Takari",
+   "last_name": "Hickle",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 44,
    "rating": 6.0
   },
   {
-   "first_name": "Raesjon",
-   "last_name": "Davis",
+   "first_name": "Dylan",
+   "last_name": "Layne",
    "position": "LB",
    "year": 4,
-   "jersey": null,
+   "jersey": 1,
    "rating": 6.0
   },
   {
-   "first_name": "Kobe",
-   "last_name": "Singleton",
+   "first_name": "TJ",
+   "last_name": "Crandall",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 4,
    "rating": 6.0
   },
   {
-   "first_name": "Mason",
-   "last_name": "White",
+   "first_name": "Drake",
+   "last_name": "Vickers",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 36,
    "rating": 6.0
   },
   {
-   "first_name": "Tetsuta",
-   "last_name": "Tsuyumine",
+   "first_name": "Caleb",
+   "last_name": "Ojeda",
    "position": "K",
    "year": 4,
-   "jersey": null,
+   "jersey": 28,
    "rating": 5.8
   }
  ]

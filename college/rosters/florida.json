@@ -1,105 +1,104 @@
 {
  "school": "Florida",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Harrison",
-   "last_name": "Bailey",
+   "first_name": "Aaron",
+   "last_name": "Philo",
    "position": "QB",
-   "year": 5,
-   "jersey": null,
-   "rating": 7.2
-  },
-  {
-   "first_name": "Ja'Kobi",
-   "last_name": "Jackson",
-   "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.6
-  },
-  {
-   "first_name": "J.",
-   "last_name": "Michael Sturdivant",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.6
-  },
-  {
-   "first_name": "Kahleil",
-   "last_name": "Jackson",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.6
-  },
-  {
-   "first_name": "Scott",
-   "last_name": "Isacks",
-   "position": "TE",
-   "year": 3,
-   "jersey": null,
+   "year": 2,
+   "jersey": 12,
    "rating": 6.3
   },
   {
-   "first_name": "Devon",
-   "last_name": "Manuel",
-   "position": "OL",
+   "first_name": "Jadan",
+   "last_name": "Baugh",
+   "position": "RB",
+   "year": 3,
+   "jersey": 13,
+   "rating": 6.3
+  },
+  {
+   "first_name": "Dallas",
+   "last_name": "Wilson",
+   "position": "WR",
+   "year": 2,
+   "jersey": 6,
+   "rating": 6.0
+  },
+  {
+   "first_name": "Eric",
+   "last_name": "Singleton Jr.",
+   "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 2,
    "rating": 6.6
   },
   {
-   "first_name": "Austin",
-   "last_name": "Barber",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.6
+   "first_name": "Amir",
+   "last_name": "Jackson",
+   "position": "TE",
+   "year": 2,
+   "jersey": 7,
+   "rating": 6.0
   },
   {
-   "first_name": "Brien",
-   "last_name": "Taylor Jr.",
+   "first_name": "Bryce",
+   "last_name": "Lovett",
+   "position": "OL",
+   "year": 3,
+   "jersey": 53,
+   "rating": 6.3
+  },
+  {
+   "first_name": "Harrison",
+   "last_name": "Moore",
+   "position": "OL",
+   "year": 3,
+   "jersey": 52,
+   "rating": 6.3
+  },
+  {
+   "first_name": "Kamran",
+   "last_name": "James",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 24,
    "rating": 6.6
   },
   {
-   "first_name": "Grayson",
-   "last_name": "Howard",
+   "first_name": "Jayden",
+   "last_name": "Woods",
    "position": "LB",
+   "year": 2,
+   "jersey": 0,
+   "rating": 6.0
+  },
+  {
+   "first_name": "Cormani",
+   "last_name": "McClain",
+   "position": "DB",
    "year": 3,
-   "jersey": null,
+   "jersey": 25,
    "rating": 6.3
   },
   {
-   "first_name": "Micheal",
-   "last_name": "Caraway Jr.",
+   "first_name": "Bryce",
+   "last_name": "Thornton",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 1,
    "rating": 6.6
   },
   {
-   "first_name": "Devin",
-   "last_name": "Moore",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.6
-  },
-  {
-   "first_name": "Trey",
-   "last_name": "Smack",
+   "first_name": "Patrick",
+   "last_name": "Durkin",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.4
+   "year": 2,
+   "jersey": 91,
+   "rating": 5.8
   }
  ]
 }

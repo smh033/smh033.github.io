@@ -1,105 +1,104 @@
 {
  "school": "Oregon",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Dante",
-   "last_name": "Moore",
+   "first_name": "Dylan",
+   "last_name": "Raiola",
    "position": "QB",
-   "year": 2,
-   "jersey": null,
-   "rating": 7.0
+   "year": 3,
+   "jersey": 8,
+   "rating": 7.3
   },
   {
-   "first_name": "Noah",
-   "last_name": "Whittington",
+   "first_name": "Jordon",
+   "last_name": "Davison",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
+   "year": 2,
+   "jersey": 0,
+   "rating": 6.7
   },
   {
-   "first_name": "Gary",
-   "last_name": "Bryant Jr.",
+   "first_name": "Dakorien",
+   "last_name": "Moore",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
+   "year": 2,
+   "jersey": 1,
+   "rating": 6.7
   },
   {
-   "first_name": "Malik",
-   "last_name": "Benson",
+   "first_name": "Messiah",
+   "last_name": "Hampton",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
+   "year": 3,
+   "jersey": 15,
+   "rating": 7.0
   },
   {
-   "first_name": "Kenyon",
-   "last_name": "Sadiq",
+   "first_name": "Jamari",
+   "last_name": "Johnson",
    "position": "TE",
-   "year": 3,
-   "jersey": null,
-   "rating": 7.0
+   "year": 2,
+   "jersey": 9,
+   "rating": 6.7
   },
   {
-   "first_name": "Charlie",
-   "last_name": "Pickard",
+   "first_name": "Ziyare",
+   "last_name": "Addison",
+   "position": "OL",
+   "year": 2,
+   "jersey": 58,
+   "rating": 6.7
+  },
+  {
+   "first_name": "Iapani",
+   "last_name": "Laloulu",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 72,
    "rating": 7.3
   },
   {
-   "first_name": "Alex",
-   "last_name": "Harkey",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
-  },
-  {
-   "first_name": "Bear",
-   "last_name": "Alexander",
+   "first_name": "Matayo",
+   "last_name": "Uiagalelei",
    "position": "DL",
-   "year": 3,
-   "jersey": null,
-   "rating": 7.0
+   "year": 4,
+   "jersey": 10,
+   "rating": 7.3
   },
   {
-   "first_name": "Bryce",
-   "last_name": "Boettcher",
+   "first_name": "Teitum",
+   "last_name": "Tuioti",
    "position": "LB",
    "year": 4,
-   "jersey": null,
+   "jersey": 44,
    "rating": 7.3
   },
   {
-   "first_name": "Theran",
-   "last_name": "Johnson",
+   "first_name": "Ify",
+   "last_name": "Obidegwu",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
+   "year": 2,
+   "jersey": 7,
+   "rating": 6.7
   },
   {
-   "first_name": "Jadon",
-   "last_name": "Canady",
+   "first_name": "Peyton",
+   "last_name": "Woodyard",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
+   "year": 3,
+   "jersey": 12,
+   "rating": 7.0
   },
   {
-   "first_name": "Atticus",
-   "last_name": "Sappington",
+   "first_name": "Gage",
+   "last_name": "Hurych",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.1
+   "year": 2,
+   "jersey": 97,
+   "rating": 6.5
   }
  ]
 }

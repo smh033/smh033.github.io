@@ -1,105 +1,104 @@
 {
  "school": "Texas Tech",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Behren",
-   "last_name": "Morton",
+   "first_name": "Will",
+   "last_name": "Hammond",
    "position": "QB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
-  },
-  {
-   "first_name": "Loic",
-   "last_name": "Tshibangu",
-   "position": "RB",
-   "year": 3,
-   "jersey": null,
+   "year": 2,
+   "jersey": 15,
    "rating": 6.4
   },
   {
-   "first_name": "Reggie",
-   "last_name": "Virgil",
+   "first_name": "Cameron",
+   "last_name": "Dickey",
+   "position": "RB",
+   "year": 3,
+   "jersey": 8,
+   "rating": 6.4
+  },
+  {
+   "first_name": "Kenny",
+   "last_name": "Johnson",
    "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 2,
    "rating": 6.7
   },
   {
-   "first_name": "Caleb",
-   "last_name": "Douglas",
+   "first_name": "Micah",
+   "last_name": "Hudson",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
+   "year": 3,
+   "jersey": 1,
+   "rating": 6.4
   },
   {
-   "first_name": "Johncarlos",
-   "last_name": "Miller II",
+   "first_name": "Terrance",
+   "last_name": "Carter Jr.",
    "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 7,
    "rating": 6.7
   },
   {
-   "first_name": "Davion",
-   "last_name": "Carter",
+   "first_name": "Howard",
+   "last_name": "Sampson",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 79,
    "rating": 6.7
   },
   {
-   "first_name": "Hunter",
-   "last_name": "Zambrano",
+   "first_name": "Sheridan",
+   "last_name": "Wilson",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 72,
    "rating": 6.7
   },
   {
-   "first_name": "Skyler",
-   "last_name": "Gill-Howard",
+   "first_name": "Trey",
+   "last_name": "White",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 2,
    "rating": 6.7
   },
   {
-   "first_name": "Bryce",
-   "last_name": "Ramirez",
+   "first_name": "Austin",
+   "last_name": "Romaine",
    "position": "LB",
    "year": 4,
-   "jersey": null,
+   "jersey": 15,
    "rating": 6.7
   },
   {
-   "first_name": "A.J.",
-   "last_name": "McCarty",
+   "first_name": "Brice",
+   "last_name": "Pollock",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 14,
    "rating": 6.7
   },
   {
-   "first_name": "Cole",
-   "last_name": "Wisniewski",
+   "first_name": "Peyton",
+   "last_name": "Morgan",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
+   "year": 2,
+   "jersey": 3,
+   "rating": 6.1
   },
   {
-   "first_name": "Upton",
-   "last_name": "Bellenfant",
+   "first_name": "Stone",
+   "last_name": "Harrington",
    "position": "K",
-   "year": 3,
-   "jersey": null,
-   "rating": 6.2
+   "year": 4,
+   "jersey": 48,
+   "rating": 6.5
   }
  ]
 }

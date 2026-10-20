@@ -1,105 +1,104 @@
 {
  "school": "Penn State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Starting lineup provided by repo owner",
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
  "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Drew",
-   "last_name": "Allar",
+   "first_name": "Rocco",
+   "last_name": "Becht",
    "position": "QB",
-   "year": 3,
-   "jersey": 15,
+   "year": 4,
+   "jersey": 3,
+   "rating": 7.4
+  },
+  {
+   "first_name": "Carson",
+   "last_name": "Hansen",
+   "position": "RB",
+   "year": 4,
+   "jersey": 21,
    "rating": 7.1
   },
   {
-   "first_name": "Nicholas",
-   "last_name": "Singleton",
-   "position": "RB",
+   "first_name": "Chase",
+   "last_name": "Sowell",
+   "position": "WR",
+   "year": 4,
+   "jersey": 0,
+   "rating": 7.1
+  },
+  {
+   "first_name": "Brett",
+   "last_name": "Eskildsen",
+   "position": "WR",
    "year": 3,
-   "jersey": 10,
+   "jersey": 4,
    "rating": 6.8
   },
   {
-   "first_name": "Trebor",
-   "last_name": "Peña",
-   "position": "WR",
+   "first_name": "Andrew",
+   "last_name": "Rappleyea",
+   "position": "TE",
    "year": 3,
-   "jersey": 8,
+   "jersey": 87,
    "rating": 6.8
   },
   {
-   "first_name": "Devonte",
-   "last_name": "Ross",
-   "position": "WR",
+   "first_name": "Malachi",
+   "last_name": "Goodman",
+   "position": "OL",
+   "year": 3,
+   "jersey": 78,
+   "rating": 6.8
+  },
+  {
+   "first_name": "Brock",
+   "last_name": "Riker",
+   "position": "OL",
+   "year": 2,
+   "jersey": 51,
+   "rating": 6.5
+  },
+  {
+   "first_name": "Ikenna",
+   "last_name": "Ezeogu",
+   "position": "DL",
+   "year": 4,
+   "jersey": 1,
+   "rating": 7.1
+  },
+  {
+   "first_name": "Tony",
+   "last_name": "Rojas",
+   "position": "LB",
+   "year": 3,
+   "jersey": 13,
+   "rating": 6.8
+  },
+  {
+   "first_name": "Daryus",
+   "last_name": "Dixson",
+   "position": "DB",
    "year": 3,
    "jersey": 5,
    "rating": 6.8
   },
   {
-   "first_name": "Luke",
-   "last_name": "Reynolds",
-   "position": "TE",
-   "year": 3,
-   "jersey": 85,
-   "rating": 6.8
-  },
-  {
-   "first_name": "Olaivavega",
-   "last_name": "Ioane",
-   "position": "OL",
-   "year": 3,
-   "jersey": 71,
-   "rating": 6.8
-  },
-  {
-   "first_name": "Anthony",
-   "last_name": "Donkoh",
-   "position": "OL",
-   "year": 3,
-   "jersey": 68,
-   "rating": 6.8
-  },
-  {
-   "first_name": "Dani",
-   "last_name": "Dennis-Sutton",
-   "position": "DL",
-   "year": 3,
-   "jersey": 33,
-   "rating": 6.8
-  },
-  {
-   "first_name": "Dominic",
-   "last_name": "DeLuca",
-   "position": "LB",
-   "year": 3,
-   "jersey": 0,
-   "rating": 6.8
-  },
-  {
-   "first_name": "Zakee",
-   "last_name": "Wheatley",
+   "first_name": "Jeremiah",
+   "last_name": "Cooper",
    "position": "DB",
-   "year": 3,
-   "jersey": 6,
-   "rating": 6.8
-  },
-  {
-   "first_name": "Zion",
-   "last_name": "Tracy",
-   "position": "DB",
-   "year": 3,
-   "jersey": 7,
-   "rating": 6.8
+   "year": 5,
+   "jersey": 4,
+   "rating": 7.4
   },
   {
    "first_name": "Ryan",
    "last_name": "Barker",
    "position": "K",
-   "year": 3,
+   "year": 2,
    "jersey": 94,
-   "rating": 6.6
+   "rating": 6.3
   }
  ]
 }

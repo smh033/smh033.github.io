@@ -1,104 +1,103 @@
 {
  "school": "Georgia State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "TJ",
-   "last_name": "Finley",
+   "first_name": "Cameran",
+   "last_name": "Brown",
    "position": "QB",
    "year": 4,
-   "jersey": null,
+   "jersey": 8,
    "rating": 5.8
   },
   {
-   "first_name": "Jordon",
-   "last_name": "Simmons",
+   "first_name": "Dennis",
+   "last_name": "Murray Jr.",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 2,
+   "jersey": 0,
+   "rating": 4.9
   },
   {
-   "first_name": "Ted",
-   "last_name": "Hurst",
+   "first_name": "Derrick",
+   "last_name": "Avery Jr.",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 2,
+   "jersey": 13,
+   "rating": 4.9
   },
   {
-   "first_name": "Leo",
-   "last_name": "Blackburn",
+   "first_name": "Rodshaun",
+   "last_name": "Dorsey",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 3,
+   "jersey": 83,
+   "rating": 5.2
   },
   {
-   "first_name": "Camden",
-   "last_name": "Overton-Howard",
+   "first_name": "Avion",
+   "last_name": "McBride",
    "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 81,
    "rating": 5.5
   },
   {
-   "first_name": "Derrell",
-   "last_name": "Bailey Jr.",
+   "first_name": "Aidan",
+   "last_name": "Andrews",
+   "position": "OL",
+   "year": 2,
+   "jersey": 71,
+   "rating": 4.9
+  },
+  {
+   "first_name": "Tyhler",
+   "last_name": "Williams",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 54,
    "rating": 5.5
   },
   {
-   "first_name": "Mason",
-   "last_name": "Cook",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
-  },
-  {
-   "first_name": "Dorian",
-   "last_name": "Royal",
+   "first_name": "Jabriel",
+   "last_name": "Rhodes Nelson",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 1,
    "rating": 5.5
   },
   {
-   "first_name": "Marlin",
-   "last_name": "Dean",
+   "first_name": "Kelan",
+   "last_name": "Butler",
    "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 2,
+   "jersey": 45,
+   "rating": 4.9
   },
   {
-   "first_name": "Jordan",
-   "last_name": "Huff",
+   "first_name": "Toby",
+   "last_name": "Bolton",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 11,
    "rating": 5.5
   },
   {
-   "first_name": "Isaiah",
-   "last_name": "Dunson",
+   "first_name": "Deuce",
+   "last_name": "Lee",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 8,
    "rating": 5.5
   },
   {
-   "first_name": "Braeden",
-   "last_name": "McAlister",
+   "first_name": "Samer",
+   "last_name": "Layous",
    "position": "K",
    "year": 3,
-   "jersey": null,
+   "jersey": 39,
    "rating": 5.0
   }
  ]

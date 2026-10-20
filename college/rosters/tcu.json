@@ -1,104 +1,103 @@
 {
  "school": "TCU",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Ken",
-   "last_name": "Seals",
+   "first_name": "Jaden",
+   "last_name": "Craig",
    "position": "QB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
+   "year": 5,
+   "jersey": 1,
+   "rating": 7.3
   },
   {
-   "first_name": "Kevorian",
-   "last_name": "Barnes",
+   "first_name": "Jeremy",
+   "last_name": "Payne",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
-  },
-  {
-   "first_name": "Eric",
-   "last_name": "McAlister",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
-  },
-  {
-   "first_name": "Joseph",
-   "last_name": "Manjack IV",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
-  },
-  {
-   "first_name": "DJ",
-   "last_name": "Rogers",
-   "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
-  },
-  {
-   "first_name": "Coltin",
-   "last_name": "Deery",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
-  },
-  {
-   "first_name": "Remington",
-   "last_name": "Strickland",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
-  },
-  {
-   "first_name": "Kelten",
-   "last_name": "Mickell",
-   "position": "DL",
    "year": 3,
-   "jersey": null,
+   "jersey": 26,
    "rating": 6.4
   },
   {
-   "first_name": "Kaleb",
-   "last_name": "Elarms-Orr",
+   "first_name": "Jeremy",
+   "last_name": "Scott",
+   "position": "WR",
+   "year": 2,
+   "jersey": 6,
+   "rating": 6.1
+  },
+  {
+   "first_name": "Jordan",
+   "last_name": "Dwyer",
+   "position": "WR",
+   "year": 4,
+   "jersey": 7,
+   "rating": 6.7
+  },
+  {
+   "first_name": "Kamorreun",
+   "last_name": "Pimpton",
+   "position": "TE",
+   "year": 4,
+   "jersey": 88,
+   "rating": 6.7
+  },
+  {
+   "first_name": "Ben",
+   "last_name": "Taylor-Whitfield",
+   "position": "OL",
+   "year": 4,
+   "jersey": 56,
+   "rating": 6.7
+  },
+  {
+   "first_name": "Jaheim",
+   "last_name": "Buchanon",
+   "position": "OL",
+   "year": 3,
+   "jersey": 59,
+   "rating": 6.4
+  },
+  {
+   "first_name": "Paul",
+   "last_name": "Oyewale",
+   "position": "DL",
+   "year": 4,
+   "jersey": 97,
+   "rating": 6.7
+  },
+  {
+   "first_name": "Max",
+   "last_name": "Carroll",
    "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
+   "year": 3,
+   "jersey": 3,
+   "rating": 6.4
   },
   {
-   "first_name": "Austin",
-   "last_name": "Jordan",
+   "first_name": "Vernon",
+   "last_name": "Glover Jr.",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
+   "year": 3,
+   "jersey": 1,
+   "rating": 6.4
   },
   {
-   "first_name": "Channing",
-   "last_name": "Canada",
+   "first_name": "Jordan",
+   "last_name": "Lester",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.7
+   "year": 3,
+   "jersey": 22,
+   "rating": 6.4
   },
   {
-   "first_name": "Caleb",
-   "last_name": "Sempebwa",
+   "first_name": "Kyle",
+   "last_name": "Lemmermann",
    "position": "K",
    "year": 3,
-   "jersey": null,
+   "jersey": 34,
    "rating": 6.2
   }
  ]

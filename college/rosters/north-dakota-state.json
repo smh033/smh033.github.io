@@ -1,105 +1,104 @@
 {
  "school": "North Dakota State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Cole",
-   "last_name": "Payton",
+   "first_name": "Nathan",
+   "last_name": "Hayes",
    "position": "QB",
    "year": 4,
-   "jersey": null,
+   "jersey": 2,
    "rating": 5.6
   },
   {
-   "first_name": "Owen",
-   "last_name": "Johnson",
+   "first_name": "DJ",
+   "last_name": "Scott",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
-  },
-  {
-   "first_name": "RaJa",
-   "last_name": "Nelson",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
-  },
-  {
-   "first_name": "Bryce",
-   "last_name": "Lance",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
-  },
-  {
-   "first_name": "Carson",
-   "last_name": "Williams",
-   "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
-  },
-  {
-   "first_name": "Trent",
-   "last_name": "Fraley",
-   "position": "OL",
    "year": 3,
-   "jersey": null,
+   "jersey": 7,
    "rating": 5.0
+  },
+  {
+   "first_name": "Mekhi",
+   "last_name": "Collins",
+   "position": "WR",
+   "year": 4,
+   "jersey": 15,
+   "rating": 5.3
+  },
+  {
+   "first_name": "Isiah",
+   "last_name": "St. Romain",
+   "position": "WR",
+   "year": 2,
+   "jersey": 17,
+   "rating": 4.7
   },
   {
    "first_name": "Kaden",
-   "last_name": "Chadwick",
-   "position": "OL",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.0
+   "last_name": "Zenzen",
+   "position": "TE",
+   "year": 4,
+   "jersey": 40,
+   "rating": 5.3
   },
   {
-   "first_name": "Jaxon",
-   "last_name": "Duttenhefer",
+   "first_name": "Ryan",
+   "last_name": "Babatz",
+   "position": "OL",
+   "year": 2,
+   "jersey": 76,
+   "rating": 4.7
+  },
+  {
+   "first_name": "Gage",
+   "last_name": "Schmidt",
+   "position": "OL",
+   "year": 2,
+   "jersey": 61,
+   "rating": 4.7
+  },
+  {
+   "first_name": "Kelton",
+   "last_name": "McCaslin",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 9,
    "rating": 5.3
   },
   {
-   "first_name": "Logan",
-   "last_name": "Kopp",
+   "first_name": "Gavin",
+   "last_name": "Sell",
    "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
+   "year": 2,
+   "jersey": 3,
+   "rating": 4.7
   },
   {
-   "first_name": "Antoine",
-   "last_name": "Booth",
+   "first_name": "Marion",
+   "last_name": "Moore",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
+   "year": 2,
+   "jersey": 16,
+   "rating": 4.7
   },
   {
-   "first_name": "Anthony",
-   "last_name": "Chideme-Alfaro",
+   "first_name": "Darius",
+   "last_name": "Givance",
    "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 29,
    "rating": 5.3
   },
   {
    "first_name": "Drew",
    "last_name": "Klein",
    "position": "K",
-   "year": 3,
-   "jersey": null,
-   "rating": 4.8
+   "year": 4,
+   "jersey": 37,
+   "rating": 5.1
   }
  ]
 }

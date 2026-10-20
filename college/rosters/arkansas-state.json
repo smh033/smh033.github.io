@@ -1,105 +1,104 @@
 {
  "school": "Arkansas State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Jaylen",
-   "last_name": "Raynor",
+   "first_name": "Trey",
+   "last_name": "Owens",
    "position": "QB",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Ja'Quez",
-   "last_name": "Cross",
-   "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Nana",
-   "last_name": "Burris",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Corey",
-   "last_name": "Rucker",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
-  },
-  {
-   "first_name": "Tyler",
-   "last_name": "Fortenberry",
-   "position": "TE",
-   "year": 3,
-   "jersey": null,
+   "year": 2,
+   "jersey": 9,
    "rating": 5.4
   },
   {
-   "first_name": "Noah",
-   "last_name": "Smith",
-   "position": "OL",
+   "first_name": "Kenyon",
+   "last_name": "Clay",
+   "position": "RB",
    "year": 4,
-   "jersey": null,
+   "jersey": 5,
    "rating": 5.7
   },
   {
-   "first_name": "Chace",
-   "last_name": "Stratford",
-   "position": "OL",
+   "first_name": "Jaylen",
+   "last_name": "Bonelli",
+   "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 10,
    "rating": 5.7
   },
   {
-   "first_name": "Bryan",
-   "last_name": "Whitehead",
+   "first_name": "Hunter",
+   "last_name": "Summers",
+   "position": "WR",
+   "year": 3,
+   "jersey": 3,
+   "rating": 5.4
+  },
+  {
+   "first_name": "Tyler",
+   "last_name": "Little",
+   "position": "TE",
+   "year": 4,
+   "jersey": 11,
+   "rating": 5.7
+  },
+  {
+   "first_name": "Manasse",
+   "last_name": "Itete",
+   "position": "OL",
+   "year": 2,
+   "jersey": 70,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Mason",
+   "last_name": "Myers",
+   "position": "OL",
+   "year": 3,
+   "jersey": 52,
+   "rating": 5.4
+  },
+  {
+   "first_name": "TJ",
+   "last_name": "Grant",
    "position": "DL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
+   "year": 3,
+   "jersey": 20,
+   "rating": 5.4
   },
   {
-   "first_name": "Terry",
-   "last_name": "Kirksey Jr.",
+   "first_name": "Tony",
+   "last_name": "Carter",
    "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
+   "year": 2,
+   "jersey": 10,
+   "rating": 5.1
   },
   {
-   "first_name": "Trenton",
-   "last_name": "Alan Yowe",
+   "first_name": "Noah",
+   "last_name": "Flores",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
+   "year": 3,
+   "jersey": 3,
+   "rating": 5.4
   },
   {
    "first_name": "AG",
    "last_name": "McGhee",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.7
+   "year": 5,
+   "jersey": 6,
+   "rating": 6.0
   },
   {
    "first_name": "Clune",
    "last_name": "Van Andel",
    "position": "K",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.2
+   "year": 4,
+   "jersey": 34,
+   "rating": 5.5
   }
  ]
 }

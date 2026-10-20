@@ -1,105 +1,104 @@
 {
  "school": "Utah State",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Starting lineup provided by repo owner",
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
  "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Bryson",
-   "last_name": "Barnes",
+   "first_name": "Mccae",
+   "last_name": "Hillstead",
    "position": "QB",
    "year": 3,
-   "jersey": 16,
+   "jersey": 2,
    "rating": 5.7
   },
   {
-   "first_name": "Miles",
-   "last_name": "Davis",
+   "first_name": "Javen",
+   "last_name": "Jacobs",
    "position": "RB",
    "year": 3,
-   "jersey": 2,
+   "jersey": 8,
    "rating": 5.4
   },
   {
-   "first_name": "Braden",
-   "last_name": "Pegan",
+   "first_name": "Eli",
+   "last_name": "Wood",
    "position": "WR",
-   "year": 3,
-   "jersey": 11,
-   "rating": 5.4
+   "year": 5,
+   "jersey": 7,
+   "rating": 6.0
   },
   {
-   "first_name": "Brady",
-   "last_name": "Boyd",
+   "first_name": "Anthony",
+   "last_name": "Garcia",
    "position": "WR",
-   "year": 3,
-   "jersey": 5,
-   "rating": 5.4
+   "year": 2,
+   "jersey": 1,
+   "rating": 5.1
   },
   {
-   "first_name": "Broc",
-   "last_name": "Lane",
+   "first_name": "Collin",
+   "last_name": "Remenowsky",
    "position": "TE",
-   "year": 3,
-   "jersey": 87,
-   "rating": 5.4
+   "year": 4,
+   "jersey": 11,
+   "rating": 5.7
   },
   {
-   "first_name": "Jake",
-   "last_name": "Eichorn",
+   "first_name": "Kleyone",
+   "last_name": "Iosua",
    "position": "OL",
    "year": 3,
-   "jersey": 56,
+   "jersey": 96,
    "rating": 5.4
   },
   {
-   "first_name": "Trey",
-   "last_name": "Andersen",
+   "first_name": "Jimmy",
+   "last_name": "Liston",
    "position": "OL",
    "year": 3,
-   "jersey": 57,
+   "jersey": 52,
    "rating": 5.4
   },
   {
-   "first_name": "Tyree",
-   "last_name": "Morris",
+   "first_name": "Tevita",
+   "last_name": "Tuha",
    "position": "DL",
    "year": 3,
-   "jersey": 9,
+   "jersey": 55,
    "rating": 5.4
   },
   {
-   "first_name": "John",
-   "last_name": "Miller",
+   "first_name": "James",
+   "last_name": "Jennette",
    "position": "LB",
-   "year": 3,
-   "jersey": 20,
-   "rating": 5.4
-  },
-  {
-   "first_name": "Ike",
-   "last_name": "Larsen",
-   "position": "DB",
-   "year": 3,
+   "year": 5,
    "jersey": 18,
-   "rating": 5.4
+   "rating": 6.0
   },
   {
-   "first_name": "Noah",
-   "last_name": "Avinger",
+   "first_name": "Markie",
+   "last_name": "Grant",
+   "position": "DB",
+   "year": 2,
+   "jersey": 5,
+   "rating": 5.1
+  },
+  {
+   "first_name": "Brevin",
+   "last_name": "Hamblin",
    "position": "DB",
    "year": 3,
-   "jersey": 1,
+   "jersey": 4,
    "rating": 5.4
   },
   {
-   "first_name": "Carter",
-   "last_name": "Brown",
+   "first_name": "Kian",
+   "last_name": "Afrookhteh",
    "position": "K",
-   "year": 3,
-   "jersey": 21,
-   "rating": 5.2
+   "year": 4,
+   "jersey": 19,
+   "rating": 5.5
   }
  ]
 }

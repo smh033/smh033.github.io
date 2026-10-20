@@ -1,105 +1,104 @@
 {
  "school": "Rutgers",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Athan",
-   "last_name": "Kaliakmanis",
+   "first_name": "AJ",
+   "last_name": "Surace",
    "position": "QB",
+   "year": 3,
+   "jersey": 10,
+   "rating": 6.3
+  },
+  {
+   "first_name": "Antwan",
+   "last_name": "Raymond",
+   "position": "RB",
+   "year": 3,
+   "jersey": 3,
+   "rating": 6.0
+  },
+  {
+   "first_name": "Ben",
+   "last_name": "Black III",
+   "position": "WR",
+   "year": 3,
+   "jersey": 2,
+   "rating": 6.0
+  },
+  {
+   "first_name": "KJ",
+   "last_name": "Duff",
+   "position": "WR",
+   "year": 3,
+   "jersey": 8,
+   "rating": 6.0
+  },
+  {
+   "first_name": "Logan",
+   "last_name": "Blake",
+   "position": "TE",
    "year": 4,
-   "jersey": null,
+   "jersey": 11,
+   "rating": 6.3
+  },
+  {
+   "first_name": "Tyler",
+   "last_name": "Needham",
+   "position": "OL",
+   "year": 5,
+   "jersey": 56,
    "rating": 6.6
   },
   {
-   "first_name": "Samuel",
-   "last_name": "Brown V",
-   "position": "RB",
+   "first_name": "Terrence",
+   "last_name": "Salami",
+   "position": "OL",
+   "year": 5,
+   "jersey": 73,
+   "rating": 6.6
+  },
+  {
+   "first_name": "Sekou",
+   "last_name": "Kromah",
+   "position": "DL",
+   "year": 5,
+   "jersey": 8,
+   "rating": 6.6
+  },
+  {
+   "first_name": "Sean",
+   "last_name": "Allison",
+   "position": "LB",
+   "year": 5,
+   "jersey": 41,
+   "rating": 6.6
+  },
+  {
+   "first_name": "Bradlee",
+   "last_name": "Jones",
+   "position": "DB",
    "year": 4,
-   "jersey": null,
+   "jersey": 5,
    "rating": 6.3
   },
   {
-   "first_name": "Dino",
-   "last_name": "Kaliakmanis",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
+   "first_name": "Latrell",
+   "last_name": "Noel",
+   "position": "DB",
+   "year": 2,
+   "jersey": 3,
+   "rating": 5.7
   },
   {
    "first_name": "Dane",
-   "last_name": "Pardridge",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Kenny",
-   "last_name": "Fletcher Jr.",
-   "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Kwabena",
-   "last_name": "Asamoah",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Justin",
-   "last_name": "Cesaire",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "DJ",
-   "last_name": "Allen",
-   "position": "DL",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Austin",
-   "last_name": "Dean",
-   "position": "LB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Jett",
-   "last_name": "Elad",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Jacobie",
-   "last_name": "Henderson",
-   "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.3
-  },
-  {
-   "first_name": "Jai",
-   "last_name": "Patel",
+   "last_name": "Pizzaro",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.1
+   "year": 3,
+   "jersey": 29,
+   "rating": 5.8
   }
  ]
 }

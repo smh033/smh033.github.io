@@ -1,105 +1,104 @@
 {
  "school": "Miami",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Carson",
-   "last_name": "Beck",
+   "first_name": "Darian",
+   "last_name": "Mensah",
    "position": "QB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.3
+   "year": 3,
+   "jersey": 10,
+   "rating": 7.0
   },
   {
    "first_name": "Mark",
    "last_name": "Fletcher Jr.",
    "position": "RB",
+   "year": 4,
+   "jersey": 4,
+   "rating": 7.0
+  },
+  {
+   "first_name": "Vandrevius",
+   "last_name": "Jacobs",
+   "position": "WR",
    "year": 3,
-   "jersey": null,
+   "jersey": 8,
    "rating": 6.7
   },
   {
-   "first_name": "Keelan",
-   "last_name": "Marion",
+   "first_name": "Cooper",
+   "last_name": "Barkate",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
+   "year": 5,
+   "jersey": 18,
+   "rating": 7.3
   },
   {
-   "first_name": "CJ",
-   "last_name": "Daniels",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
-  },
-  {
-   "first_name": "Alex",
-   "last_name": "Bauman",
+   "first_name": "Elija",
+   "last_name": "Lofton",
    "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
+   "year": 3,
+   "jersey": 9,
+   "rating": 6.7
   },
   {
-   "first_name": "James",
-   "last_name": "Brockermeyer",
+   "first_name": "Samson",
+   "last_name": "Okunlola",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
+   "year": 3,
+   "jersey": 63,
+   "rating": 6.7
   },
   {
-   "first_name": "Markel",
-   "last_name": "Bell",
+   "first_name": "Ryan",
+   "last_name": "Rodriguez",
    "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
+   "year": 5,
+   "jersey": 76,
+   "rating": 7.3
   },
   {
-   "first_name": "Akheem",
-   "last_name": "Mesidor",
+   "first_name": "Damon",
+   "last_name": "Wilson II",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 10,
    "rating": 7.0
   },
   {
-   "first_name": "Mohamed",
-   "last_name": "Toure",
+   "first_name": "Chase",
+   "last_name": "Smith",
    "position": "LB",
-   "year": 5,
-   "jersey": null,
-   "rating": 7.3
+   "year": 2,
+   "jersey": 9,
+   "rating": 6.4
   },
   {
-   "first_name": "Briton",
-   "last_name": "Allen",
+   "first_name": "Damari",
+   "last_name": "Brown",
    "position": "DB",
-   "year": 5,
-   "jersey": null,
-   "rating": 7.3
+   "year": 3,
+   "jersey": 2,
+   "rating": 6.7
   },
   {
-   "first_name": "Keionte",
-   "last_name": "Scott",
+   "first_name": "JJ",
+   "last_name": "Dunnigan",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.0
+   "year": 3,
+   "jersey": 25,
+   "rating": 6.7
   },
   {
-   "first_name": "Carter",
-   "last_name": "Davis",
+   "first_name": "Jake",
+   "last_name": "Weinberg",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 6.8
+   "year": 2,
+   "jersey": 22,
+   "rating": 6.2
   }
  ]
 }

@@ -1,105 +1,104 @@
 {
  "school": "UTSA",
- "season": 2025,
- "athleticYear": "2025-26",
- "source": "Shah NCAA All Sports Rosters 2025-26 v2.1.1 (CC0-1.0)",
- "jerseysVerified": false,
+ "season": 2026,
+ "source": "Ourlads depth chart (first string), October 2026",
+ "jerseysVerified": true,
  "players": [
   {
    "first_name": "Owen",
    "last_name": "McCown",
    "position": "QB",
-   "year": 3,
-   "jersey": null,
-   "rating": 5.5
+   "year": 4,
+   "jersey": 2,
+   "rating": 5.8
   },
   {
-   "first_name": "Robert",
-   "last_name": "Henry Jr.",
+   "first_name": "Will",
+   "last_name": "Henderson III",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 2,
+   "jersey": 1,
+   "rating": 4.9
   },
   {
-   "first_name": "Jaren",
-   "last_name": "Randle",
+   "first_name": "AJ",
+   "last_name": "Wilson",
    "position": "WR",
    "year": 4,
-   "jersey": null,
+   "jersey": 84,
    "rating": 5.5
   },
   {
-   "first_name": "Willie",
-   "last_name": "McCoy III",
+   "first_name": "Mekhi",
+   "last_name": "Anderson",
    "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 2,
+   "jersey": 14,
+   "rating": 4.9
   },
   {
-   "first_name": "Dan",
-   "last_name": "Dishman",
+   "first_name": "Isaiah",
+   "last_name": "Butler-Tanner",
    "position": "TE",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 2,
+   "jersey": 86,
+   "rating": 4.9
   },
   {
-   "first_name": "Cory",
-   "last_name": "Godinet",
+   "first_name": "Amarion",
+   "last_name": "Breland",
+   "position": "OL",
+   "year": 2,
+   "jersey": 73,
+   "rating": 4.9
+  },
+  {
+   "first_name": "Luke",
+   "last_name": "Lapeze",
    "position": "OL",
    "year": 4,
-   "jersey": null,
+   "jersey": 76,
    "rating": 5.5
   },
   {
-   "first_name": "Kamar",
-   "last_name": "Missouri",
-   "position": "OL",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
-  },
-  {
-   "first_name": "Jon",
-   "last_name": "Jones",
+   "first_name": "Tai",
+   "last_name": "Leonard",
    "position": "DL",
    "year": 4,
-   "jersey": null,
+   "jersey": 99,
    "rating": 5.5
   },
   {
-   "first_name": "Shad",
-   "last_name": "Banks Jr.",
+   "first_name": "Camron",
+   "last_name": "Cooper",
    "position": "LB",
    "year": 4,
-   "jersey": null,
+   "jersey": 1,
    "rating": 5.5
   },
   {
-   "first_name": "Jermarius",
-   "last_name": "Lewis",
+   "first_name": "Asaad",
+   "last_name": "Chapman",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 3,
+   "jersey": 17,
+   "rating": 5.2
   },
   {
-   "first_name": "Tyan",
-   "last_name": "Milton",
+   "first_name": "Cameron",
+   "last_name": "Upshaw Jr.",
    "position": "DB",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.5
+   "year": 3,
+   "jersey": 11,
+   "rating": 5.2
   },
   {
-   "first_name": "Jaffer",
-   "last_name": "Murphy",
+   "first_name": "Michael",
+   "last_name": "Petro",
    "position": "K",
-   "year": 4,
-   "jersey": null,
-   "rating": 5.3
+   "year": 3,
+   "jersey": 92,
+   "rating": 5.0
   }
  ]
 }
