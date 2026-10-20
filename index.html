@@ -4877,7 +4877,7 @@ const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:''
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
  buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100;
+const NET_DELAY=100,NET_VER=4;   /* bump whenever the messages change: both players must run the same version */
 /* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
 const netDelay=()=>clamp(NET.iv*1.15+NET.jit*2.5,45,320);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
@@ -4905,7 +4905,7 @@ function netWire(c){
  const isCand=()=>NET.role==='host'&&(NET.cands||[]).includes(c);
  c.on('open',()=>{if(c!==NET.conn&&!isCand())return;
   if(NET.role==='host'){if(isCand())return;NET.connOpen=true;NET.on=true;NET.stage='lobby';NET.lastRx=performance.now();netLobbySend();}
-  else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok});}}
+  else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER});}}
   sfx('first');if(UI.scr==='online')render();});
  c.on('data',m=>{try{
   if(isCand()){if(m&&m.t==='rejoin'&&m.tok&&m.tok===NET.gtok){const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
@@ -5010,15 +5010,15 @@ ACT.netJoin=async()=>{const code=String(($('#netCode')||{}).value||'').trim().to
  if(!lib||NET_FORCE_RELAY){NET.mode='relay';return netGuestRelay(0);}
  netGuestPeer();const tok=NET.tok;NET.p2pT=setTimeout(()=>{if(NET.tok===tok)netToRelay();},7000);};
 /* ---------- lobby ---------- */
-function netLobbySend(){if(NET.role==='host')netSend({t:'lob',lob:NET.lob,last:NET.glast||''});}
+function netLobbySend(){if(NET.role==='host')netSend({t:'lob',lob:NET.lob,last:NET.glast||'',v:NET_VER});}
 const netMine=()=>NET.role==='host'?'h':'g',netTheirs=()=>NET.role==='host'?'g':'h';
 ACT.netTeam=d=>{const me=NET.lob[netMine()],them=NET.lob[netTheirs()],ord=H2H_ORDER();let i=ord.indexOf(me.team);do{i=(i+ +d.d+ord.length)%ord.length;}while(ord[i]===them.team);me.team=ord[i];me.uni=NET.role==='host'?0:1;netAfterPick();};
 ACT.netUni=d=>{const me=NET.lob[netMine()],n=uniformsFor(me.team).length;me.uni=((me.uni||0)+ +d.d+n)%n;netAfterPick();};
 ACT.netSet=d=>{if(NET.role!=='host')return;const v=isNaN(+d.v)?d.v:+d.v;NET.lob[d.k]=v;netAfterPick();};
-function netAfterPick(){if(NET.role==='host')netLobbySend();else netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok});render();}
+function netAfterPick(){if(NET.role==='host')netLobbySend();else netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER});render();}
 SCR.online=()=>{cfbSync(null);const s=NET;
  const head=`<div class="row" style="width:100%"><button class="bt ico" data-a="netBack">${ICON.back}</button><div class="grow">${ttl('ONLINE')}</div><div style="width:32px"></div></div>`;
- const err=s.err?`<div class="rdt" style="max-width:520px;text-align:center;line-height:1.8">${esc(s.err)}</div>`:'';
+ const err=s.err?`<div class="rdt" style="max-width:520px;text-align:center;line-height:1.8">${esc(s.err)}</div>${/YOU HAVE AN OLD VERSION/.test(s.err)?'<button class="bt y" data-a="netReload">RELOAD</button>':''}`:'';
  if(s.stage==='menu')return`<div class="screen" style="align-items:center;gap:14px">${head}
   <div class="col" style="align-items:center;gap:12px;margin-top:10px">
    <button class="bt y big" style="width:260px" data-a="netHost">HOST A GAME</button>
@@ -5052,7 +5052,7 @@ SCR.online=()=>{cfbSync(null);const s=NET;
  <div class="row" style="width:100%"><div class="sp"></div>${host?'<button class="bt y" style="width:160px;padding:8px 0 7px" data-a="netGo">PLAY &gt;</button>':'<span class="s7 yl blink">WAITING FOR THE HOST TO START</span>'}</div></div>`;};
 function teamRatings0(t){try{return L&&L.teams&&L.players?teamRatings(t):null;}catch(e){return null;}}
 /* ---------- start ---------- */
-ACT.netGo=async()=>{if(NET.role!=='host'||!NET.connOpen)return;const o=NET.lob;
+ACT.netGo=async()=>{if(NET.role!=='host'||!NET.connOpen)return;if(NET.oldV){render();return;}const o=NET.lob;
  const s={you:o.h.team,opp:o.g.team,uU:o.h.uni||0,uO:o.g.uni||0,rm:o.rm,diff:1,mode:'both',qlen:o.qlen,home:o.home==='h',arc:null};
  if(s.rm==='NFL'&&!H2H_NFL){try{H2H_NFL=await loadNFLRosterData();}catch(e){s.rm='CUSTOM';}}
  const g=h2hBuild(s);L.net=true;L.settings.play='both';L.settings.replay=false;L.settings.arc=null;
@@ -5123,7 +5123,7 @@ function netDefReturn(kind,landX,landY){M.ov=null;M.def=true;syncDir();M.aiQB=nu
 function netHostMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'YOUR FRIEND LEFT THE GAME':'YOUR FRIEND LEFT');return;}
  if(m.t==='hb'){NET.rtt=m.rtt||0;netSend({t:'hbr',ts:m.ts});return;}
- if(m.t==='pick'){if(!NET.lob)return;if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(UI.scr==='online')render();return;}
+ if(m.t==='pick'){if(!NET.lob)return;NET.oldV=m.v!==NET_VER?(m.v||1):0;if(NET.oldV){NET.err=m.v>NET_VER?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':'YOUR FRIEND HAS AN OLD VERSION OF THE GAME. THEY NEED TO CLOSE THE TAB AND OPEN THE GAME AGAIN.';}else if(/VERSION/.test(NET.err))NET.err='';if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(UI.scr==='online')render();return;}
  if(!netHost())return;
  if(m.t==='ans'){if(M.ov&&M.ov.net&&M.ov.gacts&&+m.q===M.ov.qid){const f=M.ov.gacts[+m.i];M.ov=null;if(f)f();}return;}
  const pre=M.phase==='pre'&&!M.ov,live=M.phase==='live';
@@ -5184,7 +5184,7 @@ function netSnapshot(){
 /* ---------- guest side ---------- */
 function netGuestMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'THE HOST LEFT THE GAME':'THE HOST LEFT');return;}
- if(m.t==='lob'){NET.lob=m.lob;NET.last=m.last||'';if(NET.stage!=='game'&&UI.scr==='online')render();return;}
+ if(m.t==='lob'){NET.oldV=m.v!==NET_VER?(m.v||1):0;NET.err=NET.oldV?(m.v>NET_VER||!m.v&&false?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':(m.v||1)<NET_VER?'THE HOST HAS AN OLD VERSION OF THE GAME. THEY NEED TO RELOAD IT.':'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.'):(/VERSION/.test(NET.err)?'':NET.err);NET.lob=m.lob;NET.last=m.last||'';if(NET.stage!=='game'&&UI.scr==='online')render();return;}
  if(m.t==='hbr'){const r=performance.now()-m.ts;NET.rtt=NET.rtt?NET.rtt+(r-NET.rtt)*0.3:r;return;}
  if(m.t==='start'){netGuestStart(m);return;}
  if(m.t==='end'){NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
@@ -5307,6 +5307,7 @@ function netGuestHud(){
 /* host: your friend dropped out; the game is frozen until they're back */
 function netHostHud(){if(!netHost())return;if(NET.wait&&performance.now()-NET.waitT>1200)setH('gpz',`<div class="gov" style="z-index:40"><div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('FRIEND DISCONNECTED',true)}<div class="s7 yl blink" style="line-height:2">WAITING FOR ${esc(T(M.op).name.toUpperCase())} TO RECONNECT...<br>GAME CODE ${esc(NET.code)}</div><button class="bt r" data-a="netEnd">END GAME</button></div></div>`);}
 function netPingDraw(){if(!(netHost()||netGuest()))return;const r=Math.round(NET.rtt||0),col=r<120?'#7dff8a':r<250?'#ffe94a':'#ff8a8a';ctext((netRelayOn()?'RELAY':'DIRECT')+(r?' · '+r+' MS':''),6,CH-8,col,'left',6);}
+ACT.netReload=()=>{location.href=location.pathname+'?v='+Date.now();};   /* a fresh address skips the old cached copy */
 ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
