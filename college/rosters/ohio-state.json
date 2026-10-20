@@ -2,113 +2,104 @@
  "school": "Ohio State",
  "season": 2026,
  "athleticYear": "2026",
- "source": "Hand-entered 2026 players + Shah NCAA All Sports Rosters 2025-26 (CC0-1.0)",
+ "source": "Ohio State 2026 depth chart (Ourlads, updated 10/17/2026)",
  "jerseysVerified": true,
  "players": [
   {
-   "first_name": "Eli",
-   "last_name": "Brickhandler",
+   "first_name": "Julian",
+   "last_name": "Sayin",
    "position": "QB",
-   "year": 5,
-   "jersey": null,
-   "rating": 7.7
+   "year": 3,
+   "jersey": 10,
+   "rating": 8.4
   },
   {
-   "first_name": "CJ",
-   "last_name": "Donaldson",
+   "first_name": "Bo",
+   "last_name": "Jackson",
    "position": "RB",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.1
+   "year": 2,
+   "jersey": 25,
+   "rating": 6.7
   },
   {
-   "id": "osu-2026-001",
+   "first_name": "Jeremiah",
+   "last_name": "Smith",
+   "position": "WR",
+   "year": 3,
+   "jersey": 4,
+   "rating": 9.2
+  },
+  {
    "first_name": "Brandon",
    "last_name": "Inniss",
    "position": "WR",
    "year": 4,
    "jersey": 0,
-   "rating": 7.1
+   "rating": 7.3
   },
   {
-   "first_name": "Shawn",
-   "last_name": "Lodge",
-   "position": "WR",
-   "year": 4,
-   "jersey": null,
-   "rating": 7.1
-  },
-  {
-   "id": "osu-2026-059",
    "first_name": "Nate",
    "last_name": "Roberts",
    "position": "TE",
    "year": 2,
    "jersey": 83,
-   "rating": 6.5
+   "rating": 6.7
   },
   {
-   "id": "osu-2026-054",
-   "first_name": "Vasean",
-   "last_name": "Washington",
+   "first_name": "Carson",
+   "last_name": "Hinzman",
    "position": "OL",
    "year": 5,
-   "jersey": 73,
-   "rating": 7.4
+   "jersey": 75,
+   "rating": 7.6
   },
   {
-   "id": "osu-2026-052",
-   "first_name": "Austin",
-   "last_name": "Siereveld",
+   "first_name": "Luke",
+   "last_name": "Montgomery",
    "position": "OL",
    "year": 4,
-   "jersey": 67,
-   "rating": 7.1
+   "jersey": 51,
+   "rating": 7.3
   },
   {
-   "id": "osu-2026-067",
-   "first_name": "Eddrick",
-   "last_name": "Houston",
+   "first_name": "Kenyatta",
+   "last_name": "Jackson Jr.",
    "position": "DL",
-   "year": 3,
-   "jersey": 96,
-   "rating": 6.8
+   "year": 4,
+   "jersey": 2,
+   "rating": 7.3
   },
   {
-   "id": "osu-2026-009",
-   "first_name": "Riley",
-   "last_name": "Pettijohn",
+   "first_name": "Payton",
+   "last_name": "Pierce",
    "position": "LB",
-   "year": 2,
-   "jersey": 5,
-   "rating": 6.5
+   "year": 4,
+   "jersey": 26,
+   "rating": 7.3
   },
   {
-   "id": "osu-2026-014",
    "first_name": "Jermaine",
    "last_name": "Mathews Jr.",
    "position": "DB",
    "year": 4,
    "jersey": 7,
-   "rating": 7.1
+   "rating": 7.3
   },
   {
-   "id": "osu-2026-011",
    "first_name": "Devin",
    "last_name": "Sanchez",
    "position": "DB",
    "year": 2,
    "jersey": 6,
-   "rating": 6.5
+   "rating": 6.7
   },
   {
-   "id": "osu-2026-068",
    "first_name": "Connor",
    "last_name": "Hawkins",
    "position": "K",
    "year": 3,
    "jersey": 96,
-   "rating": 6.6
+   "rating": 6.8
   }
  ]
 }
