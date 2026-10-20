@@ -2817,7 +2817,7 @@ function upTrick(dt){const T0=M.trick;if(!T0)return;if(T0.fool>0)T0.fool-=dt;if(
   if(!T0.hand)pop(T0.i===1&&T0.t==='flea'?'HANDOFF':T0.i>1&&T0.t==='flea'?'FLEA FLICKER!':'PITCH!',to.x,to.y,'#ffe94a');else if(T0.t==='reverse'&&T0.i===2)pop('REVERSE!',to.x,to.y,'#ffe94a');
   if(T0.leak&&T0.i===1){const o=T0.oq;o.role='TE';o.route=[{x:clamp(o.x+3,0,119),y:clamp(o.y-T0.s*7,2,51)},{x:clamp(o.x+28,0,119),y:clamp(o.y-T0.s*15,2,51)}];o.ri=0;o.rlen=2;}
   if(T0.i<T0.steps.length){T0.stage='wait';return;}
-  T0.stage='ready';
+  T0.stage='ready';T0.readyAt=M.pt;
   if(T0.final==='carry'){to.route=null;setCarrier(to);to.ty=clamp(T0.runTo,3,50.3);M.qb=T0.oq;}
   else{to.route=null;to.face=1;sfx('catch');}}}
 function trickBiteTarget(){const T0=M.trick;if(!T0)return null;if(T0.biteRun)return T0.decoy;return T0.stage==='fly'?T0.steps[T0.i].to:M.qb;}
@@ -3453,7 +3453,7 @@ function snap(type){
  if(type==='run'){for(const f of M.O)if(f.role==='WR'||f.role==='TE')f.route=null;M.rb.route=null;}
 }
 function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;if(M.def){if(M.input!=='dctl')M.input=null;}else M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down&&!M.def)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
-function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier||trickBusy())return;M.scramble=true;setCarrier(M.qb);pop('QB KEEPER',M.qb.x,M.qb.y,'#ffe94a');}
+function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier||trickBusy())return;M.scramble=true;setCarrier(M.qb);pop(M.qb.role==='QB'?'QB KEEPER':'KEEPS IT',M.qb.x,M.qb.y,'#ffe94a');}
 
 /* =====================================================================
    PASSING — custom slingshot model
@@ -3546,7 +3546,7 @@ function aimInfo(a){
 }
 /* Commit the throw. Error is applied to the target point only, bounded by ai.err. */
 function throwBall(ai){
- const q=M.qb;let tx=ai.tx,ty=ai.ty;
+ const q=M.qb;if(q&&q.x>M.los+0.3){tuck();return;}   /* no forward passes from past the line of scrimmage */let tx=ai.tx,ty=ai.ty;
  if(!window.__pass.noError){
   const ang=passRand()*Math.PI*2,r=ai.err*Math.min(1,Math.abs(gaussR())*0.5); // ~95% inside half... capped at the ring
   tx+=Math.cos(ang)*r;ty+=Math.sin(ang)*r;
@@ -3846,6 +3846,7 @@ function upLive(dt){
   if(f.dive>0&&f!==M.carrier&&!(b&&f===M.primary)){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=1.0;f.vx=f.vy=0;}continue;}
   if(f.stun>0||(f.down>0&&f!==M.carrier&&!f.dive))continue;
   if(f===M.carrier){upCarrier(f,dt);if(M.phase!=='live')return;continue;}
+  if(f===M.qb&&f.role!=='QB'&&M.play==='pass'&&!M.thrown&&!M.carrier){upTrickPasser(f,dt);if(M.phase!=='live')return;continue;}   /* trick play: RB / WR / TE holding the ball to throw */
   if(f.role==='QB'){if(M.play==='pass'&&!M.thrown&&!M.carrier){upQB(f,dt);if(M.phase!=='live')return;}else if(M.play==='run'&&M.runVar==='draw'&&!M.handed)steer(f,M.los-6.4,M.ballY,6,30,dt);else steer(f,f.x,f.y,0,18,dt);continue;}
   if(f.role==='OL'){upOL(f,dt);continue;}
   if(M.play==='run'&&f===M.rb&&!M.handed){steer(f,M.qb.x+0.4,M.qb.y,f.spd*0.75,40,dt);continue;}
@@ -3876,6 +3877,14 @@ function upLive(dt){
   }
  }
  contacts(dt);
+}
+/* The RB / WR / TE who takes the pitch on a trick pass sets his feet behind the line like a
+   quarterback: he can't drift past the line of scrimmage and throw forward. If he does cross
+   it (or you hit RUN IT) he's a runner and can be tackled like anyone else. */
+function upTrickPasser(f,dt){
+ const tx=Math.min(f.x,M.los-2.5);steer(f,tx,f.y,f.x>tx?f.spd*0.7:0,22,dt);f.face=1;f.y=clamp(f.y,1,52.3);
+ if(f.x>M.los-0.2)tuck();
+ if(M.def)aiQB(f,dt);
 }
 function upQB(f,dt){
  if(M.pt<0.5)steer(f,M.los-6.6,M.ballY,7,34,dt);
@@ -3953,6 +3962,8 @@ function upDef(f,dt){
   if(!r){for(const o of M.O)if((o.role==='WR'||o.role==='TE')&&(!r||o.x>r.x))r=o;}
   const lock=r&&r.x>M.los+8;const tx=r?(lock?Math.max(r.x+3+r.vx*0.3,M.los+9):Math.max(r.x+6,M.los+13,f.x-0.5)):M.los+13,   /* never let a vertical get behind him */ty=r?(lock?r.y+r.vy*0.25:lerp(26.67,r.y,0.6)):26.67;
   steer(f,Math.min(tx,119),ty,f.spd*(lock?1:0.95),lock?f.acc:16,dt);return;}
+ /* once the fake is over, whoever is covering the trick passer (or is close to him) attacks him */
+ if(M.play==='pass'&&!M.thrown&&M.trick&&M.trick.stage==='ready'&&M.qb&&M.qb.role!=='QB'&&!(M.trick.fool>0)&&M.pt-(M.trick.readyAt||0)>0.35){const q=M.qb;if(f.man===q||d2(f,q)<6.5){steer(f,q.x,q.y,f.spd*0.95,f.acc+6,dt);return;}}
  /* trick play: the defenders on the pitch man and the RB bite and flow to the pitch side,
     keeping contain a few yards off the passer, so the RB slips out the back side */
  if(M.trick&&M.trick.fool>0&&!M.thrown&&f.man&&M.trick.bite.includes(f.man)){const q=trickBiteTarget();if(q){const sd=f.y<q.y?-1:1;steer(f,q.x+2.5,q.y+sd*3.2,f.spd*0.9,f.acc,dt);return;}}
