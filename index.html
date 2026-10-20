@@ -2861,7 +2861,7 @@ function gameOver(){
  if(W)boom();else sfx('bad');
  M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div>`,acts:[finishMatch]};
 }
-function finishMatch(){if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
+function finishMatch(){if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
  const ql=L.settings.qlen,rem=M.qtr<=4?(4-M.qtr)*ql+Math.max(0,M.clock):0,f=rem/(4*ql);
  const H=teamRatings(L.user),O=teamRatings(M.op);
@@ -4756,7 +4756,7 @@ document.addEventListener('touchmove',e=>{if(!e.target.closest||!e.target.closes
 if(document.fonts&&document.fonts.load){document.fonts.load('8px "Press Start 2P"').then(()=>{if(UI.scr!=='game')render();}).catch(()=>{});}
 
 /* ===========================================================================
-   2026 FBS COLLEGE EXHIBITION
+   2026 FBS COLLEGE EXHIBITION AND MULTI-SEASON DYNASTY
    All 138 real school identities; REAL rosters are imported as STATIC JSON and
    fetched only for the two teams playing. Does not replace a saved NFL franchise.
    This mode will NOT silently substitute fictional players when data is absent.
@@ -4898,6 +4898,7 @@ SCR.college=()=>{
   </div>
   ${card(o,'opp')}
  </div>
+ <div class="row ctr" style="width:100%;gap:6px"><span class="s7 yl">NEW: COLLEGE DYNASTY</span><button class="bt" data-a="colDynNewConfirm">NEW SEASON MODE</button>${colDynHasSave()?'<button class="bt y" data-a="colDynContinue">CONTINUE DYNASTY</button>':''}</div>
  <div class="row ctr" style="width:100%;gap:8px">
   <span class="s7 dim" style="flex:1;text-align:left;line-height:1.5">${esc(s.last||'ONE-TIME 2025-26 ROSTER SNAPSHOT · LOCAL LOGOS')}</span>
   <button class="bt y big" style="width:160px" data-a="collegePlay">PLAY GAME &gt;</button>
@@ -4952,6 +4953,149 @@ ACT.collegePlay=async()=>{
   startMatch(g,{uU:s.uU,uO:s.uO});
  }catch(err){console.error(err);M=null;collegeRestoreTeams();L=null;collegeError(err.message||String(err));}
 };
+
+
+/* ====================================================================
+   COLLEGE DYNASTY (isolated from the 32-team NFL franchise)
+   138 schools, 12 regular-season games, conference championship week,
+   12-team playoff, replayable years, historic real-name roster snapshot,
+   generated future recruits clearly marked as fictional.
+   ==================================================================== */
+const COL_DYN_KEY='retroFootballCollegeDynasty_v1';
+const COL_DYN_POS=['QB','RB','WR','WR','TE','OL','DL','LB','DB','K','OL','DB'];
+let CD=null;
+function colDynRead(){try{const x=JSON.parse(localStorage.getItem(COL_DYN_KEY));return x&&x.v===1&&COLLEGE_MAP[x.school]&&Array.isArray(x.schedule)?x:null;}catch(e){return null;}}
+function colDynHasSave(){return !!(CD||colDynRead());}
+function colDynSave(){if(!CD)return;try{localStorage.setItem(COL_DYN_KEY,JSON.stringify(CD));}catch(e){console.error('College save full/unavailable',e);toast('COLLEGE SAVE NOT WRITTEN - CHECK BROWSER STORAGE');}}
+function colDynHash(str){let h=2166136261;for(const c of String(str)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;}
+function colDynGrade(row){const v=String(row.year||row.class||row.class_year||'').toUpperCase();const n=Number(v);if(n>=1&&n<=5)return Math.min(n,4);if(/SR|SENIOR|GRAD/.test(v))return 4;if(/JR|JUNIOR/.test(v))return 3;if(/SO|SOPH/.test(v))return 2;return 1;}
+function colDynTeamPower(id){const t=COLLEGE_MAP[id];if(!t)return 5;const winners=new Set(['ohio-state','michigan','alabama','georgia','texas','oregon','penn-state','lsu','clemson','notre-dame','oklahoma','florida-state','tennessee','usc','miami','texas-am','utah','ole-miss','boise-state','indiana','byu','washington']);const good=new Set(['wisconsin','iowa','kansas-state','louisville','south-carolina','auburn','missouri','florida','nebraska','texas-tech','oklahoma-state','arizona-state','tcu','smu','iowa-state','north-carolina','virginia-tech','memphis']);const conf=t.conference,base=['SEC','Big Ten'].includes(conf)?6.5:['ACC','Big 12'].includes(conf)?6.1:conf==='Pac-12'?5.5:5.0;return clamp(base+(winners.has(id)?1.3:good.has(id)?.65:0)+(colDynHash(id)%100)/100*.7-.35,3.6,9.0);}
+function colDynSchedule(){
+ const ids=COLLEGE_TEAMS.map(x=>x.id),seen=new Set(),home=Object.fromEntries(ids.map(id=>[id,0]));const weeks=[];
+ for(let w=0;w<12;w++){
+  const pool=shuffle(ids.slice()),games=[];
+  while(pool.length){const x=pool.shift(),tx=COLLEGE_MAP[x];let best=-1,bs=-1e5;
+   for(let i=0;i<pool.length;i++){const y=pool[i],ty=COLLEGE_MAP[y],dup=seen.has([x,y].sort().join('|'));if(dup)continue;
+    let score=Math.random()*3;
+    if(w<8)score+=tx.conference===ty.conference?30:0;else score+=tx.conference!==ty.conference?13:0;
+    if(Math.abs(colDynTeamPower(x)-colDynTeamPower(y))<1.2)score+=1;
+    if(score>bs){bs=score;best=i;}}
+   if(best<0)best=0;const y=pool.splice(best,1)[0];seen.add([x,y].sort().join('|'));
+   let h=x,a=y;if(home[x]>home[y]||(home[x]===home[y]&&Math.random()<.5)){h=y;a=x;}home[h]++;games.push({h,a,hs:null,as:null});
+  }
+  weeks.push(games);
+ }
+ return weeks;
+}
+function colDynAllRegular(){return CD.schedule.flat();}
+function colDynRecord(id,throughOnly){let w=0,l=0,pf=0,pa=0,cw=0,cl=0;
+ for(const g of colDynAllRegular()){if(g.hs==null||(g.h!==id&&g.a!==id))continue;const h=g.h===id,ours=h?g.hs:g.as,theirs=h?g.as:g.hs,conference=COLLEGE_MAP[g.h].conference===COLLEGE_MAP[g.a].conference;
+  pf+=ours;pa+=theirs;if(ours>theirs){w++;if(conference)cw++;}else if(ours<theirs){l++;if(conference)cl++;}}
+ return {w,l,pf,pa,cw,cl};}
+function colDynRank(){return COLLEGE_TEAMS.slice().sort((a,b)=>{const A=colDynRecord(a.id),B=colDynRecord(b.id),pA=CD.power[a.id],pB=CD.power[b.id];return (B.w-A.w)||(B.cw-A.cw)||((B.pf-B.pa)-(A.pf-A.pa))*.015+(pB-pA)*1.15;});}
+function colDynStandings(conf){return colDynRank().filter(x=>!conf||conf==='ALL'||x.conference===conf).sort((a,b)=>{const A=colDynRecord(a.id),B=colDynRecord(b.id);return (B.cw-A.cw)||(B.w-A.w)||((B.pf-B.pa)-(A.pf-A.pa));});}
+function colDynToday(){if(!CD)return[];if(CD.phase==='REG')return CD.schedule[CD.week-1]||[];if(CD.phase==='CONF')return CD.confGames||[];if(CD.phase==='CFP')return CD.cfpRounds[CD.round]||[];return[];}
+function colDynNextGame(){return colDynToday().find(g=>g.h===CD.school||g.a===CD.school)||null;}
+function colDynWin(g){return g.hs>g.as?g.h:g.a;}
+function colDynSim(g){let H=CD.power[g.h]||5,A=CD.power[g.a]||5;let hs=0,as=0;for(let i=0;i<11;i++){const r=Math.random(),d=(H-A)*.08;if(r<.22+d)hs+=Math.random()<.85?7:3;if(Math.random()<.21-d)as+=Math.random()<.85?7:3;}if(hs===as){(Math.random()<.5+(H-A)*.075)?hs+=3:as+=3;}return[hs,as];}
+function colDynSimGame(g){const [hs,as]=colDynSim(g);g.hs=hs;g.as=as;}
+function colDynChampWeek(){const confs=COLLEGE_CONFS.filter(c=>c!=='ALL'&&c!=='FBS Independent'&&c!=='Independent');CD.confGames=[];
+ for(const conf of confs){const rows=colDynStandings(conf);if(rows.length<2)continue;const a=rows[0].id,b=rows[1].id;CD.confGames.push({h:a,a:b,hs:null,as:null,title:conf+' TITLE'});}
+ CD.phase='CONF';}
+function colDynSeeds(){const champs={};for(const g of CD.confGames||[])if(g.hs!=null)champs[COLLEGE_MAP[g.h].conference]=colDynWin(g);
+ const ranking=colDynRank(),champsTop=Object.values(champs).sort((a,b)=>ranking.findIndex(t=>t.id===a)-ranking.findIndex(t=>t.id===b)).slice(0,5),picked=new Set(champsTop);
+ for(const t of ranking){if(picked.size>=12)break;picked.add(t.id);}
+ CD.champs=champs;CD.seeds=[...picked].sort((a,b)=>ranking.findIndex(t=>t.id===a)-ranking.findIndex(t=>t.id===b));
+ const s=CD.seeds;CD.cfpRounds=[[{h:s[4],a:s[11],hs:null,as:null},{h:s[5],a:s[10],hs:null,as:null},{h:s[6],a:s[9],hs:null,as:null},{h:s[7],a:s[8],hs:null,as:null}]];CD.round=0;CD.phase='CFP';}
+function colDynNextRound(){const r=CD.round,old=CD.cfpRounds[r];if(r===3){CD.champion=colDynWin(old[0]);CD.phase='OFF';CD.history=CD.history||[];
+  const R=colDynRecord(CD.school);CD.history.unshift({year:CD.year,school:CD.school,w:R.w,l:R.l,champion:CD.champion,playoff:CD.seeds.includes(CD.school)});CD.recruits=[];CD.recruitsPicked=[];return;}
+ const w=old.map(colDynWin);let next;
+ if(r===0){const s=CD.seeds;next=[{h:s[0],a:w[3]},{h:s[3],a:w[0]},{h:s[1],a:w[2]},{h:s[2],a:w[1]}];}
+ else if(r===1)next=[{h:w[0],a:w[1]},{h:w[2],a:w[3]}];else next=[{h:w[0],a:w[1]}];
+ CD.cfpRounds.push(next.map(x=>({...x,hs:null,as:null})));CD.round++;}
+function colDynAdvance(){if(!CD||CD.phase==='OFF')return;
+ const g=colDynNextGame();if(g&&g.hs==null)return toast('PLAY OR SIM YOUR MATCHUP FIRST');
+ for(const game of colDynToday())if(game.hs==null)colDynSimGame(game);
+ if(CD.phase==='REG'){CD.week++;CD.train=2;if(CD.week>12)colDynChampWeek();}
+ else if(CD.phase==='CONF')colDynSeeds();else if(CD.phase==='CFP')colDynNextRound();
+ colDynSave();go('collegeDynasty');}
+function colDynPlayed(g,hs,as){if(!CD||!g)return go('college');g.hs=hs;g.as=as;CD.last=COLLEGE_MAP[g.h].abbr+' '+hs+' - '+as+' '+COLLEGE_MAP[g.a].abbr;CD.lastWeek=CD.week;colDynSave();go('collegeDynasty');}
+function colDynRecBadge(id){const R=colDynRecord(id);return R.w+'-'+R.l;}
+function colDynPlayerRecord(r,school){const pos=mapNFLPosition(r.position);if(!pos)return null;const fn=String(r.first_name||r.firstName||'').trim(),ln=String(r.last_name||r.lastName||'').trim();if(!fn||!ln)return null;
+ const grade=colDynGrade(r),key=String(r.id||fn+'-'+ln+'-'+pos),h=colDynHash(school+'|'+key),q=clamp(4.3+(grade-1)*.4+colDynTeamPower(school)*.19+((h%170)/100-0.9),3.0,9.1),a={};
+ POSDEF[pos].forEach((k,i)=>{a[k]=clamp(Math.round(q+((h>>>((i*5)%24))%5-2)*.37),1,10);});
+ return {key,fn,ln,pos,grade,a,pot:clamp(Math.round(q+1.6),3,10),num:r.jersey?Number(r.jersey)||1:((h%89)+1),estimated:!r.jersey,real:true};}
+function colDynFiction(pos,school,grade=1){const fn=pick(FN),ln=pick(LN),q=clamp((CD.power[school]||5)+rnd(-1.2,1),3,9.5),a={};for(const k of POSDEF[pos])a[k]=clamp(Math.round(q+rnd(-1.2,1.2)),1,10);
+ return {key:'generated-'+CD.year+'-'+Math.random().toString(36).slice(2),fn,ln,pos,grade,a,pot:clamp(Math.round(q+2),3,10),num:ri(1,99),estimated:true,real:false};}
+async function colDynRoster(id){if(CD.rosters[id])return CD.rosters[id];
+ const rows=await collegeRoster(COLLEGE_MAP[id]),used=collegePickPlayers(rows),records=used.map(x=>colDynPlayerRecord(x,id)).filter(Boolean);
+ if(records.length<8)throw Error(COLLEGE_MAP[id].school+' roster does not have eight playable real names.');
+ // If joining after the first dynasty year, age the snapshot forward and replace graduates.
+ for(let yr=2026;yr<CD.year;yr++){for(const p of records)p.grade++;for(let i=records.length-1;i>=0;i--)if(records[i].grade>4)records.splice(i,1);}
+ for(const pos of COL_DYN_POS){if(records.length>=12)break;const existing=records.filter(x=>x.pos===pos).length;if(existing<COL_DYN_POS.filter(x=>x===pos).length)records.push(colDynFiction(pos,id));}
+ CD.rosters[id]=records;colDynSave();return records;}
+function colDynFillRoster(id,chosen){const current=CD.rosters[id]||[],signed=chosen||[];
+ for(const p of current)p.grade++;
+ CD.rosters[id]=current.filter(p=>p.grade<=4).concat(signed);
+ for(const need of COL_DYN_POS){const count=CD.rosters[id].filter(x=>x.pos===need).length,target=COL_DYN_POS.filter(x=>x===need).length; if(count<target)CD.rosters[id].push(colDynFiction(need,id));}
+ // Limit to 12, favor keeping existing starters over excess recruits.
+ if(CD.rosters[id].length>12){const wanted=new Set(signed.map(p=>p.key));const always=CD.rosters[id].filter(p=>wanted.has(p.key)).slice(0,3);const others=CD.rosters[id].filter(p=>!wanted.has(p.key)).sort((a,b)=>b.pot-a.pot);CD.rosters[id]=always.concat(others.slice(0,12-always.length));}
+ for(const p of CD.rosters[id])if(p.grade<=3&&Math.random()<.5){const k=pick(POSDEF[p.pos]);p.a[k]=clamp(p.a[k]+1,1,10);}
+}
+function colDynRecruitOptions(){if(CD.recruits&&CD.recruits.length)return CD.recruits;CD.recruits=[];
+ const available=['QB','RB','WR','WR','TE','OL','DL','DL','LB','DB','DB','K'];
+ for(let i=0;i<9;i++){const p=colDynFiction(available[i],CD.school);p.grade=1;CD.recruits.push(p);}CD.recruitsPicked=[];colDynSave();return CD.recruits;}
+function colDynNewYear(){if(CD.phase!=='OFF')return;
+ for(const id in CD.rosters)colDynFillRoster(id,id===CD.school?(CD.recruitsPicked||[]).map(k=>CD.recruits.find(p=>p.key===k)).filter(Boolean):[]);
+ for(const id in CD.power)CD.power[id]=clamp(CD.power[id]+rnd(-.35,.35)+(.1*(5.7-CD.power[id])),3.7,9.5);
+ CD.year++;CD.season++;CD.week=1;CD.train=2;CD.phase='REG';CD.schedule=colDynSchedule();CD.confGames=[];CD.cfpRounds=[];CD.round=0;CD.seeds=[];CD.champs={};CD.champion=null;CD.recruits=[];CD.recruitsPicked=[];CD.last='';colDynSave();go('collegeDynasty');}
+function colDynRenderRank(t,withConf){const r=colDynRecord(t.id);return `<tr class="${t.id===CD.school?'me':''}"><td>${esc(t.school)}</td>${withConf?`<td class="s6 dim">${esc(t.conference)}</td>`:''}<td class="r">${r.w}</td><td class="r">${r.l}</td><td class="r">${r.cw}-${r.cl}</td></tr>`;}
+function colDynGameCell(g,week){const h=COLLEGE_MAP[g.h],a=COLLEGE_MAP[g.a],user=(g.h===CD.school||g.a===CD.school),final=g.hs!=null;return `<div class="row" style="gap:8px;border-bottom:1px solid #6a86cd;padding:5px 2px;${user?'background:rgba(255,235,90,.16)':''}"><span class="s7" style="width:62px;flex:none">${esc(week||'')}</span><span class="s7" style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.school)} @ ${esc(h.school)}</span><span class="s7 ${final?'yl':'dim'}" style="width:85px;text-align:right">${final?g.as+' - '+g.hs:'UPCOMING'}</span></div>`;}
+function colDynBracketHTML(){if(!CD.cfpRounds||!CD.cfpRounds.length)return '<div class="s7 dim">THE PLAYOFF BRACKET IS REVEALED AFTER CONFERENCE CHAMPIONSHIPS.</div>';
+ return CD.cfpRounds.map((round,i)=>`<div class="col" style="gap:5px;min-width:125px;flex:1"><div class="s7 yl" style="text-align:center">${['ROUND OF 12','QUARTERFINALS','SEMIFINALS','NATIONAL TITLE'][i]}</div>${round.map(g=>`<div style="background:#102d72;border:1px solid #8daef4;padding:6px 3px;line-height:1.8;font-size:7px"><div>${esc(COLLEGE_MAP[g.a].abbr)} ${g.as==null?'':g.as}</div><div>${esc(COLLEGE_MAP[g.h].abbr)} ${g.hs==null?'':g.hs}</div></div>`).join('')}</div>`).join('');}
+SCR.collegeDynasty=()=>{
+ if(!CD)return `<div class="screen">${ttl('NO COLLEGE SAVE')}<button class="bt" data-a="go" data-s="college">BACK</button></div>`;
+ const t=COLLEGE_MAP[CD.school],record=colDynRecord(CD.school),g=colDynNextGame(),isPending=g&&g.hs==null,tab=CD.tab||'schedule',weekLabel=CD.phase==='REG'?'WEEK '+CD.week:CD.phase==='CONF'?'CONFERENCE CHAMPIONSHIPS':CD.phase==='CFP'?['ROUND OF 12','QUARTERFINALS','SEMIFINALS','NATIONAL CHAMPIONSHIP'][CD.round]:'OFFSEASON';
+ const tabs=['schedule','standings','roster','playoffs','history'],content={};
+ content.schedule=`<div class="s7 yl" style="margin-bottom:6px">${CD.year} SCHEDULE · 12 GAMES</div>${CD.schedule.map((a,i)=>{const g=a.find(g=>g.h===CD.school||g.a===CD.school);return g?colDynGameCell(g,'WK '+(i+1)):'';}).join('')}${(CD.confGames||[]).filter(g=>g.h===CD.school||g.a===CD.school).map(g=>colDynGameCell(g,'CONF')).join('')}${(CD.cfpRounds||[]).flat().filter(g=>g.h===CD.school||g.a===CD.school).map(g=>colDynGameCell(g,'CFP')).join('')}`;
+ content.standings=`<div class="row" style="gap:6px;margin-bottom:5px"><select style="font:inherit;font-size:7px;padding:5px;color:white;background:#13286e;border:1px solid white" onchange="ACT.colDynConf({v:this.value})">${COLLEGE_CONFS.map(c=>`<option value="${esc(c)}" ${c===(CD.viewConf||t.conference)?'selected':''}>${esc(c)}</option>`).join('')}</select><span class="s7 dim">W-L · CONF W-L</span></div><table class="tbl"><tr><th>SCHOOL</th><th class="r">W</th><th class="r">L</th><th class="r">CONF</th></tr>${colDynStandings(CD.viewConf||t.conference).map(x=>colDynRenderRank(x,false)).join('')}</table><div class="s7 yl" style="margin:8px 0">TOP 25 NATIONALLY</div><table class="tbl"><tr><th>SCHOOL</th><th class="r">W</th><th class="r">L</th><th class="r">CONF</th></tr>${colDynRank().slice(0,25).map(x=>colDynRenderRank(x,false)).join('')}</table>`;
+ content.roster=`<div class="row" style="margin-bottom:6px"><span class="s7 yl" style="flex:1">${esc(t.school.toUpperCase())} · DEPTH CHART</span><span class="s7">WEEKLY TRAINING: ${CD.train==null?2:CD.train}</span></div><table class="tbl"><tr><th>PLAYER</th><th>POS</th><th class="r">YR</th><th class="r">OVR</th><th class="r">TRAIN</th></tr>${(CD.rosters[CD.school]||[]).slice().sort((a,b)=>COL_DYN_POS.indexOf(a.pos)-COL_DYN_POS.indexOf(b.pos)).map(p=>`<tr><td>${esc(p.fn+' '+p.ln)}${p.real?'':' *'}</td><td>${p.pos}</td><td class="r">${p.grade}</td><td class="r">${(Object.values(p.a).reduce((a,b)=>a+b,0)/Object.values(p.a).length).toFixed(1)}</td><td class="r"><button class="chip" data-a="colDynTrain" data-key="${esc(p.key)}" style="font-size:6px;padding:3px">+1</button></td></tr>`).join('')}</table><div class="s7 dim" style="margin-top:8px;line-height:1.8">* FUTURE RECRUITS ARE FICTIONAL. INITIAL NAMES ARE FROM THE HOSTED HISTORICAL ROSTER; RATINGS ARE SIMULATED.</div>`;
+ content.playoffs=`<div class="s7 yl" style="margin-bottom:8px">${CD.year} COLLEGE FOOTBALL PLAYOFF · 12 TEAMS</div>${CD.seeds&&CD.seeds.length?`<div class="s7" style="line-height:2">${CD.seeds.map((id,i)=>(i+1)+'. '+COLLEGE_MAP[id].school).join(' · ')}</div>`:'<div class="s7 dim">SEEDS ARE SET AFTER CONFERENCE CHAMPIONSHIPS.</div>'}<div class="row scroll" style="align-items:stretch;gap:6px;margin-top:9px">${colDynBracketHTML()}</div>${CD.champion?`<div class="s10 yl" style="text-align:center;margin:10px">NATIONAL CHAMPION: ${esc(COLLEGE_MAP[CD.champion].school.toUpperCase())}</div>`:''}`;
+ content.history=`<div class="s7 yl" style="margin-bottom:7px">YOUR DYNASTY HISTORY</div><table class="tbl"><tr><th>SEASON</th><th>RECORD</th><th>RESULT</th></tr>${(CD.history||[]).map(r=>`<tr><td>${r.year}</td><td>${r.w}-${r.l}</td><td>${r.champion===CD.school?'NATIONAL CHAMPIONS':r.playoff?'PLAYOFFS':'REGULAR SEASON'}</td></tr>`).join('')}</table>`;
+ let bottom='';
+ if(CD.phase==='OFF'){const recruits=colDynRecruitOptions(),signed=CD.recruitsPicked||[];bottom=`<div class="s7 yl" style="margin:3px 0">RECRUITING · SIGN UP TO 3 PROSPECTS (FICTIONAL)</div><div class="row scroll" style="align-items:stretch;max-height:85px;gap:4px">${recruits.map(p=>`<button class="bt" data-a="colDynSign" data-key="${p.key}" style="padding:6px 4px;min-width:65px;background:${signed.includes(p.key)?'#278435':'#13286e'}"><div>${p.pos}</div><div class="s6" style="margin-top:4px">${esc(p.ln.toUpperCase().slice(0,10))}</div><div class="s6" style="margin-top:4px">${signed.includes(p.key)?'SIGNED':'SIGN'}</div></button>`).join('')}</div><button class="bt y" data-a="colDynNextSeason">START ${CD.year+1} SEASON &gt;</button>`;}
+ else if(isPending){const opp=COLLEGE_MAP[g.h===CD.school?g.a:g.h];bottom=`<div class="row" style="gap:7px;align-items:center"><span class="s7" style="flex:1;line-height:1.7">${CD.school===g.h?'HOME VS':'AWAY AT'} ${esc(opp.school.toUpperCase())}</span><button class="bt" data-a="colDynSim">SIM MATCH</button><button class="bt y" data-a="colDynPlay">PLAY MATCH &gt;</button></div>`;}
+ else bottom=`<button class="bt y" data-a="colDynAdvance">${CD.phase==='REG'?'NEXT WEEK':CD.phase==='CONF'?'START PLAYOFF':'NEXT PLAYOFF ROUND'} &gt;</button>`;
+ return `<div class="screen" style="gap:6px"><div class="row"><button class="bt ico" data-a="colDynExit">${ICON.back}</button><div class="grow">${ttl('COLLEGE DYNASTY')}</div><span class="s7 yl">${CD.year}</span></div>
+ <div class="row" style="align-items:center;gap:9px;min-height:63px">${collegeBadge(t,51)}<div class="col" style="flex:1;min-width:0;gap:7px"><div class="s10">${esc(t.school.toUpperCase())}</div><div class="s7 dim">${esc(t.conference)} · ${record.w}-${record.l} · ${esc(weekLabel)}</div></div><div class="col" style="text-align:right;gap:5px"><div class="s7 yl">${CD.season===1?'YEAR 1':'YEAR '+CD.season}</div><div class="s7 dim">${CD.last?esc(CD.last):'BUILD YOUR PROGRAM'}</div></div></div>
+ <div class="row" style="gap:4px">${tabs.map(x=>`<button class="chip ${x===tab?'on':''}" data-a="colDynTab" data-tab="${x}" style="flex:1;min-width:0;font-size:6px;padding:6px 2px">${x.toUpperCase()}</button>`).join('')}</div>
+ <div class="scroll grow" style="background:rgba(8,32,100,.17);padding:4px;min-height:0">${content[tab]}</div><div class="col" style="gap:5px">${bottom}</div></div>`;
+};
+ACT.colDynTrain=d=>{if(!CD||CD.phase==='OFF')return toast('TRAIN IN SEASON');if(CD.train==null)CD.train=2;if(CD.train<=0)return toast('NO TRAINING LEFT THIS WEEK');const p=(CD.rosters[CD.school]||[]).find(x=>x.key===d.key);if(!p)return;const ks=POSDEF[p.pos].filter(k=>p.a[k]<10&&p.a[k]<p.pot+1);if(!ks.length)return toast('PLAYER HAS REACHED POTENTIAL');ks.sort((a,b)=>p.a[a]-p.a[b]);p.a[ks[0]]++;CD.train--;colDynSave();render();};
+ACT.colDynTab=d=>{CD.tab=d.tab;colDynSave();render();};
+ACT.colDynConf=d=>{CD.viewConf=d.v;CD.tab='standings';colDynSave();render();};
+ACT.colDynSign=d=>{const list=CD.recruitsPicked||[],i=list.indexOf(d.key);if(i>=0)list.splice(i,1);else if(list.length<3)list.push(d.key);else return toast('ONLY 3 RECRUITS CAN SIGN');CD.recruitsPicked=list;colDynSave();render();};
+ACT.colDynNextSeason=()=>colDynNewYear();
+ACT.colDynAdvance=()=>colDynAdvance();
+ACT.colDynSim=()=>{const g=colDynNextGame();if(!g||g.hs!=null)return;colDynSimGame(g);colDynSave();render();};
+ACT.colDynExit=()=>{M=null;L=null;collegeRestoreTeams();go('college');};
+ACT.colDynNewConfirm=()=>{modal(`<div class="mp" style="width:475px;text-align:center;align-items:center">${ttl('START COLLEGE DYNASTY',true)}<div class="s7" style="line-height:2">COACH ${esc(COLLEGE_MAP[COLLEGE_STATE.youId].school.toUpperCase())} THROUGH 12-GAME SEASONS, CONFERENCE TITLES AND THE 12-TEAM PLAYOFF.<br>REAL HISTORICAL ROSTERS FROM YOUR GITHUB SITE. FUTURE RECRUITS ARE FICTIONAL.</div>${colDynHasSave()?'<div class="s7 rdt">THIS WILL REPLACE YOUR PREVIOUS COLLEGE DYNASTY SAVE.</div>':''}<div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="colDynNew">START DYNASTY</button></div></div>`);};
+ACT.colDynContinue=()=>{CD=colDynRead();if(!CD)return toast('COLLEGE SAVE NOT FOUND');UI.modal=null;go('collegeDynasty');};
+ACT.colDynNew=async()=>{const id=COLLEGE_STATE.youId,t=COLLEGE_MAP[id];if(!t)return;modal(`<div class="mp" style="width:400px;text-align:center">${ttl('LOADING YOUR ROSTER',true)}<div class="s7">${esc(t.school)} · STATIC COLLEGE FILES</div></div>`);
+ try{const rows=await collegeRoster(t);const power=Object.fromEntries(COLLEGE_TEAMS.map(x=>[x.id,colDynTeamPower(x.id)]));CD={v:1,school:id,year:2026,season:1,week:1,phase:'REG',power,schedule:[],rosters:{},confGames:[],cfpRounds:[],round:0,seeds:[],champs:{},champion:null,recruits:[],recruitsPicked:[],history:[],train:2,tab:'schedule',viewConf:t.conference,last:''};
+  CD.rosters[id]=collegePickPlayers(rows).map(r=>colDynPlayerRecord(r,id)).filter(Boolean);if(CD.rosters[id].length<8)throw Error('This school has fewer than eight playable players.');CD.schedule=colDynSchedule();colDynSave();UI.modal=null;go('collegeDynasty');
+ }catch(e){CD=null;console.error(e);collegeError(e.message||String(e));}};
+ACT.colDynPlay=async()=>{if(!CD)return;const g=colDynNextGame();if(!g||g.hs!=null)return;const own=COLLEGE_MAP[CD.school],other=COLLEGE_MAP[g.h===CD.school?g.a:g.h];
+ modal(`<div class="mp" style="width:400px;text-align:center">${ttl('LOADING REAL PLAYER NAMES',true)}<div class="s7">${esc(own.school)} VS ${esc(other.school)}</div></div>`);
+ try{await Promise.all([colDynRoster(own.id),colDynRoster(other.id)]);collegeSetTeams(own,other);
+  createLeague(13,'COLLEGE',{rmax:12,diff:COLLEGE_STATE.diff,dir:'R',rosterMode:'CUSTOM'});
+  for(const id of [13,30])for(const p of rosterOf(id).slice())removePlayer(p);
+  for(const [school,index] of [[own.id,13],[other.id,30]])for(const r of CD.rosters[school]){const p=genPlayer(r.pos,5,18+r.grade);p.fn=r.fn;p.ln=r.ln;p.a={...r.a};p.pot=r.pot;p.num=r.num;p.team=index;p.college=true;p.seasons=0;p.yrs=4;p.inj=0;p.mor=78;p.cond=100;addPlayer(p);}
+  L.draft=null;L.phase='REG';L.week=1;L.exh=true;L.college=true;L.collegeDynasty=true;L.year=CD.year;
+  Object.assign(L.settings,{qlen:COLLEGE_STATE.qlen,play:COLLEGE_STATE.mode,mode:COLLEGE_STATE.mode,diff:COLLEGE_STATE.diff,dir:'R',replay:true});
+  const match={h:g.h===CD.school?13:30,a:g.a===CD.school?13:30,hs:null,as:null};L.sched=[[match]];
+  window.__collegeDynastyPlayingGame=g;UI.modal=null;startMatch(match,{uU:COLLEGE_STATE.uU,uO:COLLEGE_STATE.uO});
+ }catch(err){console.error(err);M=null;L=null;collegeRestoreTeams();collegeError(err.message||String(err));}};
 
 go('title');
 requestAnimationFrame(loop);
