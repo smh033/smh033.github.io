@@ -1,3 +1,10 @@
+{
+  "school": "Ohio State",
+  "season": 2026,
+  "athleticYear": "2026",
+  "source": "Hand-entered by repo owner",
+  "jerseysVerified": true,
+  "players": [
     {
       "id": "osu-2026-001",
       "first_name": "Brandon",
