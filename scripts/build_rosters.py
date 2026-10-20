@@ -210,6 +210,11 @@ def team_power():
         out[t] = round(w*p + (1-w)*l, 2)
     return out
 
+FORCE = {
+    "Josh Jacobs":   {"team": "GB", "status": "ACT", "depth": 0.5, "dpos": "RB"},
+    "Micah Parsons": {"team": "GB", "status": "ACT", "depth": 0.5, "dpos": "LB"},
+}
+
 def ident(r):
     return r.get("gsis_id") or r.get("espn_id") or (r.get("full_name") or "").lower()
 
@@ -240,6 +245,11 @@ def main():
     for r in rows:
         d = dr.get(r.get("gsis_id")) or dr.get(r.get("espn_id"))
         if d and r["team"]: r["depth"], r["dpos"] = d
+    # Hand-picked overrides: these players always start for these teams in the game,
+    # whatever the weekly feed says about their status (injured reserve / exempt lists).
+    for r in rows:
+        f = FORCE.get(r.get("full_name"))
+        if f: r.update(f)
     prof = profiles(rows)
     for r in rows:
         t = prof.get(ident(r))
