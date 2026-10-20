@@ -1,0 +1,33 @@
+name: One-time college roster snapshot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-rosters-once:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out game repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Download open 2025–26 dataset and build STATIC school JSON files
+        run: python import_cc0_snapshot.py
+      - name: Commit roster snapshot exactly once per manual run
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add college/rosters/ college/manifest.json
+          if git diff --cached --quiet; then
+            echo 'Roster files already match the snapshot.'
+          else
+            git commit -m 'Add static college football roster snapshot (2025-26, CC0)'
+            git push
+          fi

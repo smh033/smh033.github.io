@@ -197,20 +197,20 @@ function loadFieldLogo(teamId){
  NFL_FIELD_LOGO_PENDING.add(teamId);
  const img=new Image();
  img.onload=()=>{
-  NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGOS[teamId]=img;
+  if(TEAMS[teamId]!==team)return;NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGOS[teamId]=img;
   if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[];
   // Refresh the TV scoreboard too, so badges that were showing abbreviations
   // switch to the same official NFL logo assets used at midfield.
   if(UI&&UI.scr==='game'&&M&&M.hc)hud();
  };
  img.onerror=()=>{
-  NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGO_FAILED.add(teamId);
+  if(TEAMS[teamId]!==team)return;NFL_FIELD_LOGO_PENDING.delete(teamId);NFL_FIELD_LOGO_FAILED.add(teamId);
   if(M&&M.fieldLogoTeam===teamId&&M.fieldCvs)M.fieldCvs=[];
   // Keep the scoreboard's abbreviation fallback when a logo cannot be loaded.
   if(UI&&UI.scr==='game'&&M&&M.hc)hud();
  };
  const slug=NFL_LOGO_ESPN_SLUGS[team.abbr]||team.abbr.toLowerCase();
- img.src='https://a.espncdn.com/i/teamlogos/nfl/500/'+slug+'.png';
+ img.src=team.collegeLogo || ('https://a.espncdn.com/i/teamlogos/nfl/500/'+slug+'.png');
  return null;
 }
 function drawLocalMidfieldMark(ctx,teamId,x,y){
@@ -1165,6 +1165,11 @@ WAS:[['HOME','#5a1414','#ffb612','#5a1414','#ffb612','#ffb612','#5a1414'],['THRO
    for player portraits, so changing your jerseys changes them too. */
 function uniCol(t){try{const u=uniformsFor(t)[0],wh=c=>lum(c)>215;let c1=u.jersey;if(wh(c1))c1=wh(u.helm)?u.trim:u.helm;let c2=u.trim&&colDist(u.trim,c1)>40?u.trim:(u.helm&&colDist(u.helm,c1)>40?u.helm:teamCol(t).c2);return{c1,c2};}catch(e){return teamCol(t);}}
 function uniformsFor(t){
+ if(T(t).college){const c=teamCol(t);return[
+  {n:'HOME',helm:c.c1,stripe:c.c2,jersey:c.c1,trim:c.c2,pants:'#ededed',socks:c.c1},
+  {n:'AWAY',helm:c.c1,stripe:c.c2,jersey:'#eeeeee',trim:c.c1,pants:'#eeeeee',socks:c.c1},
+  {n:'ALT',helm:c.c2,stripe:c.c1,jersey:c.c2,trim:c.c1,pants:c.c2,socks:c.c2}
+ ];}
  if(L&&t===L.user&&L.custom&&Array.isArray(L.custom.unis)&&L.custom.unis.length)return L.custom.unis.map(u=>Object.assign({},u));
  const ab=T(t).abbr,c=teamCol(t);let raw=UNI_RAW[ab];
  if(!raw||(t===L?.user&&L?.custom&&L.custom.c1))raw=[['HOME',c.c1,c.c2,c.c1,c.c2,'#e2e2e2',c.c1],['COLOR RUSH',c.c1,c.c2,c.c1,c.c2,c.c1,c.c1],['BLACKOUT','#111111',c.c1,'#111111',c.c1,'#111111','#111111']];
@@ -1408,6 +1413,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(TEAMS[sv.user].name.toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button></div>
+   <button class="bt y big" data-a="collegeOpen" style="padding:9px 14px;background:#205c32;border-color:#ffe67a">COLLEGE FOOTBALL · 138 FBS SCHOOLS</button>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div>
   <div class="s7 dim" style="position:absolute;bottom:8px">${IS_MOBILE?'BEST IN LANDSCAPE · FULL SCREEN RECOMMENDED':'MOUSE OR TOUCH · KEYBOARD SUPPORTED'}</div></div>`;
@@ -2796,7 +2802,7 @@ function startMatch(g,uAway){applyCustomTeam();
  if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
- const lab=L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
+ const lab=L.college?'COLLEGE FOOTBALL':L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
  const wxTxt=M.wx==='dome'?'INDOORS':M.wx==='snow'?'SNOW':M.wx==='rain'?'RAIN':'CLEAR SKIES';
  const UR=teamRatings(L.user),OR=teamRatings(op);
  ovMsg(lab,`<div class="row ctr" style="gap:14px;align-items:center;margin:2px 0 6px"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,!home)}<span>${esc(teamName(L.user).toUpperCase())}</span><span>${stars(UR.offS,'o xs')} ${stars(UR.defS,'d xs')}</span></div><span class="s16">${home?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,home)}<span>${esc(T(op).name.toUpperCase())}</span><span>${stars(OR.offS,'o xs')} ${stars(OR.defS,'d xs')}</span></div></div>
@@ -2855,7 +2861,7 @@ function gameOver(){
  if(W)boom();else sfx('bad');
  M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div>`,acts:[finishMatch]};
 }
-function finishMatch(){if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');UI.sub=s;go('h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
+function finishMatch(){if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
  const ql=L.settings.qlen,rem=M.qtr<=4?(4-M.qtr)*ql+Math.max(0,M.clock):0,f=rem/(4*ql);
  const H=teamRatings(L.user),O=teamRatings(M.op);
@@ -4748,6 +4754,205 @@ if(window.visualViewport)visualViewport.addEventListener('resize',fit);
 fit();
 document.addEventListener('touchmove',e=>{if(!e.target.closest||!e.target.closest('.scroll'))e.preventDefault();},{passive:false});
 if(document.fonts&&document.fonts.load){document.fonts.load('8px "Press Start 2P"').then(()=>{if(UI.scr!=='game')render();}).catch(()=>{});}
+
+/* ===========================================================================
+   2026 FBS COLLEGE EXHIBITION
+   All 138 real school identities; REAL rosters are imported as STATIC JSON and
+   fetched only for the two teams playing. Does not replace a saved NFL franchise.
+   This mode will NOT silently substitute fictional players when data is absent.
+   =========================================================================== */
+const COLLEGE_TEAMS = [{"id":"boston-college","school":"Boston College","mascot":"Eagles","name":"Boston College Eagles","abbr":"BC","conference":"ACC","c1":"#8B0015","c2":"#B7A57A","logo":"college/logos/boston-college.png"},{"id":"california","school":"California","mascot":"Golden Bears","name":"California Golden Bears","abbr":"CAL","conference":"ACC","c1":"#003262","c2":"#FDB515","logo":"college/logos/california.png"},{"id":"clemson","school":"Clemson","mascot":"Tigers","name":"Clemson Tigers","abbr":"CLEM","conference":"ACC","c1":"#F56600","c2":"#522D80","logo":"college/logos/clemson.png"},{"id":"duke","school":"Duke","mascot":"Blue Devils","name":"Duke Blue Devils","abbr":"DUKE","conference":"ACC","c1":"#012169","c2":"#FFFFFF","logo":"college/logos/duke.png"},{"id":"florida-state","school":"Florida State","mascot":"Seminoles","name":"Florida State Seminoles","abbr":"FSU","conference":"ACC","c1":"#782F40","c2":"#CEB888","logo":"college/logos/florida-state.png"},{"id":"georgia-tech","school":"Georgia Tech","mascot":"Yellow Jackets","name":"Georgia Tech Yellow Jackets","abbr":"GT","conference":"ACC","c1":"#B3A369","c2":"#003057","logo":"college/logos/georgia-tech.png"},{"id":"louisville","school":"Louisville","mascot":"Cardinals","name":"Louisville Cardinals","abbr":"LOU","conference":"ACC","c1":"#AD0000","c2":"#000000","logo":"college/logos/louisville.png"},{"id":"miami","school":"Miami","mascot":"Hurricanes","name":"Miami Hurricanes","abbr":"MIA","conference":"ACC","c1":"#F47321","c2":"#005030","logo":"college/logos/miami.png"},{"id":"nc-state","school":"NC State","mascot":"Wolfpack","name":"NC State Wolfpack","abbr":"NCSU","conference":"ACC","c1":"#CC0000","c2":"#FFFFFF","logo":"college/logos/nc-state.png"},{"id":"north-carolina","school":"North Carolina","mascot":"Tar Heels","name":"North Carolina Tar Heels","abbr":"UNC","conference":"ACC","c1":"#7BAFD4","c2":"#FFFFFF","logo":"college/logos/north-carolina.png"},{"id":"pittsburgh","school":"Pittsburgh","mascot":"Panthers","name":"Pittsburgh Panthers","abbr":"PITT","conference":"ACC","c1":"#003594","c2":"#FFB81C","logo":"college/logos/pittsburgh.png"},{"id":"smu","school":"SMU","mascot":"Mustangs","name":"SMU Mustangs","abbr":"SMU","conference":"ACC","c1":"#CC0035","c2":"#0033A0","logo":"college/logos/smu.png"},{"id":"stanford","school":"Stanford","mascot":"Cardinal","name":"Stanford Cardinal","abbr":"STAN","conference":"ACC","c1":"#8C1515","c2":"#FFFFFF","logo":"college/logos/stanford.png"},{"id":"syracuse","school":"Syracuse","mascot":"Orange","name":"Syracuse Orange","abbr":"SYR","conference":"ACC","c1":"#F76900","c2":"#002D72","logo":"college/logos/syracuse.png"},{"id":"virginia","school":"Virginia","mascot":"Cavaliers","name":"Virginia Cavaliers","abbr":"UVA","conference":"ACC","c1":"#232D4B","c2":"#F84C1E","logo":"college/logos/virginia.png"},{"id":"virginia-tech","school":"Virginia Tech","mascot":"Hokies","name":"Virginia Tech Hokies","abbr":"VT","conference":"ACC","c1":"#630031","c2":"#CF4420","logo":"college/logos/virginia-tech.png"},{"id":"wake-forest","school":"Wake Forest","mascot":"Demon Deacons","name":"Wake Forest Demon Deacons","abbr":"WAKE","conference":"ACC","c1":"#9E7E38","c2":"#000000","logo":"college/logos/wake-forest.png"},{"id":"army","school":"Army","mascot":"Black Knights","name":"Army Black Knights","abbr":"ARMY","conference":"American Athletic","c1":"#000000","c2":"#D4BF91","logo":"college/logos/army.png"},{"id":"charlotte","school":"Charlotte","mascot":"49ers","name":"Charlotte 49ers","abbr":"CHAR","conference":"American Athletic","c1":"#005035","c2":"#A49665","logo":"college/logos/charlotte.png"},{"id":"east-carolina","school":"East Carolina","mascot":"Pirates","name":"East Carolina Pirates","abbr":"ECU","conference":"American Athletic","c1":"#592A8A","c2":"#FDC82F","logo":"college/logos/east-carolina.png"},{"id":"florida-atlantic","school":"Florida Atlantic","mascot":"Owls","name":"Florida Atlantic Owls","abbr":"FAU","conference":"American Athletic","c1":"#003366","c2":"#CC0000","logo":"college/logos/florida-atlantic.png"},{"id":"memphis","school":"Memphis","mascot":"Tigers","name":"Memphis Tigers","abbr":"MEM","conference":"American Athletic","c1":"#2E4B9B","c2":"#8D9093","logo":"college/logos/memphis.png"},{"id":"navy","school":"Navy","mascot":"Midshipmen","name":"Navy Midshipmen","abbr":"NAVY","conference":"American Athletic","c1":"#00205B","c2":"#C5B783","logo":"college/logos/navy.png"},{"id":"north-texas","school":"North Texas","mascot":"Mean Green","name":"North Texas Mean Green","abbr":"UNT","conference":"American Athletic","c1":"#00853E","c2":"#FFFFFF","logo":"college/logos/north-texas.png"},{"id":"rice","school":"Rice","mascot":"Owls","name":"Rice Owls","abbr":"RICE","conference":"American Athletic","c1":"#00205B","c2":"#C1C6C8","logo":"college/logos/rice.png"},{"id":"south-florida","school":"South Florida","mascot":"Bulls","name":"South Florida Bulls","abbr":"USF","conference":"American Athletic","c1":"#006747","c2":"#CFC493","logo":"college/logos/south-florida.png"},{"id":"temple","school":"Temple","mascot":"Owls","name":"Temple Owls","abbr":"TEMP","conference":"American Athletic","c1":"#9E1B34","c2":"#FFFFFF","logo":"college/logos/temple.png"},{"id":"tulane","school":"Tulane","mascot":"Green Wave","name":"Tulane Green Wave","abbr":"TULN","conference":"American Athletic","c1":"#006747","c2":"#418FDE","logo":"college/logos/tulane.png"},{"id":"tulsa","school":"Tulsa","mascot":"Golden Hurricane","name":"Tulsa Golden Hurricane","abbr":"TULS","conference":"American Athletic","c1":"#002D72","c2":"#C8102E","logo":"college/logos/tulsa.png"},{"id":"uab","school":"UAB","mascot":"Blazers","name":"UAB Blazers","abbr":"UAB","conference":"American Athletic","c1":"#1E6B52","c2":"#F4C300","logo":"college/logos/uab.png"},{"id":"utsa","school":"UTSA","mascot":"Roadrunners","name":"UTSA Roadrunners","abbr":"UTSA","conference":"American Athletic","c1":"#0C2340","c2":"#F15A22","logo":"college/logos/utsa.png"},{"id":"arizona","school":"Arizona","mascot":"Wildcats","name":"Arizona Wildcats","abbr":"ARIZ","conference":"Big 12","c1":"#AB0520","c2":"#0C234B","logo":"college/logos/arizona.png"},{"id":"arizona-state","school":"Arizona State","mascot":"Sun Devils","name":"Arizona State Sun Devils","abbr":"ASU","conference":"Big 12","c1":"#8C1D40","c2":"#FFC627","logo":"college/logos/arizona-state.png"},{"id":"baylor","school":"Baylor","mascot":"Bears","name":"Baylor Bears","abbr":"BAY","conference":"Big 12","c1":"#154734","c2":"#FFB81C","logo":"college/logos/baylor.png"},{"id":"byu","school":"BYU","mascot":"Cougars","name":"BYU Cougars","abbr":"BYU","conference":"Big 12","c1":"#002E5D","c2":"#FFFFFF","logo":"college/logos/byu.png"},{"id":"cincinnati","school":"Cincinnati","mascot":"Bearcats","name":"Cincinnati Bearcats","abbr":"CIN","conference":"Big 12","c1":"#E00122","c2":"#000000","logo":"college/logos/cincinnati.png"},{"id":"colorado","school":"Colorado","mascot":"Buffaloes","name":"Colorado Buffaloes","abbr":"COLO","conference":"Big 12","c1":"#CFB87C","c2":"#000000","logo":"college/logos/colorado.png"},{"id":"houston","school":"Houston","mascot":"Cougars","name":"Houston Cougars","abbr":"HOU","conference":"Big 12","c1":"#C8102E","c2":"#FFFFFF","logo":"college/logos/houston.png"},{"id":"iowa-state","school":"Iowa State","mascot":"Cyclones","name":"Iowa State Cyclones","abbr":"ISU","conference":"Big 12","c1":"#C8102E","c2":"#F1BE48","logo":"college/logos/iowa-state.png"},{"id":"kansas","school":"Kansas","mascot":"Jayhawks","name":"Kansas Jayhawks","abbr":"KU","conference":"Big 12","c1":"#0051BA","c2":"#E8000D","logo":"college/logos/kansas.png"},{"id":"kansas-state","school":"Kansas State","mascot":"Wildcats","name":"Kansas State Wildcats","abbr":"KSU","conference":"Big 12","c1":"#512888","c2":"#FFFFFF","logo":"college/logos/kansas-state.png"},{"id":"oklahoma-state","school":"Oklahoma State","mascot":"Cowboys","name":"Oklahoma State Cowboys","abbr":"OKST","conference":"Big 12","c1":"#FF7300","c2":"#000000","logo":"college/logos/oklahoma-state.png"},{"id":"tcu","school":"TCU","mascot":"Horned Frogs","name":"TCU Horned Frogs","abbr":"TCU","conference":"Big 12","c1":"#4D1979","c2":"#FFFFFF","logo":"college/logos/tcu.png"},{"id":"texas-tech","school":"Texas Tech","mascot":"Red Raiders","name":"Texas Tech Red Raiders","abbr":"TTU","conference":"Big 12","c1":"#CC0000","c2":"#000000","logo":"college/logos/texas-tech.png"},{"id":"ucf","school":"UCF","mascot":"Knights","name":"UCF Knights","abbr":"UCF","conference":"Big 12","c1":"#000000","c2":"#FFC904","logo":"college/logos/ucf.png"},{"id":"utah","school":"Utah","mascot":"Utes","name":"Utah Utes","abbr":"UTAH","conference":"Big 12","c1":"#CC0000","c2":"#FFFFFF","logo":"college/logos/utah.png"},{"id":"west-virginia","school":"West Virginia","mascot":"Mountaineers","name":"West Virginia Mountaineers","abbr":"WVU","conference":"Big 12","c1":"#002855","c2":"#EAAA00","logo":"college/logos/west-virginia.png"},{"id":"illinois","school":"Illinois","mascot":"Fighting Illini","name":"Illinois Fighting Illini","abbr":"ILL","conference":"Big Ten","c1":"#13294B","c2":"#E84A27","logo":"college/logos/illinois.png"},{"id":"indiana","school":"Indiana","mascot":"Hoosiers","name":"Indiana Hoosiers","abbr":"IND","conference":"Big Ten","c1":"#990000","c2":"#EEEDEB","logo":"college/logos/indiana.png"},{"id":"iowa","school":"Iowa","mascot":"Hawkeyes","name":"Iowa Hawkeyes","abbr":"IOWA","conference":"Big Ten","c1":"#FFCD00","c2":"#000000","logo":"college/logos/iowa.png"},{"id":"maryland","school":"Maryland","mascot":"Terrapins","name":"Maryland Terrapins","abbr":"MD","conference":"Big Ten","c1":"#E03A3E","c2":"#FFD520","logo":"college/logos/maryland.png"},{"id":"michigan","school":"Michigan","mascot":"Wolverines","name":"Michigan Wolverines","abbr":"MICH","conference":"Big Ten","c1":"#00274C","c2":"#FFCB05","logo":"college/logos/michigan.png"},{"id":"michigan-state","school":"Michigan State","mascot":"Spartans","name":"Michigan State Spartans","abbr":"MSU","conference":"Big Ten","c1":"#18453B","c2":"#FFFFFF","logo":"college/logos/michigan-state.png"},{"id":"minnesota","school":"Minnesota","mascot":"Golden Gophers","name":"Minnesota Golden Gophers","abbr":"MINN","conference":"Big Ten","c1":"#7A0019","c2":"#FFCC33","logo":"college/logos/minnesota.png"},{"id":"nebraska","school":"Nebraska","mascot":"Cornhuskers","name":"Nebraska Cornhuskers","abbr":"NEB","conference":"Big Ten","c1":"#E41C38","c2":"#FFFFFF","logo":"college/logos/nebraska.png"},{"id":"northwestern","school":"Northwestern","mascot":"Wildcats","name":"Northwestern Wildcats","abbr":"NW","conference":"Big Ten","c1":"#4E2A84","c2":"#FFFFFF","logo":"college/logos/northwestern.png"},{"id":"ohio-state","school":"Ohio State","mascot":"Buckeyes","name":"Ohio State Buckeyes","abbr":"OSU","conference":"Big Ten","c1":"#BA0C2F","c2":"#A7B1B7","logo":"college/logos/ohio-state.png"},{"id":"oregon","school":"Oregon","mascot":"Ducks","name":"Oregon Ducks","abbr":"ORE","conference":"Big Ten","c1":"#154733","c2":"#FEE123","logo":"college/logos/oregon.png"},{"id":"penn-state","school":"Penn State","mascot":"Nittany Lions","name":"Penn State Nittany Lions","abbr":"PSU","conference":"Big Ten","c1":"#041E42","c2":"#FFFFFF","logo":"college/logos/penn-state.png"},{"id":"purdue","school":"Purdue","mascot":"Boilermakers","name":"Purdue Boilermakers","abbr":"PUR","conference":"Big Ten","c1":"#CEB888","c2":"#000000","logo":"college/logos/purdue.png"},{"id":"rutgers","school":"Rutgers","mascot":"Scarlet Knights","name":"Rutgers Scarlet Knights","abbr":"RUTG","conference":"Big Ten","c1":"#CC0033","c2":"#FFFFFF","logo":"college/logos/rutgers.png"},{"id":"ucla","school":"UCLA","mascot":"Bruins","name":"UCLA Bruins","abbr":"UCLA","conference":"Big Ten","c1":"#2D68C4","c2":"#F2A900","logo":"college/logos/ucla.png"},{"id":"usc","school":"USC","mascot":"Trojans","name":"USC Trojans","abbr":"USC","conference":"Big Ten","c1":"#990000","c2":"#FFC72C","logo":"college/logos/usc.png"},{"id":"washington","school":"Washington","mascot":"Huskies","name":"Washington Huskies","abbr":"WASH","conference":"Big Ten","c1":"#4B2E83","c2":"#B7A57A","logo":"college/logos/washington.png"},{"id":"wisconsin","school":"Wisconsin","mascot":"Badgers","name":"Wisconsin Badgers","abbr":"WISC","conference":"Big Ten","c1":"#C5050C","c2":"#FFFFFF","logo":"college/logos/wisconsin.png"},{"id":"delaware","school":"Delaware","mascot":"Blue Hens","name":"Delaware Blue Hens","abbr":"DEL","conference":"Conference USA","c1":"#00539F","c2":"#FFD200","logo":"college/logos/delaware.png"},{"id":"florida-international","school":"Florida International","mascot":"Panthers","name":"Florida International Panthers","abbr":"FIU","conference":"Conference USA","c1":"#081E3F","c2":"#B6862C","logo":"college/logos/florida-international.png"},{"id":"jacksonville-state","school":"Jacksonville State","mascot":"Gamecocks","name":"Jacksonville State Gamecocks","abbr":"JVST","conference":"Conference USA","c1":"#CC0000","c2":"#FFFFFF","logo":"college/logos/jacksonville-state.png"},{"id":"kennesaw-state","school":"Kennesaw State","mascot":"Owls","name":"Kennesaw State Owls","abbr":"KENN","conference":"Conference USA","c1":"#FDBB30","c2":"#000000","logo":"college/logos/kennesaw-state.png"},{"id":"liberty","school":"Liberty","mascot":"Flames","name":"Liberty Flames","abbr":"LIB","conference":"Conference USA","c1":"#002D62","c2":"#C41230","logo":"college/logos/liberty.png"},{"id":"middle-tennessee","school":"Middle Tennessee","mascot":"Blue Raiders","name":"Middle Tennessee Blue Raiders","abbr":"MTSU","conference":"Conference USA","c1":"#0066CC","c2":"#FFFFFF","logo":"college/logos/middle-tennessee.png"},{"id":"missouri-state","school":"Missouri State","mascot":"Bears","name":"Missouri State Bears","abbr":"MOST","conference":"Conference USA","c1":"#5E0009","c2":"#FFFFFF","logo":"college/logos/missouri-state.png"},{"id":"new-mexico-state","school":"New Mexico State","mascot":"Aggies","name":"New Mexico State Aggies","abbr":"NMSU","conference":"Conference USA","c1":"#891216","c2":"#FFFFFF","logo":"college/logos/new-mexico-state.png"},{"id":"sam-houston","school":"Sam Houston","mascot":"Bearkats","name":"Sam Houston Bearkats","abbr":"SHSU","conference":"Conference USA","c1":"#F77F00","c2":"#FFFFFF","logo":"college/logos/sam-houston.png"},{"id":"western-kentucky","school":"Western Kentucky","mascot":"Hilltoppers","name":"Western Kentucky Hilltoppers","abbr":"WKU","conference":"Conference USA","c1":"#F32026","c2":"#FFFFFF","logo":"college/logos/western-kentucky.png"},{"id":"notre-dame","school":"Notre Dame","mascot":"Fighting Irish","name":"Notre Dame Fighting Irish","abbr":"ND","conference":"FBS Independents","c1":"#0C2340","c2":"#C99700","logo":"college/logos/notre-dame.png"},{"id":"uconn","school":"UConn","mascot":"Huskies","name":"UConn Huskies","abbr":"CONN","conference":"FBS Independents","c1":"#000E2F","c2":"#FFFFFF","logo":"college/logos/uconn.png"},{"id":"akron","school":"Akron","mascot":"Zips","name":"Akron Zips","abbr":"AKR","conference":"Mid-American","c1":"#041E42","c2":"#A89968","logo":"college/logos/akron.png"},{"id":"ball-state","school":"Ball State","mascot":"Cardinals","name":"Ball State Cardinals","abbr":"BALL","conference":"Mid-American","c1":"#BA0C2F","c2":"#FFFFFF","logo":"college/logos/ball-state.png"},{"id":"bowling-green","school":"Bowling Green","mascot":"Falcons","name":"Bowling Green Falcons","abbr":"BGSU","conference":"Mid-American","c1":"#FF7300","c2":"#4F2C1D","logo":"college/logos/bowling-green.png"},{"id":"buffalo","school":"Buffalo","mascot":"Bulls","name":"Buffalo Bulls","abbr":"BUFF","conference":"Mid-American","c1":"#005BBB","c2":"#FFFFFF","logo":"college/logos/buffalo.png"},{"id":"central-michigan","school":"Central Michigan","mascot":"Chippewas","name":"Central Michigan Chippewas","abbr":"CMU","conference":"Mid-American","c1":"#6A0032","c2":"#FFC82E","logo":"college/logos/central-michigan.png"},{"id":"eastern-michigan","school":"Eastern Michigan","mascot":"Eagles","name":"Eastern Michigan Eagles","abbr":"EMU","conference":"Mid-American","c1":"#006633","c2":"#FFFFFF","logo":"college/logos/eastern-michigan.png"},{"id":"kent-state","school":"Kent State","mascot":"Golden Flashes","name":"Kent State Golden Flashes","abbr":"KENT","conference":"Mid-American","c1":"#002664","c2":"#EAAB00","logo":"college/logos/kent-state.png"},{"id":"massachusetts","school":"Massachusetts","mascot":"Minutemen","name":"Massachusetts Minutemen","abbr":"UMASS","conference":"Mid-American","c1":"#881C1C","c2":"#FFFFFF","logo":"college/logos/massachusetts.png"},{"id":"miami-oh","school":"Miami (OH)","mascot":"RedHawks","name":"Miami (OH) RedHawks","abbr":"MIOH","conference":"Mid-American","c1":"#C41230","c2":"#FFFFFF","logo":"college/logos/miami-oh.png"},{"id":"ohio","school":"Ohio","mascot":"Bobcats","name":"Ohio Bobcats","abbr":"OHIO","conference":"Mid-American","c1":"#00694E","c2":"#FFFFFF","logo":"college/logos/ohio.png"},{"id":"sacramento-state","school":"Sacramento State","mascot":"Hornets","name":"Sacramento State Hornets","abbr":"SAC","conference":"Mid-American","c1":"#00573F","c2":"#C4B581","logo":"college/logos/sacramento-state.png"},{"id":"toledo","school":"Toledo","mascot":"Rockets","name":"Toledo Rockets","abbr":"TOL","conference":"Mid-American","c1":"#15397F","c2":"#FFDA00","logo":"college/logos/toledo.png"},{"id":"western-michigan","school":"Western Michigan","mascot":"Broncos","name":"Western Michigan Broncos","abbr":"WMU","conference":"Mid-American","c1":"#B59A57","c2":"#3B2314","logo":"college/logos/western-michigan.png"},{"id":"air-force","school":"Air Force","mascot":"Falcons","name":"Air Force Falcons","abbr":"AF","conference":"Mountain West","c1":"#003087","c2":"#8A8D8F","logo":"college/logos/air-force.png"},{"id":"hawai-i","school":"Hawai'i","mascot":"Rainbow Warriors","name":"Hawai'i Rainbow Warriors","abbr":"HAW","conference":"Mountain West","c1":"#024731","c2":"#FFFFFF","logo":"college/logos/hawai-i.png"},{"id":"nevada","school":"Nevada","mascot":"Wolf Pack","name":"Nevada Wolf Pack","abbr":"NEV","conference":"Mountain West","c1":"#003366","c2":"#807F84","logo":"college/logos/nevada.png"},{"id":"new-mexico","school":"New Mexico","mascot":"Lobos","name":"New Mexico Lobos","abbr":"UNM","conference":"Mountain West","c1":"#BA0C2F","c2":"#A7A8AA","logo":"college/logos/new-mexico.png"},{"id":"north-dakota-state","school":"North Dakota State","mascot":"Bison","name":"North Dakota State Bison","abbr":"NDSU","conference":"Mountain West","c1":"#006A53","c2":"#FFC72C","logo":"college/logos/north-dakota-state.png"},{"id":"northern-illinois","school":"Northern Illinois","mascot":"Huskies","name":"Northern Illinois Huskies","abbr":"NIU","conference":"Mountain West","c1":"#BA0C2F","c2":"#000000","logo":"college/logos/northern-illinois.png"},{"id":"san-jose-state","school":"San José State","mascot":"Spartans","name":"San José State Spartans","abbr":"SJSU","conference":"Mountain West","c1":"#0055A2","c2":"#E5A823","logo":"college/logos/san-jose-state.png"},{"id":"unlv","school":"UNLV","mascot":"Rebels","name":"UNLV Rebels","abbr":"UNLV","conference":"Mountain West","c1":"#CF0A2C","c2":"#FFFFFF","logo":"college/logos/unlv.png"},{"id":"utep","school":"UTEP","mascot":"Miners","name":"UTEP Miners","abbr":"UTEP","conference":"Mountain West","c1":"#FF8200","c2":"#041E42","logo":"college/logos/utep.png"},{"id":"wyoming","school":"Wyoming","mascot":"Cowboys","name":"Wyoming Cowboys","abbr":"WYO","conference":"Mountain West","c1":"#492F24","c2":"#FFC425","logo":"college/logos/wyoming.png"},{"id":"boise-state","school":"Boise State","mascot":"Broncos","name":"Boise State Broncos","abbr":"BOIS","conference":"Pac-12","c1":"#0033A0","c2":"#D64309","logo":"college/logos/boise-state.png"},{"id":"colorado-state","school":"Colorado State","mascot":"Rams","name":"Colorado State Rams","abbr":"CSU","conference":"Pac-12","c1":"#1E4D2B","c2":"#C8C372","logo":"college/logos/colorado-state.png"},{"id":"fresno-state","school":"Fresno State","mascot":"Bulldogs","name":"Fresno State Bulldogs","abbr":"FRES","conference":"Pac-12","c1":"#DB0032","c2":"#13284C","logo":"college/logos/fresno-state.png"},{"id":"oregon-state","school":"Oregon State","mascot":"Beavers","name":"Oregon State Beavers","abbr":"ORST","conference":"Pac-12","c1":"#DC4405","c2":"#000000","logo":"college/logos/oregon-state.png"},{"id":"san-diego-state","school":"San Diego State","mascot":"Aztecs","name":"San Diego State Aztecs","abbr":"SDSU","conference":"Pac-12","c1":"#A6192E","c2":"#000000","logo":"college/logos/san-diego-state.png"},{"id":"texas-state","school":"Texas State","mascot":"Bobcats","name":"Texas State Bobcats","abbr":"TXST","conference":"Pac-12","c1":"#501214","c2":"#B9985A","logo":"college/logos/texas-state.png"},{"id":"utah-state","school":"Utah State","mascot":"Aggies","name":"Utah State Aggies","abbr":"USU","conference":"Pac-12","c1":"#00263A","c2":"#8D959A","logo":"college/logos/utah-state.png"},{"id":"washington-state","school":"Washington State","mascot":"Cougars","name":"Washington State Cougars","abbr":"WSU","conference":"Pac-12","c1":"#981E32","c2":"#5E6A71","logo":"college/logos/washington-state.png"},{"id":"alabama","school":"Alabama","mascot":"Crimson Tide","name":"Alabama Crimson Tide","abbr":"BAMA","conference":"SEC","c1":"#9E1B32","c2":"#FFFFFF","logo":"college/logos/alabama.png"},{"id":"arkansas","school":"Arkansas","mascot":"Razorbacks","name":"Arkansas Razorbacks","abbr":"ARK","conference":"SEC","c1":"#9D2235","c2":"#FFFFFF","logo":"college/logos/arkansas.png"},{"id":"auburn","school":"Auburn","mascot":"Tigers","name":"Auburn Tigers","abbr":"AUB","conference":"SEC","c1":"#0C2340","c2":"#E87722","logo":"college/logos/auburn.png"},{"id":"florida","school":"Florida","mascot":"Gators","name":"Florida Gators","abbr":"FLA","conference":"SEC","c1":"#0021A5","c2":"#FA4616","logo":"college/logos/florida.png"},{"id":"georgia","school":"Georgia","mascot":"Bulldogs","name":"Georgia Bulldogs","abbr":"UGA","conference":"SEC","c1":"#BA0C2F","c2":"#000000","logo":"college/logos/georgia.png"},{"id":"kentucky","school":"Kentucky","mascot":"Wildcats","name":"Kentucky Wildcats","abbr":"UK","conference":"SEC","c1":"#0033A0","c2":"#FFFFFF","logo":"college/logos/kentucky.png"},{"id":"lsu","school":"LSU","mascot":"Tigers","name":"LSU Tigers","abbr":"LSU","conference":"SEC","c1":"#461D7C","c2":"#FDD023","logo":"college/logos/lsu.png"},{"id":"mississippi-state","school":"Mississippi State","mascot":"Bulldogs","name":"Mississippi State Bulldogs","abbr":"MSST","conference":"SEC","c1":"#660000","c2":"#FFFFFF","logo":"college/logos/mississippi-state.png"},{"id":"missouri","school":"Missouri","mascot":"Tigers","name":"Missouri Tigers","abbr":"MIZZ","conference":"SEC","c1":"#F1B82D","c2":"#000000","logo":"college/logos/missouri.png"},{"id":"oklahoma","school":"Oklahoma","mascot":"Sooners","name":"Oklahoma Sooners","abbr":"OU","conference":"SEC","c1":"#841617","c2":"#FFFFFF","logo":"college/logos/oklahoma.png"},{"id":"ole-miss","school":"Ole Miss","mascot":"Rebels","name":"Ole Miss Rebels","abbr":"MISS","conference":"SEC","c1":"#CE1126","c2":"#14213D","logo":"college/logos/ole-miss.png"},{"id":"south-carolina","school":"South Carolina","mascot":"Gamecocks","name":"South Carolina Gamecocks","abbr":"SC","conference":"SEC","c1":"#73000A","c2":"#000000","logo":"college/logos/south-carolina.png"},{"id":"tennessee","school":"Tennessee","mascot":"Volunteers","name":"Tennessee Volunteers","abbr":"TENN","conference":"SEC","c1":"#FF8200","c2":"#FFFFFF","logo":"college/logos/tennessee.png"},{"id":"texas","school":"Texas","mascot":"Longhorns","name":"Texas Longhorns","abbr":"TEX","conference":"SEC","c1":"#BF5700","c2":"#FFFFFF","logo":"college/logos/texas.png"},{"id":"texas-a-m","school":"Texas A&M","mascot":"Aggies","name":"Texas A&M Aggies","abbr":"TAMU","conference":"SEC","c1":"#500000","c2":"#FFFFFF","logo":"college/logos/texas-a-m.png"},{"id":"vanderbilt","school":"Vanderbilt","mascot":"Commodores","name":"Vanderbilt Commodores","abbr":"VAND","conference":"SEC","c1":"#000000","c2":"#B59A57","logo":"college/logos/vanderbilt.png"},{"id":"app-state","school":"App State","mascot":"Mountaineers","name":"App State Mountaineers","abbr":"APP","conference":"Sun Belt","c1":"#FFCC00","c2":"#000000","logo":"college/logos/app-state.png"},{"id":"arkansas-state","school":"Arkansas State","mascot":"Red Wolves","name":"Arkansas State Red Wolves","abbr":"ARST","conference":"Sun Belt","c1":"#CC092F","c2":"#000000","logo":"college/logos/arkansas-state.png"},{"id":"coastal-carolina","school":"Coastal Carolina","mascot":"Chanticleers","name":"Coastal Carolina Chanticleers","abbr":"CCU","conference":"Sun Belt","c1":"#006F71","c2":"#A27752","logo":"college/logos/coastal-carolina.png"},{"id":"georgia-southern","school":"Georgia Southern","mascot":"Eagles","name":"Georgia Southern Eagles","abbr":"GASO","conference":"Sun Belt","c1":"#011E41","c2":"#A48D5A","logo":"college/logos/georgia-southern.png"},{"id":"georgia-state","school":"Georgia State","mascot":"Panthers","name":"Georgia State Panthers","abbr":"GAST","conference":"Sun Belt","c1":"#0039A6","c2":"#FFFFFF","logo":"college/logos/georgia-state.png"},{"id":"james-madison","school":"James Madison","mascot":"Dukes","name":"James Madison Dukes","abbr":"JMU","conference":"Sun Belt","c1":"#450084","c2":"#CBB677","logo":"college/logos/james-madison.png"},{"id":"louisiana","school":"Louisiana","mascot":"Ragin' Cajuns","name":"Louisiana Ragin' Cajuns","abbr":"ULL","conference":"Sun Belt","c1":"#CE181E","c2":"#FFFFFF","logo":"college/logos/louisiana.png"},{"id":"louisiana-tech","school":"Louisiana Tech","mascot":"Bulldogs","name":"Louisiana Tech Bulldogs","abbr":"LT","conference":"Sun Belt","c1":"#002D65","c2":"#E31B23","logo":"college/logos/louisiana-tech.png"},{"id":"marshall","school":"Marshall","mascot":"Thundering Herd","name":"Marshall Thundering Herd","abbr":"MRSH","conference":"Sun Belt","c1":"#00B140","c2":"#FFFFFF","logo":"college/logos/marshall.png"},{"id":"old-dominion","school":"Old Dominion","mascot":"Monarchs","name":"Old Dominion Monarchs","abbr":"ODU","conference":"Sun Belt","c1":"#003057","c2":"#7C878E","logo":"college/logos/old-dominion.png"},{"id":"south-alabama","school":"South Alabama","mascot":"Jaguars","name":"South Alabama Jaguars","abbr":"USA","conference":"Sun Belt","c1":"#00205B","c2":"#BF0D3E","logo":"college/logos/south-alabama.png"},{"id":"southern-miss","school":"Southern Miss","mascot":"Golden Eagles","name":"Southern Miss Golden Eagles","abbr":"USM","conference":"Sun Belt","c1":"#FFCF00","c2":"#000000","logo":"college/logos/southern-miss.png"},{"id":"troy","school":"Troy","mascot":"Trojans","name":"Troy Trojans","abbr":"TROY","conference":"Sun Belt","c1":"#8A2432","c2":"#D6D5C9","logo":"college/logos/troy.png"},{"id":"ul-monroe","school":"UL Monroe","mascot":"Warhawks","name":"UL Monroe Warhawks","abbr":"ULM","conference":"Sun Belt","c1":"#800029","c2":"#FDB913","logo":"college/logos/ul-monroe.png"}];
+const COLLEGE_MAP = Object.fromEntries(COLLEGE_TEAMS.map(t=>[t.id,t]));
+const COLLEGE_NFL_SLOTS = {13:TEAMS[13],30:TEAMS[30]};
+const COLLEGE_CACHE = new Map();
+const COLLEGE_STATE={youId:'ohio-state',oppId:'michigan',home:true,diff:1,mode:'off',qlen:180,uU:0,uO:1,choose:'you',conf:'ALL',search:'',last:''};
+const COLLEGE_CONFS=['ALL',...new Set(COLLEGE_TEAMS.map(t=>t.conference))];
+let COLLEGE_INDEX_LOADING=null;
+function collegeRefreshIndex(){
+ if(COLLEGE_INDEX_LOADING)return COLLEGE_INDEX_LOADING;
+ COLLEGE_INDEX_LOADING=fetch('college/teams.json',{cache:'no-cache'}).then(r=>{
+  if(!r.ok)throw new Error('Index not available');return r.json();
+ }).then(data=>{
+  if(!data||data.season!==2026||!Array.isArray(data.teams)||data.teams.length!==138)return;
+  for(const updated of data.teams){const target=COLLEGE_MAP[updated.id];if(target)Object.assign(target,updated);}
+  if(UI.scr==='college'||UI.scr==='collegeTeams')render();
+ }).catch(err=>console.warn('College metadata fallback (built-in list):',err.message));
+ return COLLEGE_INDEX_LOADING;
+}
+
+function collegeClearLogo(t){
+ delete NFL_FIELD_LOGOS[t];NFL_FIELD_LOGO_FAILED.delete(t);NFL_FIELD_LOGO_PENDING.delete(t);
+ for(const k in LOGO_MINI)if(k.startsWith(t+'|'))delete LOGO_MINI[k];
+ if(typeof SPR_CACHE!=='undefined'&&SPR_CACHE&&SPR_CACHE.clear)SPR_CACHE.clear();
+ if(M&&M.fieldCvs)M.fieldCvs=[];
+}
+function collegeRestoreTeams(){
+ for(const t of [13,30]){if(TEAMS[t]!==COLLEGE_NFL_SLOTS[t]){TEAMS[t]=COLLEGE_NFL_SLOTS[t];collegeClearLogo(t);}}
+}
+function collegeSetTeams(y,o){
+ collegeRestoreTeams();
+ for(const [index,col] of [[13,y],[30,o]]){
+  const base=COLLEGE_NFL_SLOTS[index];
+  TEAMS[index]={...base,city:col.school,nickname:col.mascot,
+   name:col.school+' '+col.mascot,city0:col.school,nick0:col.mascot,
+   abbr:col.abbr,c1:col.c1,c2:col.c2,conf:col.conference,
+   college:true,collegeLogo:col.logo};
+  collegeClearLogo(index);
+ }
+}
+function collegeBadge(t,size=38){
+ const w=Math.max(18,size),font=size>=65?11:9;
+ const logo=esc(t.logo),short=esc(t.abbr);
+ return `<div style="background:${esc(t.c1)};width:${w}px;height:${w}px;flex:none;border:2px solid ${esc(t.c2)};display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-radius:5px">
+  <b style="font-size:${font}px;color:#fff;text-shadow:1px 1px #000">${short}</b>
+  <img src="${logo}" alt="${short}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain" onerror="this.remove()">
+ </div>`;
+}
+function collegeError(why){
+ modal(`<div class="mp" style="width:490px;align-items:center;text-align:center;gap:12px">
+  ${ttl('REAL ROSTER FILE MISSING',true)}
+  <div class="s7" style="line-height:2">${esc(why)}</div>
+  <div class="s7 dim" style="line-height:1.8">Upload college/rosters and college/logos with your GitHub Pages site.<br>Run the one-time GitHub Actions import to add the open 2025-26 snapshot. No live calls in-game.<br>Real players are REQUIRED; fictional rosters will not be substituted.</div>
+  <button class="bt y" data-a="close">BACK TO COLLEGE TEAMS</button></div>`);
+}
+async function collegeRoster(team){
+ if(COLLEGE_CACHE.has(team.id))return COLLEGE_CACHE.get(team.id);
+ const url='college/rosters/'+encodeURIComponent(team.id)+'.json';
+ const r=await fetch(url,{cache:'force-cache'});
+ if(!r.ok)throw new Error('Missing college roster for '+team.school+' ('+r.status+'). Run the one-time roster import workflow in GitHub: '+url);
+ const data=await r.json();
+ if(![2025,2026,'2025-26'].includes(data.season)||!Array.isArray(data.players)||!data.players.length)
+  throw new Error('The '+team.school+' roster file has no supported historical or 2026 players.');
+ // Do not cache invalid or empty JSON. The game only uses real named rows.
+ const players=data.players.filter(p=>
+  (p.first_name||p.firstName)&&(p.last_name||p.lastName)&&mapNFLPosition(p.position));
+ if(players.length<8)throw new Error(team.school+' has only '+players.length+' supported real players; check the roster import.');
+ COLLEGE_CACHE.set(team.id,players);return players;
+}
+function collegePickPlayers(rows){
+ // A compact lineup of REAL football player names. Attribute ratings are game
+ // estimates, since this data source does not provide official skill ratings.
+ const used=new Set(),out=[];
+ const w=r=>{const yr=String(r.year||'').toLowerCase();
+  if(/senior|\bsr\b|^4$|^5$/.test(yr))return 3;
+  if(/junior|\bjr\b|^3$/.test(yr))return 2;
+  if(/soph|\bso\b|^2$/.test(yr))return 1;
+  return 0;};
+ const sorted=rows.slice().sort((a,b)=>w(b)-w(a));
+ for(const need of AI_T){
+  let ix=sorted.findIndex((r,i)=>!used.has(i)&&mapNFLPosition(r.position)===need);
+  if(ix<0)continue;used.add(ix);out.push(sorted[ix]);
+ }
+ // Extra named reserves fill lineup holes without inventing unknown players.
+ for(let i=0;out.length<12&&i<sorted.length;i++)if(!used.has(i)){
+  used.add(i);out.push(sorted[i]);
+ }
+ return out;
+}
+function collegeMakePlayer(r,team){
+ const pos=mapNFLPosition(r.position),fn=String(r.first_name||r.firstName).trim(),ln=String(r.last_name||r.lastName).trim();
+ if(!pos||!fn||!ln)return;
+ const age=19+Math.min(4,Math.max(0,Number(r.year)||0)); // estimate for the engine, not a known birth date
+ const q=clamp(4.6+(Number(r.year)||0)*0.25+rnd(-0.5,0.7),2.7,8.4); // gameplay rating estimate
+ const p=genPlayer(pos,q,age);
+ p.fn=fn;p.ln=ln;p.team=team;p.college=true;
+ p.collegeId=r.id||null;p.collegeYear=r.year||null;
+ if(r.jersey!=null&&r.jersey!=='')p.num=Number(r.jersey)||p.num;else p.collegeNumEstimated=true;
+ p.seasons=0;p.yrs=4;p.inj=0;p.bench=false;p.mor=78;p.cond=100;
+ addPlayer(p);
+}
+ACT.collegeOpen=()=>{
+ if(L&&!L.exh)window.__collegeFranchise=L;
+ collegeRestoreTeams();L=null;M=null;
+ collegeRefreshIndex();
+ COLLEGE_STATE.last=COLLEGE_STATE.last||'';
+ go('college');
+};
+ACT.collegeBack=()=>{
+ M=null;collegeRestoreTeams();
+ L=window.__collegeFranchise||null;window.__collegeFranchise=null;
+ if(L)indexPlayers();go('title');
+};
+SCR.college=()=>{
+ const s=COLLEGE_STATE,y=COLLEGE_MAP[s.youId],o=COLLEGE_MAP[s.oppId];
+ const ch=(k,v,label)=>`<span class="chip ${s[k]===v?'on':''}" data-a="collegeSet" data-k="${k}" data-v="${v}">${label}</span>`;
+ const card=(t,role)=>`<div class="col" style="width:184px;align-items:center;gap:6px;padding:5px;min-width:0">
+ <span class="s7 dim">${role==='you'?'YOUR SCHOOL':'OPPONENT'}</span>
+ ${collegeBadge(t,66)}
+ <span class="s10" style="max-width:182px;text-align:center;line-height:1.4;min-height:22px">${esc(t.school.toUpperCase())}</span>
+ <span class="s7 dim" style="text-align:center">${esc(t.mascot.toUpperCase())}</span>
+ <button class="bt" data-a="collegeChoose" data-k="${role}">CHANGE SCHOOL</button>
+ <div class="row" style="gap:4px"><button class="bt" data-a="collegeUni" data-k="${role}" data-d="-1">&lt;</button><span class="s7" style="min-width:52px;text-align:center">${['HOME','AWAY','ALT'][role==='you'?s.uU:s.uO]}</span><button class="bt" data-a="collegeUni" data-k="${role}" data-d="1">&gt;</button></div>
+ </div>`;
+ return`<div class="screen" style="align-items:center;gap:5px">
+ <div class="row" style="width:100%"><button class="bt ico" data-a="collegeBack">${ICON.back}</button><div class="grow">${ttl('COLLEGE FOOTBALL')}</div><span class="s7 dim">2026 FBS · 138</span></div>
+ <div class="row" style="align-items:flex-start;gap:6px;flex:1;width:100%;justify-content:space-around">
+  ${card(y,'you')}
+  <div class="col" style="width:180px;gap:8px;align-items:center;padding-top:6px">
+   <span class="s7 dim">COLLEGE EXHIBITION</span>
+   <div class="row ctr">${ch('home',true,'HOME')}${ch('home',false,'AWAY')}</div>
+   <div class="s7">DIFFICULTY</div><div class="row ctr" style="flex-wrap:wrap;gap:2px">${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',4,'EXTREME')}</div>
+   <div class="s7">YOU PLAY</div><div class="row ctr" style="gap:2px">${ch('mode','off','OFF')}${ch('mode','def','DEF')}${ch('mode','both','BOTH')}</div>
+   <div class="s7">QUARTERS</div><div class="row ctr" style="flex-wrap:wrap;gap:2px">${[120,180,240,300].map(v=>ch('qlen',v,(v/60)+':00')).join('')}</div>
+   <span class="s7 dim" style="text-align:center;line-height:1.7">REAL HISTORICAL NAMES<br>SIMULATED RATINGS &amp; NUMBERS</span>
+  </div>
+  ${card(o,'opp')}
+ </div>
+ <div class="row ctr" style="width:100%;gap:8px">
+  <span class="s7 dim" style="flex:1;text-align:left;line-height:1.5">${esc(s.last||'ONE-TIME 2025-26 ROSTER SNAPSHOT · LOCAL LOGOS')}</span>
+  <button class="bt y big" style="width:160px" data-a="collegePlay">PLAY GAME &gt;</button>
+ </div></div>`;
+};
+SCR.collegeTeams=()=>{
+ const s=COLLEGE_STATE,current=COLLEGE_MAP[s[s.choose+'Id']],conf=s.conf;
+ const options=COLLEGE_CONFS.map(k=>`<option value="${esc(k)}" ${k===conf?'selected':''}>${esc(k)}</option>`).join('');
+ const tiles=COLLEGE_TEAMS.filter(t=>conf==='ALL'||t.conference===conf).map(t=>
+  `<button class="col-select" data-a="collegePick" data-id="${t.id}" data-search="${esc((t.school+' '+t.mascot+' '+t.abbr).toLowerCase())}" style="font:inherit;color:#fff;background:${esc(t.c1)};border:2px solid ${esc(t.c2)};cursor:pointer;min-width:0;text-align:left;padding:5px 5px 5px 7px;display:flex;align-items:center;gap:7px;box-shadow:0 2px #132048">
+    ${collegeBadge(t,27)}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7px">${esc(t.school.toUpperCase())}</span></button>`).join('');
+ return`<div class="screen" style="gap:5px">
+  <div class="row"><button class="bt ico" data-a="collegeTeamsBack">${ICON.back}</button><div class="grow">${ttl('SELECT '+(s.choose==='you'?'YOUR':'OPP.')+' SCHOOL')}</div></div>
+  <div class="row" style="gap:5px"><select style="flex:1;font:inherit;font-size:7px;padding:7px 3px;background:var(--nv);border:2px solid #fff;color:white" onchange="ACT.collegeConf({v:this.value})">${options}</select><input class="txt" style="flex:1;font-size:8px" value="${esc(s.search)}" placeholder="SEARCH ALL SCHOOLS..." oninput="collegeSearch(this.value)"></div>
+  <div class="scroll grow" style="width:100%"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px" id="collegeOptions">${tiles}</div></div>
+  <div class="s7 dim" style="text-align:center">2026 FBS · ${COLLEGE_TEAMS.filter(t=>conf==='ALL'||t.conference===conf).length} SCHOOLS IN FILTER · SELECT TO RETURN</div></div>`;
+};
+function collegeSearch(v){
+ COLLEGE_STATE.search=String(v||'');const q=COLLEGE_STATE.search.toLowerCase().trim();
+ for(const btn of document.querySelectorAll('#collegeOptions .col-select'))btn.style.display=!q||btn.dataset.search.includes(q)?'flex':'none';
+}
+ACT.collegeChoose=d=>{COLLEGE_STATE.choose=d.k;COLLEGE_STATE.conf='ALL';COLLEGE_STATE.search='';go('collegeTeams');};
+ACT.collegeTeamsBack=()=>go('college');
+ACT.collegeConf=d=>{COLLEGE_STATE.conf=d.v;COLLEGE_STATE.search='';render();};
+ACT.collegePick=d=>{
+ const s=COLLEGE_STATE,t=COLLEGE_MAP[d.id];if(!t)return;
+ if(d.id===s[(s.choose==='you'?'opp':'you')+'Id'])return toast('PICK A DIFFERENT SCHOOL');
+ s[s.choose+'Id']=t.id;s[s.choose==='you'?'uU':'uO']=s.choose==='you'?0:1;
+ go('college');
+};
+ACT.collegeSet=d=>{const s=COLLEGE_STATE;s[d.k]=d.v==='true'?true:d.v==='false'?false:isNaN(+d.v)?d.v:+d.v;render();};
+ACT.collegeUni=d=>{const s=COLLEGE_STATE,k=d.k==='you'?'uU':'uO';s[k]=(s[k]+ +d.d+3)%3;render();};
+ACT.collegePlay=async()=>{
+ const s=COLLEGE_STATE,y=COLLEGE_MAP[s.youId],o=COLLEGE_MAP[s.oppId];
+ if(!y||!o||y.id===o.id)return toast('CHOOSE TWO DIFFERENT SCHOOLS');
+ modal(`<div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('LOADING COLLEGE ROSTERS',true)}<div class="s7 dim">${esc(y.school)} vs ${esc(o.school)}</div></div>`);
+ let yr,or;
+ try{[yr,or]=await Promise.all([collegeRoster(y),collegeRoster(o)]);}
+ catch(err){console.error(err);collegeError(err.message||String(err));return;}
+ try{
+  collegeSetTeams(y,o);
+  createLeague(13,'COLLEGE',{rmax:12,diff:s.diff,dir:'R',rosterMode:'CUSTOM'});
+  for(const id of [13,30])for(const p of rosterOf(id).slice())removePlayer(p);
+  for(const r of collegePickPlayers(yr))collegeMakePlayer(r,13);
+  for(const r of collegePickPlayers(or))collegeMakePlayer(r,30);
+  if(rosterOf(13).length<8||rosterOf(30).length<8)throw new Error('One roster did not have enough supported positions.');
+  L.draft=null;L.phase='REG';L.week=1;L.exh=true;L.college=true;L.awardsShow=false;L.year=2026;
+  Object.assign(L.settings,{qlen:s.qlen,play:s.mode,mode:s.mode,diff:s.diff,dir:'R',replay:true});
+  const g=s.home?{h:13,a:30,hs:null,as:null}:{h:30,a:13,hs:null,as:null};L.sched=[[g]];
+  UI.modal=null;
+  window.__h2hSub={};
+  startMatch(g,{uU:s.uU,uO:s.uO});
+ }catch(err){console.error(err);M=null;collegeRestoreTeams();L=null;collegeError(err.message||String(err));}
+};
+
 go('title');
 requestAnimationFrame(loop);
 </script>
