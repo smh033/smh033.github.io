@@ -6,217 +6,10 @@
  "jerseysVerified": true,
  "players": [
   {
-   "id": "osu-2026-001",
-   "first_name": "Brandon",
-   "last_name": "Inniss",
-   "position": "WR",
-   "year": 4,
-   "jersey": 0,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-059",
-   "first_name": "Nate",
-   "last_name": "Roberts",
-   "position": "TE",
-   "year": 2,
-   "jersey": 83,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-052",
-   "first_name": "Austin",
-   "last_name": "Siereveld",
-   "position": "OL",
-   "year": 4,
-   "jersey": 67,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-067",
-   "first_name": "Eddrick",
-   "last_name": "Houston",
-   "position": "DT",
-   "year": 3,
-   "jersey": 96,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-009",
-   "first_name": "Riley",
-   "last_name": "Pettijohn",
-   "position": "LB",
-   "year": 2,
-   "jersey": 5,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-011",
-   "first_name": "Devin",
-   "last_name": "Sanchez",
-   "position": "CB",
-   "year": 2,
-   "jersey": 6,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-068",
-   "first_name": "Connor",
-   "last_name": "Hawkins",
-   "position": "K",
-   "year": 3,
-   "jersey": 96,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-054",
-   "first_name": "Vasean",
-   "last_name": "Washington",
-   "position": "OL",
-   "year": 5,
-   "jersey": 73,
-   "featured": true
-  },
-  {
-   "id": "osu-2026-014",
-   "first_name": "Jermaine",
-   "last_name": "Mathews Jr.",
-   "position": "CB",
-   "year": 4,
-   "jersey": 7,
-   "featured": true
-  },
-  {
-   "first_name": "Sonny",
-   "last_name": "Styles",
-   "position": "LB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Davison",
-   "last_name": "Igbinosun",
-   "position": "DB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Caleb",
-   "last_name": "Downs",
-   "position": "DB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Lincoln",
-   "last_name": "Kienholz",
-   "position": "QB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Lorenzo",
-   "last_name": "Styles Jr.",
-   "position": "DB",
-   "year": 5,
-   "jersey": null
-  },
-  {
-   "first_name": "Jeremiah",
-   "last_name": "Smith",
-   "position": "WR",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Mylan",
-   "last_name": "Graham",
-   "position": "WR",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Aaron",
-   "last_name": "Scott Jr.",
-   "position": "DB",
-   "year": 2,
-   "jersey": null
-  },
-  {
    "first_name": "Eli",
    "last_name": "Brickhandler",
    "position": "QB",
    "year": 5,
-   "jersey": null
-  },
-  {
-   "first_name": "Phillip",
-   "last_name": "Bell",
-   "position": "WR",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Arvell",
-   "last_name": "Reese",
-   "position": "LB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "De’Zie",
-   "last_name": "Jones",
-   "position": "WR",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Malik",
-   "last_name": "Hartford",
-   "position": "DB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Tavien",
-   "last_name": "St. Clair",
-   "position": "QB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Julian",
-   "last_name": "Sayin",
-   "position": "QB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Faheem",
-   "last_name": "Delane",
-   "position": "DB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "C.J.",
-   "last_name": "Hicks",
-   "position": "DL",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Quincy",
-   "last_name": "Porter",
-   "position": "WR",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Bryce",
-   "last_name": "West",
-   "position": "DB",
-   "year": 2,
    "jersey": null
   },
   {
@@ -227,480 +20,12 @@
    "jersey": null
   },
   {
-   "first_name": "Miles",
-   "last_name": "Lockhart",
-   "position": "DB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Bryson",
-   "last_name": "Rodgers",
+   "id": "osu-2026-001",
+   "first_name": "Brandon",
+   "last_name": "Inniss",
    "position": "WR",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Beau",
-   "last_name": "Atkinson",
-   "position": "DL",
    "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Trey",
-   "last_name": "Robinette",
-   "position": "QB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Jelani",
-   "last_name": "Thurman",
-   "position": "TE",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Zion",
-   "last_name": "Grady",
-   "position": "DL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Mason",
-   "last_name": "Maggs",
-   "position": "QB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Keenan",
-   "last_name": "Nelson Jr.",
-   "position": "DB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Carnell",
-   "last_name": "Tate",
-   "position": "WR",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Tarvos",
-   "last_name": "\"TJ\" Alford",
-   "position": "LB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Jaylen",
-   "last_name": "McClain",
-   "position": "DB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Bodpegn",
-   "last_name": "Miller",
-   "position": "WR",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Jordyn",
-   "last_name": "Woods",
-   "position": "DB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "James",
-   "last_name": "Peoples",
-   "position": "RB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Brenten",
-   "last_name": "\"Inky\" Jones",
-   "position": "LB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Anthony",
-   "last_name": "“Turbo” Rogers",
-   "position": "RB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Nolan",
-   "last_name": "Baudo",
-   "position": "WR",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Garrett",
-   "last_name": "Stover",
-   "position": "LB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Sam",
-   "last_name": "Dixon",
-   "position": "RB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Deshawn",
-   "last_name": "Stewart",
-   "position": "DB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Ty",
-   "last_name": "Howard",
-   "position": "LB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Bo",
-   "last_name": "Jackson",
-   "position": "RB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Payton",
-   "last_name": "Pierce",
-   "position": "LB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Kolton",
-   "last_name": "Stover",
-   "position": "QB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Leroy",
-   "last_name": "Roker III",
-   "position": "DB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Stanley",
-   "last_name": "Jackson Jr.",
-   "position": "RB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Glorien",
-   "last_name": "Gough",
-   "position": "DB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Cody",
-   "last_name": "Haddad",
-   "position": "DB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Preston",
-   "last_name": "Wolfe",
-   "position": "WR",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Isaiah",
-   "last_name": "West",
-   "position": "RB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "JJ",
-   "last_name": "Sebert",
-   "position": "DB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Eli",
-   "last_name": "Lee",
-   "position": "LB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Bukari",
-   "last_name": "Miles Jr.",
-   "position": "DB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Brennen",
-   "last_name": "Schramm",
-   "position": "WR",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Jaystin",
-   "last_name": "Gwinn",
-   "position": "DB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Zach",
-   "last_name": "Hayes",
-   "position": "LB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Jayden",
-   "last_name": "Fielding",
-   "position": "K",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Eli",
-   "last_name": "Riggs",
-   "position": "LB",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Joey",
-   "last_name": "Velazquez",
-   "position": "LB",
-   "year": 5,
-   "jersey": null
-  },
-  {
-   "first_name": "Dianté",
-   "last_name": "Griffin",
-   "position": "DB",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Epi",
-   "last_name": "Sitanilei",
-   "position": "DL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Ryan",
-   "last_name": "Rudzinski",
-   "position": "DB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Logan",
-   "last_name": "George",
-   "position": "DL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Gavin",
-   "last_name": "Thobe",
-   "position": "DB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Alec",
-   "last_name": "DelSignore",
-   "position": "LB",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Luke",
-   "last_name": "Montgomery",
-   "position": "OL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Joshua",
-   "last_name": "Mickens",
-   "position": "DL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Will",
-   "last_name": "Smith Jr.",
-   "position": "DL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Dylan",
-   "last_name": "Furshman",
-   "position": "LB",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Dominic",
-   "last_name": "Kirks",
-   "position": "DL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Isaiah",
-   "last_name": "Kema",
-   "position": "OL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Ian",
-   "last_name": "Gecse",
-   "position": "OL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Gabe",
-   "last_name": "VanSickle",
-   "position": "OL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Ahmed",
-   "last_name": "Tounkara",
-   "position": "DL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Joshua",
-   "last_name": "Padilla",
-   "position": "OL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Julian",
-   "last_name": "Goines-Jackson",
-   "position": "OL",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Simon",
-   "last_name": "Lorentz",
-   "position": "OL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Justin",
-   "last_name": "Terry",
-   "position": "OL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Ian",
-   "last_name": "Moore",
-   "position": "OL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Phillip",
-   "last_name": "Daniels",
-   "position": "OL",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Jayvon",
-   "last_name": "McFadden",
-   "position": "OL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Deontae",
-   "last_name": "Armstrong",
-   "position": "OL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Devontae",
-   "last_name": "Armstrong",
-   "position": "OL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Carter",
-   "last_name": "Lowe",
-   "position": "OL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Carson",
-   "last_name": "Hinzman",
-   "position": "OL",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Jake",
-   "last_name": "Cook",
-   "position": "OL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Tegra",
-   "last_name": "Tshabola",
-   "position": "OL",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Ethan",
-   "last_name": "Onianwa",
-   "position": "OL",
-   "year": 4,
-   "jersey": null
+   "jersey": 0
   },
   {
    "first_name": "Shawn",
@@ -710,130 +35,68 @@
    "jersey": null
   },
   {
-   "first_name": "Damarion",
-   "last_name": "Witten",
-   "position": "WR",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "David",
-   "last_name": "Adolph",
-   "position": "WR",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Dorian",
-   "last_name": "Williams",
-   "position": "WR",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Bennett",
-   "last_name": "Christian",
-   "position": "TE",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Max",
-   "last_name": "Klare",
-   "position": "TE",
-   "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Brody",
-   "last_name": "Lennon",
-   "position": "TE",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Maxence",
-   "last_name": "LeBlanc",
+   "id": "osu-2026-059",
+   "first_name": "Nate",
+   "last_name": "Roberts",
    "position": "TE",
    "year": 2,
-   "jersey": null
+   "jersey": 83
   },
   {
-   "first_name": "Trajen",
-   "last_name": "Odom",
-   "position": "DL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Will",
-   "last_name": "Kacmarek",
-   "position": "TE",
+   "id": "osu-2026-054",
+   "first_name": "Vasean",
+   "last_name": "Washington",
+   "position": "OL",
    "year": 5,
-   "jersey": null
+   "jersey": 73
   },
   {
-   "first_name": "Eric",
-   "last_name": "Mensah",
-   "position": "DL",
-   "year": 2,
-   "jersey": null
-  },
-  {
-   "first_name": "Jarquez",
-   "last_name": "Carter",
-   "position": "DL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Caden",
-   "last_name": "Curry",
-   "position": "DL",
+   "id": "osu-2026-052",
+   "first_name": "Austin",
+   "last_name": "Siereveld",
+   "position": "OL",
    "year": 4,
-   "jersey": null
+   "jersey": 67
   },
   {
-   "first_name": "Maxwell",
-   "last_name": "Roy",
-   "position": "DL",
-   "year": 1,
-   "jersey": null
-  },
-  {
-   "first_name": "Jason",
-   "last_name": "Moore",
+   "id": "osu-2026-067",
+   "first_name": "Eddrick",
+   "last_name": "Houston",
    "position": "DL",
    "year": 3,
-   "jersey": null
+   "jersey": 96
   },
   {
-   "first_name": "Tywone",
-   "last_name": "Malone Jr.",
-   "position": "DL",
-   "year": 5,
-   "jersey": null
+   "id": "osu-2026-009",
+   "first_name": "Riley",
+   "last_name": "Pettijohn",
+   "position": "LB",
+   "year": 2,
+   "jersey": 5
   },
   {
-   "first_name": "Jackson",
-   "last_name": "Courville",
+   "id": "osu-2026-014",
+   "first_name": "Jermaine",
+   "last_name": "Mathews Jr.",
+   "position": "DB",
+   "year": 4,
+   "jersey": 7
+  },
+  {
+   "id": "osu-2026-011",
+   "first_name": "Devin",
+   "last_name": "Sanchez",
+   "position": "DB",
+   "year": 2,
+   "jersey": 6
+  },
+  {
+   "id": "osu-2026-068",
+   "first_name": "Connor",
+   "last_name": "Hawkins",
    "position": "K",
    "year": 3,
-   "jersey": null
-  },
-  {
-   "first_name": "Kenyatta",
-   "last_name": "Jackson Jr.",
-   "position": "DL",
-   "year": 4,
-   "jersey": null
-  },
-  {
-   "first_name": "Kayden",
-   "last_name": "McDonald",
-   "position": "DL",
-   "year": 3,
-   "jersey": null
+   "jersey": 96
   }
  ]
 }

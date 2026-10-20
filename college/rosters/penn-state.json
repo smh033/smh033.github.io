@@ -1,0 +1,93 @@
+{
+ "school": "Penn State",
+ "season": 2025,
+ "athleticYear": "2025-26",
+ "source": "Starting lineup provided by repo owner",
+ "jerseysVerified": true,
+ "players": [
+  {
+   "first_name": "Drew",
+   "last_name": "Allar",
+   "position": "QB",
+   "year": 3,
+   "jersey": 15
+  },
+  {
+   "first_name": "Nicholas",
+   "last_name": "Singleton",
+   "position": "RB",
+   "year": 3,
+   "jersey": 10
+  },
+  {
+   "first_name": "Trebor",
+   "last_name": "Peña",
+   "position": "WR",
+   "year": 3,
+   "jersey": 8
+  },
+  {
+   "first_name": "Devonte",
+   "last_name": "Ross",
+   "position": "WR",
+   "year": 3,
+   "jersey": 5
+  },
+  {
+   "first_name": "Luke",
+   "last_name": "Reynolds",
+   "position": "TE",
+   "year": 3,
+   "jersey": 85
+  },
+  {
+   "first_name": "Olaivavega",
+   "last_name": "Ioane",
+   "position": "OL",
+   "year": 3,
+   "jersey": 71
+  },
+  {
+   "first_name": "Anthony",
+   "last_name": "Donkoh",
+   "position": "OL",
+   "year": 3,
+   "jersey": 68
+  },
+  {
+   "first_name": "Dani",
+   "last_name": "Dennis-Sutton",
+   "position": "DL",
+   "year": 3,
+   "jersey": 33
+  },
+  {
+   "first_name": "Dominic",
+   "last_name": "DeLuca",
+   "position": "LB",
+   "year": 3,
+   "jersey": 0
+  },
+  {
+   "first_name": "Zakee",
+   "last_name": "Wheatley",
+   "position": "DB",
+   "year": 3,
+   "jersey": 6
+  },
+  {
+   "first_name": "Zion",
+   "last_name": "Tracy",
+   "position": "DB",
+   "year": 3,
+   "jersey": 7
+  },
+  {
+   "first_name": "Ryan",
+   "last_name": "Barker",
+   "position": "K",
+   "year": 3,
+   "jersey": 94
+  }
+ ]
+}

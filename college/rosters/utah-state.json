@@ -1,0 +1,93 @@
+{
+ "school": "Utah State",
+ "season": 2025,
+ "athleticYear": "2025-26",
+ "source": "Starting lineup provided by repo owner",
+ "jerseysVerified": true,
+ "players": [
+  {
+   "first_name": "Bryson",
+   "last_name": "Barnes",
+   "position": "QB",
+   "year": 3,
+   "jersey": 16
+  },
+  {
+   "first_name": "Miles",
+   "last_name": "Davis",
+   "position": "RB",
+   "year": 3,
+   "jersey": 2
+  },
+  {
+   "first_name": "Braden",
+   "last_name": "Pegan",
+   "position": "WR",
+   "year": 3,
+   "jersey": 11
+  },
+  {
+   "first_name": "Brady",
+   "last_name": "Boyd",
+   "position": "WR",
+   "year": 3,
+   "jersey": 5
+  },
+  {
+   "first_name": "Broc",
+   "last_name": "Lane",
+   "position": "TE",
+   "year": 3,
+   "jersey": 87
+  },
+  {
+   "first_name": "Jake",
+   "last_name": "Eichorn",
+   "position": "OL",
+   "year": 3,
+   "jersey": 56
+  },
+  {
+   "first_name": "Trey",
+   "last_name": "Andersen",
+   "position": "OL",
+   "year": 3,
+   "jersey": 57
+  },
+  {
+   "first_name": "Tyree",
+   "last_name": "Morris",
+   "position": "DL",
+   "year": 3,
+   "jersey": 9
+  },
+  {
+   "first_name": "John",
+   "last_name": "Miller",
+   "position": "LB",
+   "year": 3,
+   "jersey": 20
+  },
+  {
+   "first_name": "Ike",
+   "last_name": "Larsen",
+   "position": "DB",
+   "year": 3,
+   "jersey": 18
+  },
+  {
+   "first_name": "Noah",
+   "last_name": "Avinger",
+   "position": "DB",
+   "year": 3,
+   "jersey": 1
+  },
+  {
+   "first_name": "Carter",
+   "last_name": "Brown",
+   "position": "K",
+   "year": 3,
+   "jersey": 21
+  }
+ ]
+}
