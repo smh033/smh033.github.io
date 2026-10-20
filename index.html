@@ -1128,7 +1128,10 @@ const SLOTS_N=5;
 let SLOT=(()=>{try{return clamp(+localStorage.getItem('rf_slot')||1,1,SLOTS_N);}catch(e){return 1;}})();
 const slotKey=n=>n===1?CFG.saveKey:CFG.saveKey+'_s'+n;
 function setSlot(n){SLOT=n;try{localStorage.setItem('rf_slot',String(n));}catch(e){}}
-function save(){if(!L||L.exh)return;   /* Head to Head games are never saved */try{L.savedAt=Date.now();const c=Object.assign({},L);delete c.pmap;localStorage.setItem(slotKey(SLOT),JSON.stringify(c));}catch(e){}}
+function save(){if(!L||L.exh)return;   /* Head to Head games are never saved */L.savedAt=Date.now();const c=Object.assign({},L);delete c.pmap;const js=JSON.stringify(c);
+ try{localStorage.setItem(slotKey(SLOT),js);}catch(e){
+  /* browser storage full: drop the re-downloadable NFL roster copy and try again, otherwise tell the player */
+  try{localStorage.removeItem(NFL_CACHE_KEY);localStorage.setItem(slotKey(SLOT),js);}catch(e2){if(!window.__fullWarn||Date.now()-window.__fullWarn>60000){window.__fullWarn=Date.now();toast('STORAGE FULL · DELETE AN OLD SAVE SLOT');}}}}
 function loadSave(n){try{const s=localStorage.getItem(slotKey(n||SLOT));if(!s)return null;const o=JSON.parse(s);if(!o||o.v!==2)return null;migrate(o);return o;}catch(e){return null;}}
 /* Small summary of a slot for the slot list, without migrating the whole save. */
 function slotInfo(n){try{const s=localStorage.getItem(slotKey(n));if(!s)return null;const o=JSON.parse(s);if(!o||o.v!==2)return null;const R=o.teams&&o.teams[o.user];return{team:o.user,cfb:o.cfbTeams||null,season:o.season,year:o.year,coach:o.coach,phase:o.phase,rec:R?R.w+'-'+R.l+(R.t?'-'+R.t:''):'',at:o.savedAt||0,titles:o.titles||0};}catch(e){return null;}}
