@@ -4875,9 +4875,11 @@ addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr.down=false;pt
    ===================================================================== */
 const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:'',err:'',lob:null,last:'',
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
- buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cand:null};
+ buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100;   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
+const NET_DELAY=100;
+/* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
+const netDelay=()=>clamp(NET.iv*1.15+NET.jit*2.5,45,320);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
 const NET_ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun.cloudflare.com:3478']},
  {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]};
@@ -4890,22 +4892,23 @@ function netSend(o){try{if(NET.conn&&NET.connOpen)NET.conn.send(o);}catch(e){con
 function netCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function loadPeerLib(){if(window.Peer||NET_MOCK)return Promise.resolve();return new Promise((res,rej)=>{const s=document.createElement('script');s.src='lib/peerjs.min.js';s.onload=()=>res();s.onerror=()=>rej(new Error('Could not load the online library'));document.head.appendChild(s);});}
 /* test transport: two tabs of the same browser talk through a BroadcastChannel (?netmock) */
-function mockConn(code,role){const bc=new BroadcastChannel('rf-net-'+code),c={handlers:{},on(ev,f){this.handlers[ev]=f;},send(o){if(!c.dead)bc.postMessage({from:role,o});},close(){if(c.dead)return;c.dead=true;bc.postMessage({from:role,bye:1});bc.close();}};
+function mockConn(code,role){const bc=new BroadcastChannel('rf-net-'+code),c={handlers:{},on(ev,f){this.handlers[ev]=f;},send(o){if(c.dead)return;const lag=+((location.search.match(/netlag=(\d+)/)||[])[1]||0);if(!lag)return bc.postMessage({from:role,o});const t=Math.max(c.lt||0,performance.now()+lag*(0.7+Math.random()*0.6));c.lt=t;const d=JSON.parse(JSON.stringify(o));setTimeout(()=>{if(!c.dead)bc.postMessage({from:role,o:d});},t-performance.now());},close(){if(c.dead)return;c.dead=true;bc.postMessage({from:role,bye:1});bc.close();}};
  bc.onmessage=e=>{const d=e.data;if(!d||d.from===role||c.dead)return;if(d.hello&&role==='host'){netAccept(c);c.handlers.open&&c.handlers.open();bc.postMessage({from:role,hi:1});return;}
   if(d.hi&&role==='guest'){c.handlers.open&&c.handlers.open();return;}if(d.bye){c.handlers.close&&c.handlers.close();return;}if(d.o!==undefined)c.handlers.data&&c.handlers.data(d.o);};
  return{c,hello(){bc.postMessage({from:role,hello:1});}};}
 function netReset(){try{NET.conn&&NET.conn.close();}catch(e){}try{(NET.rsocks||[]).forEach(s=>s.close());}catch(e){}NET.rsocks=[];NET.rconns={};clearTimeout(NET.p2pT);NET.mode=null;NET.hp2p=false;NET.hrel=false;try{NET.peer&&NET.peer.destroy();}catch(e){}try{NET.mock&&NET.mock.c.close();}catch(e){}
- Object.assign(NET,{on:false,role:null,peer:null,conn:null,connOpen:false,code:'',stage:'menu',status:'',lob:null,snap:null,pup:[],menu:false,lov:undefined,ovH:null,buf:[],wait:false,rc:null,cand:null,mock:null});}
+ Object.assign(NET,{on:false,role:null,peer:null,conn:null,connOpen:false,code:'',stage:'menu',status:'',lob:null,snap:null,pup:[],menu:false,lov:undefined,ovH:null,buf:[],wait:false,rc:null,cands:[],mock:null,rtt:0});}
 /* host: a new connection. In the lobby it's your friend; during a game it must prove it's the same friend (rejoin token) */
-function netAccept(c){if(NET.stage==='game'){if(NET.cand&&NET.cand!==c)try{NET.cand.close();}catch(e){}NET.cand=c;netWire(c);return;}
+function netAccept(c){if(NET.stage==='game'){NET.cands=(NET.cands||[]).filter(x=>!x.dead).slice(-5);NET.cands.push(c);netWire(c);return;}
  if(NET.conn&&NET.connOpen&&NET.conn!==c){try{c.close();}catch(e){}return;}NET.conn=c;netWire(c);}
 function netWire(c){
- c.on('open',()=>{if(c!==NET.conn&&c!==NET.cand)return;
-  if(NET.role==='host'){if(c===NET.cand)return;NET.connOpen=true;NET.on=true;NET.stage='lobby';NET.lastRx=performance.now();netLobbySend();}
+ const isCand=()=>NET.role==='host'&&(NET.cands||[]).includes(c);
+ c.on('open',()=>{if(c!==NET.conn&&!isCand())return;
+  if(NET.role==='host'){if(isCand())return;NET.connOpen=true;NET.on=true;NET.stage='lobby';NET.lastRx=performance.now();netLobbySend();}
   else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok});}}
   sfx('first');if(UI.scr==='online')render();});
  c.on('data',m=>{try{
-  if(NET.role==='host'&&c===NET.cand){if(m&&m.t==='rejoin'&&m.tok&&m.tok===NET.gtok){const old=NET.conn;NET.conn=c;NET.cand=null;NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
+  if(isCand()){if(m&&m.t==='rejoin'&&m.tok&&m.tok===NET.gtok){const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
   if(c!==NET.conn)return;NET.lastRx=performance.now();if(NET.role==='host'&&NET.wait&&NET.stage==='game')netResync();
   NET.role==='host'?netHostMsg(m):netGuestMsg(m);}catch(e){console.error('net msg',e);}});
  c.on('close',()=>{if(c===NET.conn)netDrop();});
@@ -4953,29 +4956,32 @@ function relayConn(sock,topic,wrap){const c={mode:'relay',sock,handlers:{},on(ev
 /* host: listen on every relay server we can reach */
 function netHostRelay(){const code=NET.code;NET.rsocks=(NET.rsocks||[]).concat(NET_BROKERS.map(url=>{
  const s=mqttSock(url,(topic,txt)=>{let m;try{m=JSON.parse(txt);}catch(e){return;}if(!m||!m.k||NET.code!==code)return;const R=NET.rconns||(NET.rconns={});
-  if(m.hello){const old=R[m.k];if(old)old.dead=true;const c=relayConn(s,NET_RT+code+'/g/'+m.k,x=>x);R[m.k]=c;netAccept(c);if(c.dead)return;s.pub(NET_RT+code+'/g/'+m.k,JSON.stringify({hi:1}));c.handlers.open&&c.handlers.open();return;}
-  const c=R[m.k];if(!c||c.dead||c.sock!==s)return;
+  if(m.hello){const key=m.k+'|'+url,old=R[key];if(old)old.dead=true;const c=relayConn(s,NET_RT+code+'/g/'+m.k,x=>x);R[key]=c;netAccept(c);if(c.dead)return;s.pub(NET_RT+code+'/g/'+m.k,JSON.stringify({hi:1}));c.handlers.open&&c.handlers.open();return;}
+  const c=R[m.k+'|'+url];if(!c||c.dead||c.sock!==s)return;
   if(m.bye){c.dead=true;c.handlers.close&&c.handlers.close();return;}
   if(m.o!==undefined)c.handlers.data&&c.handlers.data(m.o);},
   ()=>{NET.hrel=true;if(NET.stage==='hosting'){NET.status='WAITING FOR YOUR FRIEND';if(UI.scr==='online')render();}},
   (S)=>{NET.hrel=(NET.rsocks||[]).some(x=>x.up);setTimeout(()=>{if(!S.dead&&NET.code===code&&NET.role==='host')S.reopen();},3000);});
  s.sub(NET_RT+code+'/h');return s;}));}
 /* guest: try the relay servers one by one until the host answers */
-function netGuestRelay(i,again){const code=NET.code,tok=NET.tok;if(i>=NET_BROKERS.length){if(NET.stage==='joining')netJoinFail();return;}
- NET.status=again?'RECONNECTING...':'TRYING THE BACKUP ROUTE ('+(i+1)+'/'+NET_BROKERS.length+')...';if(UI.scr==='online')render();
- let c=null;const s=mqttSock(NET_BROKERS[i],(topic,txt)=>{let m;try{m=JSON.parse(txt);}catch(e){return;}if(!c||c.dead)return;
-   if(m.hi){clearTimeout(tm);NET.rIdx=i;c.opened=true;c.handlers.open&&c.handlers.open();}else if(m.bye){c.dead=true;c.handlers.close&&c.handlers.close();s.close();}else if(m.o!==undefined)c.handlers.data&&c.handlers.data(m.o);},
-  ()=>{NET.relReach=true;s.pub(NET_RT+code+'/h',JSON.stringify({k:tok,hello:1}));},
-  ()=>{if(c&&c.opened&&!c.dead){c.dead=true;s.close();c.handlers.close&&c.handlers.close();}});
- s.sub(NET_RT+code+'/g/'+tok);
- c=relayConn(s,NET_RT+code+'/h',x=>Object.assign({k:tok},x));c.own=true;NET.conn=c;netWire(c);
- const tm=setTimeout(()=>{if(!c.opened&&NET.conn===c&&NET.tok===tok){c.dead=true;s.close();NET.conn=null;netGuestRelay(i+1,again);}},6000);}
+function netGuestRelay(i,again){const code=NET.code,tok=NET.tok,att=[];let won=false;
+ NET.status=again?'RECONNECTING...':'TRYING THE BACKUP ROUTE...';if(UI.scr==='online')render();
+ NET_BROKERS.forEach((url,bi)=>{let c=null;
+  const s=mqttSock(url,(topic,txt)=>{let m;try{m=JSON.parse(txt);}catch(e){return;}if(!c||c.dead)return;
+    if(m.hi){if(won||NET.tok!==tok){c.dead=true;s.close();return;}won=true;NET.rIdx=bi;c.opened=true;NET.conn=c;for(const o of att)if(o!==c)o.close();c.handlers.open&&c.handlers.open();}
+    else if(m.bye){c.dead=true;s.close();if(c.opened)c.handlers.close&&c.handlers.close();}
+    else if(m.o!==undefined&&c.opened)c.handlers.data&&c.handlers.data(m.o);},
+   ()=>{NET.relReach=true;s.pub(NET_RT+code+'/h',JSON.stringify({k:tok,hello:1}));},
+   ()=>{if(c&&c.opened&&!c.dead){c.dead=true;s.close();c.handlers.close&&c.handlers.close();}});
+  s.sub(NET_RT+code+'/g/'+tok);
+  c=relayConn(s,NET_RT+code+'/h',x=>Object.assign({k:tok},x));c.own=true;att.push(c);netWire(c);});
+ setTimeout(()=>{if(won||NET.tok!==tok)return;for(const o of att)o.close();if(NET.stage==='joining')netJoinFail();},10000);}
 function netJoinFail(){const reach=NET.relReach||NET.p2pReach;netReset();
  NET.err=reach?'COULDN\'T FIND THAT GAME. CHECK THE CODE, AND THE HOST HAS TO KEEP THE GAME OPEN ON THEIR SCREEN (DON\'T SWITCH APPS).':'CAN\'T REACH THE ONLINE SERVERS FROM THIS WI-FI. TRY A PHONE HOTSPOT.';go('online');}
 /* guest: try to get back into the same game */
 function netGuestRetry(){const r=NET.rc;r.n++;r.next=performance.now()+3000;
  if(NET_MOCK){const m=mockConn(NET.code,'guest');NET.mock=m;NET.conn=m.c;netWire(m.c);m.hello();return;}
- if(NET.mode==='relay'){r.next=performance.now()+7000;netGuestRelay(NET.rIdx||0,true);return;}
+ if(NET.mode==='relay'){r.next=performance.now()+11000;netGuestRelay(0,true);return;}
  const p=NET.peer;if(!p||p.destroyed){netGuestPeer();return;}
  if(p.disconnected){try{p.reconnect();}catch(e){}return;}
  try{const c=p.connect('retrofootball-'+NET.code,{reliable:true});NET.conn=c;netWire(c);}catch(e){}}
@@ -5050,12 +5056,12 @@ ACT.netGo=async()=>{if(NET.role!=='host'||!NET.connOpen)return;const o=NET.lob;
  const s={you:o.h.team,opp:o.g.team,uU:o.h.uni||0,uO:o.g.uni||0,rm:o.rm,diff:1,mode:'both',qlen:o.qlen,home:o.home==='h',arc:null};
  if(s.rm==='NFL'&&!H2H_NFL){try{H2H_NFL=await loadNFLRosterData();}catch(e){s.rm='CUSTOM';}}
  const g=h2hBuild(s);L.net=true;L.settings.play='both';L.settings.replay=false;L.settings.arc=null;
- Object.assign(NET,{lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],sendAcc:0,wait:false,cand:null,lastRx:performance.now()});
+ Object.assign(NET,{lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],sendAcc:0,wait:false,cands:[],lastRx:performance.now()});
  startMatch(g,{uU:s.uU,uO:s.uO});M.oto=2;M.ocp=2;NET.stage='game';
  const pl=L.players.filter(p=>p.team===g.h||p.team===g.a),Lc=Object.assign({},L,{players:pl});delete Lc.pmap;
  netSend({t:'start',L:Lc,g,gu:s.uO,hu:s.uU,guest:o.g.team,night:M.night,wx:M.wx,wind:M.wind});};
 /* ---------- host side ---------- */
-const r2=v=>v==null?0:Math.round(v*100)/100;
+const r2=v=>v==null?0:Math.round(v*100)/100,r1=v=>v==null?0:Math.round(v*10)/10;
 function netEnsureKeys(){for(const list of [M.D])list.forEach((f,i)=>{if(!f.key)f.key=f.role+list.filter((g,j)=>j<i&&g.role===f.role).length;});}
 function netRCtl(){if(M.def){M.rctl=null;return;}netEnsureKeys();if(M.rctl&&M.D.includes(M.rctl))return;M.rctl=M.D.find(f=>f.key===(M.rkey||'LB0'))||M.D.find(f=>f.role==='LB')||M.D[0]||null;}
 const netRActive=()=>!!(M&&M.rjoy&&M.rjoy.m>0.05&&performance.now()-M.rjoy.rt<700);
@@ -5116,7 +5122,7 @@ function netDefReturn(kind,landX,landY){M.ov=null;M.def=true;syncDir();M.aiQB=nu
  M.D.forEach((f,i)=>{f.key='COV'+i;});M.ctl=M.D.slice().sort((a,b)=>Math.abs(a.y-landY)-Math.abs(b.y-landY))[0]||M.D[0];}
 function netHostMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'YOUR FRIEND LEFT THE GAME':'YOUR FRIEND LEFT');return;}
- if(m.t==='hb')return;
+ if(m.t==='hb'){NET.rtt=m.rtt||0;netSend({t:'hbr',ts:m.ts});return;}
  if(m.t==='pick'){if(!NET.lob)return;if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(UI.scr==='online')render();return;}
  if(!netHost())return;
  if(m.t==='ans'){if(M.ov&&M.ov.net&&M.ov.gacts&&+m.q===M.ov.qid){const f=M.ov.gacts[+m.i];M.ov=null;if(f)f();}return;}
@@ -5153,7 +5159,8 @@ function netHostTick(dt){if(!netHost())return;netRCtl();const now=performance.no
  if(!NET.wait&&NET.stage==='game'&&now-NET.lastRx>6000){NET.wait=true;NET.waitT=now;}   /* nothing from your friend for 6 s */
  if(M.ov&&M.ov.net&&!NET.wait){M.ov.wt+=dt;if(M.ov.wt>30){const f=M.ov.gacts[M.ov.dflt];M.ov=null;if(f)f();}}
  if(M.phase==='kick'&&M.kick&&M.kick.guest&&M.kick.st==='aim'&&!NET.wait){M.kick.wt+=dt;if(M.kick.wt>20)kickRelease(0,-clamp(kickNeed()+0.08,0.3,1.04)*170,true);}
- NET.sendAcc+=dt;if(NET.sendAcc<(netRelayOn()?0.1:0.05))return;NET.sendAcc=0;netSend(netSnapshot());}
+ NET.sendAcc+=dt;if(NET.sendAcc<(netRelayOn()?0.08:0.05))return;NET.sendAcc=0;if(netBuffered()>20000)return;netSend(netSnapshot());}
+function netBuffered(){const c=NET.conn;try{if(!c)return 0;if(c.mode==='relay')return c.sock&&c.sock.ws?c.sock.ws.bufferedAmount:0;return c.dataChannel?c.dataChannel.bufferedAmount:0;}catch(e){return 0;}}
 function netSnapshot(){
  const all=[...M.O,...M.D],ix=f=>f?all.indexOf(f):-1,now=performance.now();
  const s={t:'s',ph:M.phase,pl:M.play,sc:M.sc,clk:r2(M.clock),q:M.qtr,dn:M.down,bo:r2(M.ballOn),by:r2(M.ballY),los:r2(M.los),fd:r2(M.fdX),cv:!!M.conv,
@@ -5161,7 +5168,7 @@ function netSnapshot(){
   c:ix(M.carrier),qb:ix(M.qb),rb:ix(M.rb),rc:ix(M.rctl),nO:M.O.length,dc:M.dcall||'MAN',np:M.plays,ps:M.paused?1:0,sh:r2(M.shake||0),rs:M.res?M.res.kind:null,
   gt:M.oto==null?2:M.oto,ht:M.to,gcp:M.ocp||0,ro:r2(M.runoff||0),tk:M.tbOK?1:0,kr:ix(M.kr),ch:ix(M.def?M.rchaser:null),cl:M.def&&M.aiPlay?M.aiPlay.n:null,wt:NET.wait?1:0,
   la:M.land?[r2(M.land.x),r2(M.land.y)]:null,
-  P:all.map(f=>[r2(f.x),r2(f.y),r2(f.vx),r2(f.vy),f.face||1,r2(f.t||0),r2(f.dive||0),r2(f.dv||0),r2(f.down||0),r2(f.jump||0),r2(f.reach||0),r2(f.oneh||0),r2(f.hurdle||0),r2(f.stun||0),r2(f.throwT||0),(f.mv?1:0)|(f.ball?2:0)|(f.lk&&f.lk.nohelm?4:0)])};
+  P:all.map(f=>{const a=[r1(f.x),r1(f.y),r1(f.vx),r1(f.vy),f.face||1,r2(f.t||0),(f.mv?1:0)|(f.ball?2:0)|(f.lk&&f.lk.nohelm?4:0),r2(f.down||0),r2(f.dive||0),r2(f.dv||0),r2(f.stun||0),r2(f.jump||0),r2(f.reach||0),r2(f.oneh||0),r2(f.hurdle||0),r2(f.throwT||0)];let n=a.length;while(n>7&&!a[n-1])n--;a.length=n;return a;})};
  if(M.O!==NET.lO||M.D!==NET.lD||all.length!==NET.lN||now-NET.rT>3000){NET.lO=M.O;NET.lD=M.D;NET.lN=all.length;NET.rT=now;s.R=all.map(f=>[f.pl?f.pl.id:-1,f.side,f.role,f.key||'',f.lk||null,f.star?1:0]);}
  if(M.ball){const b=M.ball;s.b={z0:b.z0,z1:b.z1,peak:b.peak,F:b.F||null,t:r2(b.t),T:b.T,Tg:b.Tg,x0:b.x0,y0:b.y0,x1:b.x1,y1:b.y1,tip:!!b.tip,bullet:!!b.bullet,done:!!b.done,ret:!!b.ret};}
  if(M.loose)s.lo={x:r2(M.loose.x),y:r2(M.loose.y),z:r2(M.loose.z),sp:r2(M.loose.sp||0)};
@@ -5178,9 +5185,12 @@ function netSnapshot(){
 function netGuestMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'THE HOST LEFT THE GAME':'THE HOST LEFT');return;}
  if(m.t==='lob'){NET.lob=m.lob;NET.last=m.last||'';if(NET.stage!=='game'&&UI.scr==='online')render();return;}
+ if(m.t==='hbr'){const r=performance.now()-m.ts;NET.rtt=NET.rtt?NET.rtt+(r-NET.rtt)*0.3:r;return;}
  if(m.t==='start'){netGuestStart(m);return;}
  if(m.t==='end'){NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
- if(m.t==='s'){if(m.R)NET.R=m.R;const e={tm:performance.now(),s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
+ if(m.t==='s'){const now=performance.now();if(m.R){const k=JSON.stringify(m.R);if(k!==NET.Rk){NET.Rk=k;NET.R=m.R;}}
+  if(NET.lsT){const d=now-NET.lsT;if(d<1000){NET.iv+=(d-NET.iv)*0.1;NET.jit+=(Math.abs(d-NET.iv)-NET.jit)*0.1;}}NET.lsT=now;
+  const e={tm:now,s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
 }
 function netGuestStart(m){
  L=m.L;L.user=m.guest;L.custom=null;L.net=false;L.exh=true;indexPlayers();cfbSync(null);
@@ -5194,16 +5204,16 @@ function netTake(e){if(e.done)return;e.done=true;if(e.ov!==undefined)NET.ovH=e.o
  for(const x of e.ev||[]){try{if(x[0]==='p')pop(x[1],x[2],x[3],x[4]);else if(x[0]==='b')banner(x[1],/YOU|YOUR/.test(x[2]||'')?'':x[2],x[3],x[4]);else if(x[0]==='s')sfx(x[1]);else if(x[0]==='boom')boom();else if(x[0]==='cr')crowd(x[1],x[2]);}catch(err){}}}
 /* draw the host's game NET_DELAY ms in the past: the newest snapshot at or before that moment (a) sets the
    state and everyone's position is blended toward the next one (b), so players glide instead of stepping */
-function netApply(){const B=NET.buf;if(!B.length)return;const rt=performance.now()-(netRelayOn()?220:NET_DELAY);
+function netApply(){const B=NET.buf;if(!B.length)return;const rt=performance.now()-netDelay();
  while(B.length>1&&B[1].tm<=rt)netTake(B.shift());
  const ea=B[0],eb=B[1]||null,s=ea.s;netTake(ea);NET.snap=s;
  const u=eb&&eb.tm>ea.tm?clamp((rt-ea.tm)/(eb.tm-ea.tm),0,1):0;
  if(ea.R&&(ea.R!==NET.Rused||!NET.pup.length)){NET.Rused=ea.R;const p=netPuppets(ea.R);M.O=p.O;M.D=p.D;NET.pup=p.all;}
  const pup=NET.pup,at=i=>i>=0&&i<pup.length?pup[i]:null;
  if(s.P&&s.P.length===pup.length){const lp=eb&&eb.R===ea.R&&eb.s.P&&eb.s.P.length===s.P.length?eb.s.P:null;
-  s.P.forEach((a,i)=>{const f=pup[i];[f.x,f.y,f.vx,f.vy,f.face,f.t,f.dive,f.dv,f.down,f.jump,f.reach,f.oneh,f.hurdle,f.stun,f.throwT]=a;
+  s.P.forEach((a,i)=>{const f=pup[i],z=k=>a[k]||0;f.x=a[0];f.y=a[1];f.vx=a[2];f.vy=a[3];f.face=a[4];f.t=a[5];f.down=z(7);f.dive=z(8);f.dv=z(9);f.stun=z(10);f.jump=z(11);f.reach=z(12);f.oneh=z(13);f.hurdle=z(14);f.throwT=z(15);
    if(lp&&u>0){const n=lp[i];if(Math.abs(n[0]-a[0])<6&&Math.abs(n[1]-a[1])<6){f.x=a[0]+(n[0]-a[0])*u;f.y=a[1]+(n[1]-a[1])*u;f.t=a[5]+(n[5]-a[5])*u;}}
-   f.mv=!!(a[15]&1);f.ball=!!(a[15]&2);if(a[15]&4&&f.lk&&!f.lk.nohelm){f.lk=Object.assign({},f.lk,{nohelm:true});}});}
+   f.mv=!!(a[6]&1);f.ball=!!(a[6]&2);if(a[6]&4&&f.lk&&!f.lk.nohelm){f.lk=Object.assign({},f.lk,{nohelm:true});}});}
  const ph=s.ph==='replay'?'dead':s.ph;
  if(ph==='pre'&&!NET.wasPre){M.trick=null;M.called=null;M.aim=null;}NET.wasPre=ph==='pre';
  M.phase=ph;M.play=s.pl;M.sc=[s.sc[1],s.sc[0]];M.clock=s.clk;M.qtr=s.q;M.down=s.dn;M.ballOn=s.bo;M.ballY=s.by;M.los=s.los;M.fdX=s.fd;M.conv=s.cv;M.pc=s.pc;
@@ -5235,7 +5245,7 @@ ACT.netAns=d=>{if(!netGuest())return;netSend({t:'ans',i:+d.i,q:+d.q});sfx('tick'
 function netGuestFrame(dt){
  const now=performance.now();
  /* connection health: heartbeat out, and if nothing comes back for 5 s, reconnect */
- NET.hbT+=dt;if(NET.hbT>1){NET.hbT=0;netSend({t:'hb'});}
+ NET.hbT+=dt;if(NET.hbT>1){NET.hbT=0;netSend({t:'hb',ts:Math.round(performance.now()),rtt:Math.round(NET.rtt)});}
  if(NET.connOpen&&now-NET.lastRx>5000)netDrop();
  if(NET.rc){if(now-NET.rc.t0>60000){netLost('LOST THE CONNECTION TO THE HOST');return;}if(now>=NET.rc.next)netGuestRetry();}
  netApply();
@@ -5249,7 +5259,10 @@ function netGuestFrame(dt){
   if(!v||!v.m){const sx=(keys.right?1:0)-(keys.left?1:0),sy=(keys.down?1:0)-(keys.up?1:0);v=sx||sy?{x:sx/Math.hypot(sx,sy),y:sy/Math.hypot(sx,sy),m:1}:null;}
   if(!v&&M.input==='dctl'&&ptr.down&&M.ctl){const p=scrToField(ptr.x,ptr.y),dx=p.x-M.ctl.x,dy=p.y-M.ctl.y,l=Math.hypot(dx,dy);if(l>0.4)v={x:dx/l*(M.dir<0?-1:1),y:dy/l,m:1};}
   const out=v&&v.m?{x:r2(v.x*(M.dir<0?-1:1)),y:r2(v.y),m:r2(v.m)}:{x:0,y:0,m:0},k=out.x+','+out.y+','+out.m;
-  if(k!==NET.joyLast||out.m>0){NET.joyLast=k;netSend(Object.assign({t:'joy'},out));}}
+  NET.joyV=out.m>0?out:null;if(k!==NET.joyLast||out.m>0){NET.joyLast=k;netSend(Object.assign({t:'joy'},out));}}
+ if(!M.def||!(M.phase==='pre'||M.phase==='live'))NET.joyV=null;
+ {const v=NET.joyV,f=M.ctl,lead=clamp((NET.rtt/2+netDelay())/1000,0,0.45),sp=M.phase==='pre'?6.5:7.2,tx=v&&f?v.x*v.m*sp*lead:0,ty=v&&f?v.y*v.m*sp*lead:0,P0=NET.pl,kk=Math.min(1,dt*8);
+  P0.x+=(tx-P0.x)*kk;P0.y+=(ty-P0.y)*kk;if(f&&!(f.down>0)&&!(f.dive>0)){f.x=clamp(f.x+P0.x,-1,121);f.y=clamp(f.y+P0.y,0,53.3);}}   /* predicted: where the host will have him by the time you see it */
  /* they picked off your pass: your chaser follows your finger */
  if(!M.def&&M.phase==='live'&&M.play==='intret'&&ptr.down&&M.input==='chase'&&NET.joyT>=0.06){NET.joyT=0;const p=scrToField(ptr.x,ptr.y);netSend({t:'chase',x:r2(p.x),y:r2(p.y)});}}
 /* guest inputs: these game actions are sent to the host instead of changing the local copy */
@@ -5293,6 +5306,7 @@ function netGuestHud(){
  setH('gpz',NET.menu?`<div class="gov" style="z-index:40"><div class="mp" style="width:300px;align-items:center;text-align:center">${ttl('ONLINE GAME',true)}<button class="bt" data-a="gPause">BACK TO GAME</button><button class="bt r" data-a="netLeave">LEAVE GAME</button></div></div>`:'');}
 /* host: your friend dropped out; the game is frozen until they're back */
 function netHostHud(){if(!netHost())return;if(NET.wait&&performance.now()-NET.waitT>1200)setH('gpz',`<div class="gov" style="z-index:40"><div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('FRIEND DISCONNECTED',true)}<div class="s7 yl blink" style="line-height:2">WAITING FOR ${esc(T(M.op).name.toUpperCase())} TO RECONNECT...<br>GAME CODE ${esc(NET.code)}</div><button class="bt r" data-a="netEnd">END GAME</button></div></div>`);}
+function netPingDraw(){if(!(netHost()||netGuest()))return;const r=Math.round(NET.rtt||0),col=r<120?'#7dff8a':r<250?'#ffe94a':'#ff8a8a';ctext((netRelayOn()?'RELAY':'DIRECT')+(r?' · '+r+' MS':''),6,CH-8,col,'left',6);}
 ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
@@ -5302,7 +5316,7 @@ function loop(now){
  /* Real-time even on slow devices: a long frame is split into small steps instead of being capped
     (capping is what made the game run in slow motion when the iPad couldn't hold 30fps). */
  const fdt=Math.min(0.1,Math.max(0,(now-lastT)/1000));lastT=now;const ns=Math.max(1,Math.ceil(fdt/0.034)),dt=fdt/ns;
- if(UI.scr==='game'&&M){try{if(netGuest()){netGuestFrame(fdt);if(M&&UI.scr==='game'){draw();hud();netGuestHud();}}else{if(!M.paused&&!(netHost()&&NET.wait))for(let i=0;i<ns&&M&&!M.paused&&UI.scr==='game';i++)step(dt);if(M){netHostTick(fdt);draw();hud();netHostHud();}}}catch(err){console.error(err);}}
+ if(UI.scr==='game'&&M){try{if(netGuest()){netGuestFrame(fdt);if(M&&UI.scr==='game'){draw();netPingDraw();hud();netGuestHud();}}else{if(!M.paused&&!(netHost()&&NET.wait))for(let i=0;i<ns&&M&&!M.paused&&UI.scr==='game';i++)step(dt);if(M){netHostTick(fdt);draw();netPingDraw();hud();netHostHud();}}}catch(err){console.error(err);}}
  requestAnimationFrame(loop);
 }
 
