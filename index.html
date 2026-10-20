@@ -139,12 +139,42 @@ body.mobile .bt{padding:8px 9px 7px}body.mobile .chip{padding:6px 7px 5px}
 .ngc .chip{padding:4px 7px 3px}.ngc input.txt{padding-top:3px;padding-bottom:2px}
 .nwi{white-space:normal;overflow-wrap:anywhere;line-height:1.35;flex:none}
 #ui.olbusy{cursor:progress}
+/* ===================== HALLOWEEN =====================
+   Only active while <body> has the "hw" class: the HALLOWEEN switch in the script turns it on
+   during October and it's off again by itself on November 1. Delete this block and that switch
+   to remove the theme for good. */
+body.hw{--bl:#3a1b5c;--bl2:#4a2470;--bl3:#24103a;--nv:#14061f;--yl:#f07818;--yl2:#ffb04a;--dim:#cdb2ea;--cy:#9dff6a}
+body.hw .screen{isolation:isolate;background:var(--bl) radial-gradient(ellipse at 50% 115%,rgba(240,120,24,.28),transparent 60%),var(--bl);background-image:radial-gradient(ellipse at 50% 115%,rgba(240,120,24,.28),transparent 60%),repeating-linear-gradient(0deg,rgba(0,0,30,.08) 0 1px,transparent 1px 3px)}
+body.hw .screen::before{content:'';position:absolute;top:0;left:0;width:70px;height:70px;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70' fill='none' stroke='%23ffffff' stroke-opacity='.35' stroke-width='1'%3E%3Cpath d='M0 0L70 30M0 0L52 52M0 0L30 70M0 0L70 0M0 0L0 70'/%3E%3Cpath d='M18 0Q14 6 16 8Q11 10 8 16Q4 14 0 18M36 0Q28 12 32 16Q22 20 16 32Q8 28 0 36M56 0Q42 18 48 24Q34 30 24 48Q12 44 0 56'/%3E%3C/svg%3E") 0 0/70px 70px no-repeat}
+body.hw .screen::after{content:'';position:absolute;top:0;right:0;width:70px;height:70px;z-index:-1;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='70' viewBox='0 0 70 70' fill='none' stroke='%23ffffff' stroke-opacity='.35' stroke-width='1'%3E%3Cpath d='M0 0L70 30M0 0L52 52M0 0L30 70M0 0L70 0M0 0L0 70'/%3E%3Cpath d='M18 0Q14 6 16 8Q11 10 8 16Q4 14 0 18M36 0Q28 12 32 16Q22 20 16 32Q8 28 0 36M56 0Q42 18 48 24Q34 30 24 48Q12 44 0 56'/%3E%3C/svg%3E") 0 0/70px 70px no-repeat;transform:scaleX(-1)}
+body.hw #stage::after{content:'';position:absolute;left:-30px;top:60px;width:44px;height:20px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='10' viewBox='0 0 22 10' shape-rendering='crispEdges'%3E%3Cpath fill='%23120720' d='M0 3h3v1h2v1h2V3h1v1h1V2h1v1h2V2h1v2h1V3h1v2h2V4h2V3h3v1h-1v1h-1v2h-2v1h-2v1h-2v1h-2V9H9V8H7V7H5V5H4V4H1V3z'/%3E%3C/svg%3E") 0 0/44px 20px no-repeat;image-rendering:pixelated;pointer-events:none;z-index:95;animation:hwbat 16s linear infinite;opacity:0}
+body.hw.ingame #stage::after{display:none}
+@keyframes hwbat{0%{transform:translate(0,0);opacity:0}2%{opacity:.85}18%{transform:translate(340px,-40px)}34%{transform:translate(700px,10px);opacity:.85}35%,100%{transform:translate(700px,10px);opacity:0}}
+body.hw .tst i{width:15px;height:9px;clip-path:polygon(0 30%,14% 20%,24% 38%,34% 22%,42% 34%,46% 12%,50% 26%,54% 12%,58% 34%,66% 22%,76% 38%,86% 20%,100% 30%,88% 52%,72% 50%,62% 68%,50% 90%,38% 68%,28% 50%,12% 52%)}
+body.hw .tst i.r{background:var(--yl)}body.hw .tst i.w{background:#9dff6a}body.hw .tst i.n{background:#000}
+body.hw .ttl{text-shadow:2px 2px 0 #000,0 0 8px rgba(240,120,24,.55)}
+body.hw .bt.y,body.hw .chip.on{text-shadow:1px 1px 0 #7a3300}
+body.hw .tl{text-shadow:1px 1px 0 #7a3300}
+body.hw .cc{box-shadow:inset -2px -2px 0 #a34a00,0 0 0 1px #5a2600}
+body.hw .stars i,body.hw .pips i{background:#24103a}
+body.hw .stars i.h{background:linear-gradient(90deg,var(--yl2) 50%,#24103a 50%)}
+body.hw .stars.o i.h{background:linear-gradient(90deg,#6ad6ff 50%,#24103a 50%)}body.hw .stars.d i.h{background:linear-gradient(90deg,#ff4a3d 50%,#24103a 50%)}
+body.hw .segs i{background:#2c1446}
+body.hw .pcard .ph{background:#b9a2e6}body.hw .pcard.D .ph{background:#f29a5c}body.hw .pcard.K .ph{background:#a6dd7c}
+body.hw .modal{background:rgba(10,0,20,.66)}
+body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middle}
+@keyframes hwglow{50%{filter:drop-shadow(0 0 6px rgba(255,160,40,.9))}}body.hw .hwp.glow{animation:hwglow 1.6s steps(4) infinite}
+/* ===================== END HALLOWEEN ===================== */
 </style>
 </head>
 <body>
 <div id="root"><div id="stage"><canvas id="cv" width="640" height="360"></canvas><canvas id="lg" width="640" height="360"></canvas><div id="ui"></div></div></div>
 <script>
 'use strict';
+/* HALLOWEEN look (menus only): on for all of October by the player's own date, off by itself on
+   November 1. ?halloween=1 or ?halloween=0 forces it on/off for testing. To remove it for good,
+   delete this line, hwPumpkin() and the HALLOWEEN CSS block. */
+const HALLOWEEN=(()=>{const q=(location.search.match(/[?&]halloween=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===9;})();if(HALLOWEEN)document.body.classList.add('hw');
 /* =====================================================================
    RETRO FOOTBALL — core: data, players, rosters, league, sim, offseason
    ===================================================================== */
@@ -1361,6 +1391,10 @@ const ICON={
 };
 const stars=(s,cls)=>{let h=`<span class="stars ${cls||''}">`;for(let i=1;i<=5;i++)h+=`<i class="${s>=i?'f':s>=i-.5?'h':''}"></i>`;return h+'</span>';};
 const fitS=(txt,base,w)=>{const n=String(txt||'').replace(/&[a-z#0-9]+;/g,'x').length||1;return'font-size:'+Math.max(5,Math.min(base,Math.floor(w/n)))+'px;white-space:nowrap';};
+/* pixel jack-o'-lantern for the Halloween title screen (u = pixel size) */
+function hwPumpkin(u,glow){const P=['....gg....','...gg.....','.oooooooo.','oooooooooo','oo.oooo.oo','o...oo...o','oooooooooo','oo.o..o.oo','ooo....ooo','.oooooooo.'],C={o:'#f07818',g:'#3c8a2a','.':null};
+ let r='';P.forEach((row,y)=>[...row].forEach((ch,x)=>{const c=C[ch];if(c)r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;else if(y>=4&&y<=8&&x>0&&x<9&&P[y][x]==='.')r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#ffe25a"/>`;}));
+ return`<svg class="hwp${glow?' glow':''}" width="${10*u}" height="${10*u}" viewBox="0 0 10 10" shape-rendering="crispEdges">${r}</svg>`;}
 const ttl=(t,sm)=>`<div class="ttl${sm?' sm':''}"><span class="tst"><i class="r"></i><i class="w"></i><i class="n"></i></span>${t}<span class="tst"><i class="n"></i><i class="w"></i><i class="r"></i></span></div>`;
 const coinBox=()=>`<div class="coin">${L?L.cc:0} <i class="cc"></i></div>`;
 const box=(lbl,inner,st,cls)=>`<div class="box ${cls||''}" style="${st||''}"><span class="lbl">${lbl}</span>${inner}</div>`;
@@ -1376,6 +1410,7 @@ const UI={scr:'title',sub:{},modal:null};
 const SCR={},ACT={};
 function go(s,sub){UI.scr=s;UI.sub=sub||{};UI.modal=null;render();}
 function render(){
+ if(HALLOWEEN)document.body.classList.toggle('ingame',UI.scr==='game');
  applyCustomTeam();
  const ui=$('#ui');
  if(UI.scr==='game'){$('#cv').style.display='block';$('#lg').style.display='block';return;}
@@ -1444,7 +1479,7 @@ SCR.title=()=>{
  const sv=hasSave()?loadSave():null;
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-4);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">
-  ${ttl('RETRO',true)}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1">FOOTBALL</div>
+  ${ttl('RETRO',true)}<div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
   <div class="row" style="gap:10px">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
