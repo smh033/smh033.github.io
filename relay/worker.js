@@ -1,9 +1,23 @@
-/* Retro Football online relay (Cloudflare Worker + Durable Object).
+/* Retro Football online relay (Cloudflare Worker + Durable Objects).
    Each 4-letter game code gets its own little room. The host and the joiner both connect to
-   wss://<this worker>/r/CODE; whatever one sends to a topic, the other receives. */
+   wss://<this worker>/r/CODE; whatever one sends to a topic, the other receives.
+   Online franchise leagues live at https://<this worker>/lg/CODE (6 letters): one stored league
+   file per code, saved with a version number so two coaches can't overwrite each other. */
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, PUT, OPTIONS',
+  'access-control-allow-headers': 'content-type, x-enc',
+  'access-control-expose-headers': 'x-v, x-enc, x-on',
+  'access-control-max-age': '86400'
+};
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    const lg = url.pathname.match(/^\/lg\/([A-Z]{6})$/);
+    if (lg) {
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      return env.LEAGUES.get(env.LEAGUES.idFromName(lg[1])).fetch(req);
+    }
     const m = url.pathname.match(/^\/r\/([A-Z]{4})$/);
     if (!m) return new Response('Retro Football relay is running', { headers: { 'access-control-allow-origin': '*' } });
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected a websocket', { status: 426 });
@@ -37,4 +51,50 @@ export class Room {
   }
   async webSocketClose(ws, code) { try { ws.close(code === 1005 ? 1000 : code); } catch (e) {} }
   async webSocketError(ws) { try { ws.close(); } catch (e) {} }
+}
+/* One online league. GET returns the league file (x-v = its version); GET ?have=N answers 204 when
+   nothing changed since version N, so polling is cheap. PUT ?v=N saves only if the stored version is
+   still N (0 = create), otherwise 409 with the current version: the coach merges and tries again.
+   ?me=TEAM marks that coach as on the site; x-on lists who was seen in the last 25 seconds. */
+const CHUNK = 512 * 1024, MAX = 12 * 1024 * 1024;
+export class League {
+  constructor(state) { this.state = state; this.seen = {}; }
+  online(me) {
+    const now = Date.now();
+    if (me != null && /^\d{1,2}$/.test(me)) this.seen[me] = now;
+    const on = [];
+    for (const k in this.seen) { if (now - this.seen[k] < 25000) on.push(+k); else delete this.seen[k]; }
+    return JSON.stringify(on);
+  }
+  async fetch(req) {
+    const url = new URL(req.url), st = this.state.storage;
+    const meta = (await st.get('meta')) || { v: 0, n: 0, enc: 'raw' };
+    const on = this.online(url.searchParams.get('me'));
+    const h = (o) => Object.assign({ 'x-v': String(meta.v), 'x-on': on, 'cache-control': 'no-store' }, CORS, o || {});
+    if (req.method === 'GET') {
+      if (!meta.v) return new Response('no such league', { status: 404, headers: h() });
+      if (url.searchParams.get('have') === String(meta.v)) return new Response(null, { status: 204, headers: h() });
+      const keys = []; for (let i = 0; i < meta.n; i++) keys.push('c' + i);
+      const got = await st.get(keys), parts = keys.map(k => new Uint8Array(got.get(k)));
+      const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0)); let o = 0;
+      for (const p of parts) { out.set(p, o); o += p.length; }
+      return new Response(out, { headers: h({ 'x-enc': meta.enc, 'content-type': 'application/octet-stream' }) });
+    }
+    if (req.method === 'PUT') {
+      const want = +url.searchParams.get('v');
+      if (want !== meta.v) return new Response(JSON.stringify({ v: meta.v }), { status: 409, headers: h({ 'content-type': 'application/json' }) });
+      const buf = new Uint8Array(await req.arrayBuffer());
+      if (!buf.length || buf.length > MAX) return new Response('bad size', { status: 413, headers: h() });
+      const put = {}; let n = 0;
+      for (let i = 0; i < buf.length; i += CHUNK) put['c' + n++] = buf.slice(i, i + CHUNK).buffer;
+      const next = { v: meta.v + 1, n, enc: req.headers.get('x-enc') === 'gz' ? 'gz' : 'raw', at: Date.now() };
+      put.meta = next;
+      const stale = []; for (let i = n; i < meta.n; i++) stale.push('c' + i);
+      await st.put(put);
+      if (stale.length) await st.delete(stale);
+      meta.v = next.v;
+      return new Response(JSON.stringify({ v: next.v }), { headers: h({ 'content-type': 'application/json' }) });
+    }
+    return new Response('method not allowed', { status: 405, headers: h() });
+  }
 }
