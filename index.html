@@ -4927,11 +4927,14 @@ function netLost(msg){if(!NET.on&&NET.stage!=='lobby'&&NET.stage!=='game')return
    Some Wi-Fi (school networks especially) blocks the direct device-to-device link, or the free
    PeerJS server. Then the game is relayed through a public MQTT server over a normal secure web
    connection instead (the first one is on port 443, like any website). Same messages, a bit slower. */
-const NET_BROKERS=(()=>{const q=(location.search.match(/[?&]mqtt=([^&]+)/)||[])[1];return q?decodeURIComponent(q).split(','):['wss://mqtt.eclipseprojects.io:443/mqtt','wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];})();
+/* our own relay on Cloudflare (relay/ folder): fastest and on the normal web port, so it's tried first */
+const NET_CF='';
+const NET_BROKERS=(()=>{const q=(location.search.match(/[?&]mqtt=([^&]+)/)||[])[1];return q?decodeURIComponent(q).split(','):[...(NET_CF?['cf:'+NET_CF]:[]),'wss://mqtt.eclipseprojects.io:443/mqtt','wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];})();
 const NET_FORCE_RELAY=/[?&]relay(&|$)/.test(location.search),NET_RT='retrofootball1/';
 const netRelayOn=()=>!!(NET.conn&&NET.conn.mode==='relay');
 /* a tiny MQTT 3.1.1 client (QoS 0) over a WebSocket */
 function mqttSock(url,onMsg,onUp,onDown){
+ if(url.startsWith('cf:'))return cfSock(url.slice(3).replace(/\/$/,'')+'/r/'+NET.code,onMsg,onUp,onDown);
  const te=new TextEncoder(),td=new TextDecoder(),S={url,up:false,ws:null,dead:false,subs:[],pid:1};
  const vi=n=>{const b=[];do{let x=n%128;n=Math.floor(n/128);if(n>0)x|=128;b.push(x);}while(n>0);return b;};
  const st=s=>{const u=te.encode(s);return[u.length>>8,u.length&255,...u];};
@@ -4949,6 +4952,17 @@ function mqttSock(url,onMsg,onUp,onDown){
  S.sub=topic=>{if(!S.subs.includes(topic))S.subs.push(topic);if(S.up)raw(pk(0x82,new Uint8Array([0,S.pid++&255||1,...st(topic),0])));};
  S.pub=(topic,txt)=>{const p=te.encode(txt),h=st(topic),body=new Uint8Array(h.length+p.length);body.set(h,0);body.set(p,h.length);raw(pk(0x30,body));};
  S.close=()=>{if(S.dead)return;S.dead=true;clearInterval(ping);try{raw(new Uint8Array([0xE0,0]));S.ws&&S.ws.close();}catch(e){}};
+ S.reopen=open;open();return S;}
+/* the same thing through our own Cloudflare relay: {s:topic} subscribes, {p:topic,d:text} publishes */
+function cfSock(url,onMsg,onUp,onDown){const S={url,up:false,ws:null,dead:false,subs:[]};let ping=null;
+ const raw=t=>{try{if(S.ws&&S.ws.readyState===1)S.ws.send(t);}catch(e){}};
+ const open=()=>{if(S.dead)return;let ws;try{ws=new WebSocket(url);}catch(e){onDown&&onDown(S);return;}S.ws=ws;
+  ws.onopen=()=>{S.up=true;for(const t of S.subs)raw(JSON.stringify({s:t}));clearInterval(ping);ping=setInterval(()=>raw('{"ping":1}'),25000);onUp&&onUp(S);};
+  ws.onmessage=e=>{if(typeof e.data!=='string'||e.data==='{"pong":1}')return;try{onMsg('',e.data);}catch(err){console.warn('relay msg',err);}};
+  ws.onclose=ws.onerror=()=>{if(S.ws!==ws)return;S.ws=null;const was=S.up;S.up=false;clearInterval(ping);if(!S.dead)onDown&&onDown(S,was);};};
+ S.sub=t=>{if(!S.subs.includes(t))S.subs.push(t);if(S.up)raw(JSON.stringify({s:t}));};
+ S.pub=(t,txt)=>raw(JSON.stringify({p:t,d:txt}));
+ S.close=()=>{if(S.dead)return;S.dead=true;clearInterval(ping);try{S.ws&&S.ws.close();}catch(e){}};
  S.reopen=open;open();return S;}
 function relayConn(sock,topic,wrap){const c={mode:'relay',sock,handlers:{},on(ev,f){this.handlers[ev]=f;},
  send(o){if(!c.dead)sock.pub(topic,JSON.stringify(wrap({o})));},
@@ -5312,7 +5326,7 @@ function netGuestHud(){
  setH('gpz',NET.menu?`<div class="gov" style="z-index:40"><div class="mp" style="width:300px;align-items:center;text-align:center">${ttl('ONLINE GAME',true)}<button class="bt" data-a="gPause">BACK TO GAME</button><button class="bt r" data-a="netLeave">LEAVE GAME</button></div></div>`:'');}
 /* host: your friend dropped out; the game is frozen until they're back */
 function netHostHud(){if(!netHost())return;if(NET.wait&&performance.now()-NET.waitT>1200)setH('gpz',`<div class="gov" style="z-index:40"><div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('FRIEND DISCONNECTED',true)}<div class="s7 yl blink" style="line-height:2">WAITING FOR ${esc(T(M.op).name.toUpperCase())} TO RECONNECT...<br>GAME CODE ${esc(NET.code)}</div><button class="bt r" data-a="netEnd">END GAME</button></div></div>`);}
-function netPingDraw(){if(!(netHost()||netGuest()))return;const r=Math.round(NET.rtt||0),col=r<120?'#7dff8a':r<250?'#ffe94a':'#ff8a8a';ctext((netRelayOn()?'RELAY':'DIRECT')+(r?' · '+r+' MS':''),6,CH-8,col,'left',6);}
+function netPingDraw(){if(!(netHost()||netGuest()))return;const r=Math.round(NET.rtt||0),col=r<120?'#7dff8a':r<250?'#ffe94a':'#ff8a8a';const t=(netRelayOn()?(NET.conn&&NET.conn.sock&&/^wss?:\/\/[^/]*workers\.dev|\/r\/[A-Z]{4}$/.test(NET.conn.sock.url)?'RELAY CF':'RELAY'):'DIRECT')+(r?' '+r+'MS':'');rect(2,2,t.length*6+8,11,'rgba(0,0,0,.6)');ctext(t,6,4,col,'left',6);}
 ACT.netReload=()=>{location.href=location.pathname+'?v='+Date.now();};   /* a fresh address skips the old cached copy */
 ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
