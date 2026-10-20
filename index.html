@@ -88,14 +88,15 @@ body.mobile .mp.cmp .chip{padding:5px 6px 4px}body.mobile .mp.cmp .bt{padding:6p
 input.txt{font:inherit;font-size:10px;background:var(--nv);border:2px solid #fff;color:#fff;padding:6px 7px;outline:none;width:100%;text-transform:uppercase;-webkit-user-select:text;user-select:text}
 .sw{width:15px;height:15px;border:2px solid #000;cursor:pointer;display:inline-block}.sw.on{outline:2px solid #fff}
 .ava{image-rendering:pixelated;display:block}
-.toast{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:var(--nv);border:2px solid #fff;padding:6px 9px;z-index:90;font-size:8px;pointer-events:none;animation:fin .2s;white-space:nowrap}
+.toast{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:var(--nv);border:2px solid #fff;padding:6px 9px;z-index:90;font-size:8px;pointer-events:none;animation:fin .2s;white-space:normal;max-width:88%;width:max-content;text-align:center;line-height:1.5}
 @keyframes fin{from{opacity:0}}
 @keyframes pulse{50%{opacity:.35}}.blink{animation:pulse 1s steps(2) infinite}
 /* timeline */
 .tl{background:var(--yl);height:66px;position:relative;margin:0 -10px;color:#fff;text-shadow:1px 1px 0 #6d6700;cursor:pointer}
 .tl .ln{position:absolute;left:0;right:0;top:36px;height:4px;background:#fff}
+.tl.tls{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-x}.tl.tls::-webkit-scrollbar{display:none}.tl .tlin{position:relative;height:100%}
 .tl .ln i{position:absolute;left:0;top:0;bottom:0;background:var(--gr)}
-.tl .nd{position:absolute;top:0;width:200px;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;align-items:center}
+.tl .nd{position:absolute;top:0;width:216px;transform:translateX(-50%);text-align:center;display:flex;flex-direction:column;align-items:center}
 .tl .nd .a{font-size:8px;margin-top:5px;white-space:nowrap}.tl .nd .b{font-size:8px;margin-top:3px;white-space:nowrap}
 .tl .nd .dot{width:22px;height:12px;border-radius:50%;background:#ddd;border:2px solid #fff;margin-top:4px;box-shadow:0 2px 0 rgba(0,0,0,.25)}
 .tl .nd .dot.w{background:var(--gr)}.tl .nd .dot.l{background:var(--rd)}.tl .nd .dot.c{background:#fff;width:26px;height:14px}
@@ -1352,6 +1353,7 @@ const ICON={
  info:'<span style="font-size:9px">i</span>',
 };
 const stars=(s,cls)=>{let h=`<span class="stars ${cls||''}">`;for(let i=1;i<=5;i++)h+=`<i class="${s>=i?'f':s>=i-.5?'h':''}"></i>`;return h+'</span>';};
+const fitS=(txt,base,w)=>{const n=String(txt||'').replace(/&[a-z#0-9]+;/g,'x').length||1;return'font-size:'+Math.max(5,Math.min(base,Math.floor(w/n)))+'px;white-space:nowrap';};
 const ttl=(t,sm)=>`<div class="ttl${sm?' sm':''}"><span class="tst"><i class="r"></i><i class="w"></i><i class="n"></i></span>${t}<span class="tst"><i class="n"></i><i class="w"></i><i class="r"></i></span></div>`;
 const coinBox=()=>`<div class="coin">${L?L.cc:0} <i class="cc"></i></div>`;
 const box=(lbl,inner,st,cls)=>`<div class="box ${cls||''}" style="${st||''}"><span class="lbl">${lbl}</span>${inner}</div>`;
@@ -1579,6 +1581,20 @@ function tlNodes(){
   nodes.push(r>0?nd(pr,r-1):{a:'WEEK 18',b:'',res:null},nd(g,r),r<3?{a:lbl(r+1),b:'',res:null}:null);}
  return nodes;
 }
+/* every week of the season plus the playoff rounds, for the scrollable strip on the hub */
+function tlAll(){
+ const t=L.user,nodes=[];
+ for(let w=1;w<=L.sched.length;w++){const g=teamGame(w,t);if(!g){nodes.push({a:'WEEK '+w,b:'BYE',res:null});continue;}
+  const home=g.h===t,op=home?g.a:g.h;let res=null;if(g.hs!=null){const us=home?g.hs:g.as,th=home?g.as:g.hs;res={c:us>th?'w':us<th?'l':'t',txt:(us>th?'W':us<th?'L':'T')+' '+us+'-'+th};}
+  nodes.push({a:'WEEK '+w,b:(home?'vs ':'at ')+T(op).name.toUpperCase(),res});}
+ const lbl=i=>i===3?champName():L.cfbTeams?ROUNDS[i]:T(t).conf+' '+ROUNDS[i];
+ for(let r=0;r<4;r++){const gg=L.phase==='PO'&&L.po&&L.po.rounds[r]?L.po.rounds[r].find(x=>x.h===t||x.a===t):null;
+  if(!gg){nodes.push({a:lbl(r),b:'',res:null});continue;}
+  const home=gg.h===t,op=home?gg.a:gg.h;let res=null;if(gg.hs!=null){const us=home?gg.hs:gg.as,th=home?gg.as:gg.hs;res={c:us>th?'w':'l',txt:(us>th?'W ':'L ')+us+'-'+th};}
+  nodes.push({a:lbl(r),b:(home?'vs ':'at ')+T(op).name.toUpperCase(),res});}
+ const cur=L.phase==='PO'&&L.po?L.sched.length+L.po.cur:Math.min(L.sched.length,L.week)-1;
+ return{nodes,cur};
+}
 /* Existing NFL saves: pull the headshot-based looks from the site's roster file once. */
 /* Automatic weekly rating updates for NFL saves: the site's roster file is rebuilt every week
    from real production. Each real player keeps his team in your save; only the change in his
@@ -1663,12 +1679,20 @@ function syncNFLLooks(){
 }
 SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){balanceHome();L.homeBal=1;save();}syncNFLRosters();syncNFLLooks();syncNFLProfiles();syncNFLQBPot();syncNFLRatings();if(L.awardsShow&&L.awards&&L.awards[0]&&!UI.modal)setTimeout(()=>{if(UI.scr==='hub'&&!UI.modal&&L.awardsShow)modal(awardsHTML(L.awards[0]));},0);
  const t=L.user,R=teamRatings(t),nodes=tlNodes();
+ const TLW=220,TA=tlAll(),nhp=(n,x,cur)=>`<div class="nd" style="left:${x}px"><div class="a">${n.a}</div><div class="b" style="${fitS(n.b,8,TLW-12)}">${esc(n.b)}</div><div class="dot ${cur?'c':n.res?n.res.c:''}"></div><div class="r">${n.res?n.res.txt:''}</div></div>`;
+ setTimeout(()=>{const e=document.querySelector('.tl.tls');if(!e)return;e.scrollLeft=(TA.cur+0.5)*TLW-e.clientWidth/2;
+  /* mouse: wheel or click-and-drag scrolls the strip (touch scrolls natively); a drag doesn't count as a tap */
+  e.onwheel=ev=>{e.scrollLeft+=ev.deltaX+ev.deltaY;ev.preventDefault();};
+  let dn=null,moved=0;e.onpointerdown=ev=>{if(ev.pointerType!=='mouse')return;dn={x:ev.clientX,s:e.scrollLeft};moved=0;};
+  e.onpointermove=ev=>{if(!dn)return;const dx=ev.clientX-dn.x;if(Math.abs(dx)>4)moved=1;e.scrollLeft=dn.s-dx;};
+  e.onpointerup=e.onpointerleave=()=>{dn=null;};
+  e.addEventListener('click',ev=>{if(moved){ev.stopPropagation();ev.preventDefault();moved=0;}},true);},0);   /* start centred on this week */
  const nh=(n,x,cur)=>n?`<div class="nd" style="left:${x}%"><div class="a">${n.a}</div><div class="b">${esc(n.b)}</div><div class="dot ${cur?'c':n.res?n.res.c:''}"></div><div class="r">${n.res?n.res.txt:''}</div></div>`:'';
  const div=divStand(T(t).di).map(x=>{const r=L.teams[x];return`<tr class="${x===t?'me':''}"><td style="overflow:hidden;text-overflow:ellipsis">${esc(teamName(x).toUpperCase())}</td><td class="c">${r.w}</td><td class="c">${r.l}</td><td class="c">${r.t}</td></tr>`;}).join('');
  const mor=teamMor(t);
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl(CFG.game)}</div><div class="coin">Y${L.season}</div></div>
- <div class="tl" data-a="go" data-s="${L.phase==='PO'?'bracket':'schedule'}"><div class="ln"><i style="width:50%"></i></div>${nh(nodes[0],16)}${nh(nodes[1],50,true)}${nh(nodes[2],84)}</div>
+ <div class="tl tls" data-a="go" data-s="${L.phase==='PO'?'bracket':'schedule'}"><div class="tlin" style="width:${TLW*TA.nodes.length}px"><div class="ln"><i style="width:${(TA.cur+0.5)*TLW}px"></i></div>${TA.nodes.map((n,i)=>nhp(n,(i+0.5)*TLW,i===TA.cur)).join('')}</div></div>
  <div class="row grow stretch" style="gap:10px;margin-top:4px">
   <div class="box" style="flex:1.15;min-width:0;cursor:pointer;padding:9px 8px 4px" data-a="go" data-s="standings"><span class="lbl">STANDINGS</span><table class="tbl" style="table-layout:fixed"><colgroup><col><col style="width:30px"><col style="width:30px"><col style="width:30px"></colgroup><tr><th>${esc(divName(T(t).di))}</th><th class="c">W</th><th class="c">L</th><th class="c">T</th></tr>${div}</table></div>
   <div class="col" style="flex:1;min-width:0;gap:12px">
@@ -1716,7 +1740,7 @@ SCR.pregame=()=>{
  const picker=(lbl,U,i,k)=>`<div class="col" style="gap:3px;align-items:stretch"><span class="s7 dim" style="text-align:center">${lbl}</span><div class="row" style="gap:4px;align-items:center"><button class="bt" style="padding:4px 6px 3px" data-a="pgUni" data-k="${k}" data-d="-1">&lt;</button><span class="s7 grow" style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${U[i].n}</span><button class="bt" style="padding:4px 6px 3px" data-a="pgUni" data-k="${k}" data-d="1">&gt;</button></div><div class="row ctr" style="gap:3px">${[U[i].helm,U[i].jersey,U[i].trim,U[i].pants].map(x=>`<i style="display:block;width:9px;height:4px;background:${x};border:1px solid #000"></i>`).join('')}</div></div>`;
  const side=(x,R,away,left)=>`<div class="col" style="align-items:center;gap:3px;width:180px">
    <div style="position:relative;height:150px;display:flex;align-items:flex-end;justify-content:center"><div style="position:absolute;bottom:0;left:50%;width:120px;height:14px;margin-left:-60px;background:#2348a8"></div><img src="${bigMan(x,away,8)}" width="112" height="136" style="position:relative;image-rendering:pixelated"></div>
-   <div class="s16" style="margin-top:6px;white-space:nowrap">${nm(x)}</div><div>${recStr(x)}</div>
+   <div style="margin-top:6px;${fitS(nm(x),16,176)}">${nm(x)}</div><div>${recStr(x)}</div>
    ${left?`<div class="row" style="gap:6px"><span>DEFENSE</span>${stars(R.defS,'d xs')}</div><div class="row" style="gap:6px"><span>OFFENSE</span>${stars(R.offS,'o xs')}</div>`
          :`<div class="row" style="gap:6px">${stars(R.offS,'o xs')}<span>OFFENSE</span></div><div class="row" style="gap:6px">${stars(R.defS,'d xs')}<span>DEFENSE</span></div>`}</div>`;
  return`<div class="screen" style="align-items:center">
@@ -1739,7 +1763,7 @@ ACT.pgBall=()=>{L.settings.ball=((L.settings.ball||0)+1)%BALLS.length;save();ren
 function pregameHTML(g){
  const t=L.user,home=g.h===t,op=home?g.a:g.h,A=teamRatings(t),B=teamRatings(op);
  const lab=L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():(L.cfbTeams?'':T(t).conf+' ')+ROUNDS[L.po.cur]);
- const blk=(x,R,aw)=>`<div class="col" style="align-items:center;gap:5px;width:150px">${avatar(null,x,3,aw)}<div class="s10">${esc(T(x).name.toUpperCase())}</div><div>${recStr(x)}</div><div class="row">${stars(R.offS,'o xs')} ${stars(R.defS,'d xs')}</div></div>`;
+ const blk=(x,R,aw)=>`<div class="col" style="align-items:center;gap:5px;width:150px">${avatar(null,x,3,aw)}<div style="${fitS(T(x).name,10,148)}">${esc(T(x).name.toUpperCase())}</div><div>${recStr(x)}</div><div class="row">${stars(R.offS,'o xs')} ${stars(R.defS,'d xs')}</div></div>`;
  return`<div class="mp" style="width:440px;align-items:center;text-align:center">${ttl(lab,true)}<div class="row ctr" style="gap:10px">${blk(t,A,!home)}<div class="s16">${home?'VS':'AT'}</div>${blk(op,B,home)}</div>
  <div class="s7 dim">TEAM CONDITION ${teamCond(t)}% · DIFFICULTY ${DIFFN()}</div>
  <div class="row"><button class="bt" data-a="close">BACK</button><button class="bt" data-a="simg">SIM GAME</button><button class="bt y xl" data-a="play">PLAY</button></div></div>`;
@@ -1772,7 +1796,7 @@ SCR.roster=()=>{
  const cards=r.map(p=>pcard(p,t,{sm})).join('');
  const empty=Array(Math.max(0,rmax()-r.length)).fill(`<div class="pcard ${sm?'sm':''} dis" style="cursor:default"><div class="ph"></div><div class="nm">EMPTY</div><div class="st">&nbsp;</div><div class="cb"></div></div>`).join('');
  return`<div class="screen">
- <div class="row">${coinBox()}<div class="grow">${ttl(esc(teamName(t).toUpperCase()))}</div><button class="bt ico" data-a="rinfo">${ICON.info}</button></div>
+ <div class="row">${coinBox()}<div class="grow" style="min-width:0">${ttl(`<span style="${fitS(teamName(t),16,400)}">${esc(teamName(t).toUpperCase())}</span>`)}</div><button class="bt ico" data-a="rinfo">${ICON.info}</button></div>
  <div style="text-align:center">PLAYERS ${r.length} / ${rmax()}</div>
  <div class="row grow" style="gap:6px">
   <button class="bt ico" data-a="rnav" data-d="-1">&lt;</button>
@@ -2325,7 +2349,7 @@ SCR.champ=()=>{
  <div style="position:relative;text-align:center">${ttl(champName())}<div class="s16" style="margin-top:6px;text-shadow:2px 2px 0 var(--nv)">CHAMPIONS!</div></div>
  <div class="row ctr" style="position:relative;gap:4px">${r.slice(0,per).map(cell).join('')}</div>
  <div class="row ctr" style="position:relative;gap:4px">${r.slice(per).map(cell).join('')}</div>
- <div class="s16" style="position:relative;margin-top:2px">${esc(teamName(L.user).toUpperCase())}</div>
+ <div style="position:relative;margin-top:2px;${fitS(teamName(L.user),16,560)}">${esc(teamName(L.user).toUpperCase())}</div>
  <div style="position:relative">HEAD COACH</div><div style="position:relative">${esc(L.coach)}</div>
  <button class="bt big" style="position:absolute;right:12px;bottom:12px;top:auto" data-a="champGo">CONTINUE</button>${h?'':''}</div>`;
 };
@@ -2827,7 +2851,7 @@ function startMatch(g,uAway){applyCustomTeam();
  const lab=L.college?'COLLEGE FOOTBALL':L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+L.week:(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
  const wxTxt=M.wx==='dome'?'INDOORS':M.wx==='snow'?'SNOW':M.wx==='rain'?'RAIN':'CLEAR SKIES';
  const UR=teamRatings(L.user),OR=teamRatings(op);
- ovMsg(lab,`<div class="row ctr" style="gap:14px;align-items:center;margin:2px 0 6px"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,!home)}<span>${esc(teamName(L.user).toUpperCase())}</span><span>${stars(UR.offS,'o xs')} ${stars(UR.defS,'d xs')}</span></div><span class="s16">${home?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,home)}<span>${esc(T(op).name.toUpperCase())}</span><span>${stars(OR.offS,'o xs')} ${stars(OR.defS,'d xs')}</span></div></div>
+ ovMsg(lab,`<div class="row ctr" style="gap:14px;align-items:center;margin:2px 0 6px"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,!home)}<span style="${fitS(teamName(L.user),10,190)}">${esc(teamName(L.user).toUpperCase())}</span><span>${stars(UR.offS,'o xs')} ${stars(UR.defS,'d xs')}</span></div><span class="s16">${home?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,home)}<span style="${fitS(T(op).name,10,190)}">${esc(T(op).name.toUpperCase())}</span><span>${stars(OR.offS,'o xs')} ${stars(OR.defS,'d xs')}</span></div></div>
   ${M.night?'<div class="cyt">'+M.night+' · UNDER THE LIGHTS</div>':''}${M.rival?'<div class="yl blink">'+(L.phase==='PO'?'PLAYOFFS':T(g.h).di===T(g.a).di?'DIVISION RIVALRY':'HOME CROWD')+' · STADIUM PULSE</div>':''}<div class="s7">${wxTxt}${M.wind?' · WIND '+Math.abs(M.wind)+' MPH':''} · ${esc(abbr(op))} PLAYBOOK: ${teamStyle(op)}</div>
   <div class="yl">COIN TOSS: ${weRecv?'YOU RECEIVE THE KICKOFF':esc(T(op).name.toUpperCase())+' RECEIVE'}</div>`,[['KICK OFF',()=>kickoffTo(M.firstRecv),'y']]);
  crowd(1.6,.08);
