@@ -122,7 +122,7 @@ input.txt{font:inherit;font-size:10px;background:var(--nv);border:2px solid #fff
 .gl .gpause,body.mobile .gl .gpause{position:absolute;right:2px;top:1px;width:28px;height:14px;padding:0;font-size:7px;line-height:1;border-width:1px;box-shadow:none;display:flex;align-items:center;justify-content:center;z-index:30}
 .gpause::after{content:'';position:absolute;left:-12px;right:-3px;top:-2px;bottom:-14px}
 .gctrl{position:absolute;right:6px;bottom:22px;display:flex;gap:5px;align-items:flex-end}
-.ghint{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:7px;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;color:#fff;pointer-events:none}
+.ghint{position:absolute;left:0;right:0;bottom:52px;text-align:center;font-size:7px;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;color:#fff;pointer-events:none}
 .gban{position:absolute;left:0;right:0;top:20%;text-align:center;pointer-events:none}
 .gban div{display:inline-block;font-size:16px;color:#fff;text-shadow:2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,0 3px 0 #000;animation:fin .15s;line-height:1.3}
 .gban small{display:block;font-size:8px;margin-top:5px}
@@ -339,7 +339,7 @@ function arc(){const a=L&&L.settings&&L.settings.arc;return a&&a.on?Object.assig
 function arcM(k){const a=arc();return a?ARC_LV[a[k]==null?2:a[k]]:1;}
 function arcadeHTML(back){const a=Object.assign({},ARC_DEF,L.settings.arc||{}),row=(k,l)=>`<div class="row" style="gap:4px"><span style="width:118px">${l}</span>${ARC_LN.map((n,i)=>`<span class="chip ${a[k]===i?'on':''}" data-a="arcSet" data-k="${k}" data-v="${i}" data-b="${back||''}">${n}</span>`).join('')}</div>`,
   opt=(k,l,vals)=>`<div class="row" style="gap:4px"><span style="width:118px">${l}</span>${vals.map(([v,n])=>`<span class="chip ${a[k]===v?'on':''}" data-a="arcSet" data-k="${k}" data-v="${v}" data-b="${back||''}">${n}</span>`).join('')}</div>`;
- return`<div class="mp" style="width:560px;gap:6px">${ttl('ARCADE MODE',true)}
+ return`<div class="mp cmp" style="width:560px;gap:4px">${ttl('ARCADE MODE',true)}
  ${opt('on','ARCADE',[[true,'ON'],[false,'OFF']])}
  <div class="col" style="gap:5px;${a.on?'':'opacity:.45;pointer-events:none'}">
  ${row('fum','FUMBLES')}${row('int','INTERCEPTIONS')}${row('brk','BROKEN TACKLES')}${row('hit','HIT STICKS')}${row('oneh','1-HAND CATCHES')}
@@ -432,6 +432,7 @@ function refreshStaff(){L.staff={OC:[genCoord('OC'),genCoord('OC'),genCoord('OC'
 
 /* ---------- league creation ---------- */
 function createLeague(ut,coach,opt){
+ cfbSync(null);   /* start from the real 32 NFL teams (a college league swaps its schools in below) */
  const rosterMode=opt.rosterMode==='NFL'&&opt.nflData?'NFL':opt.rosterMode==='CFB'&&opt.cfb?'CFB':'CUSTOM';
  L={v:2,nid:1,season:1,year:CFG.startYear,week:1,phase:rosterMode!=='CUSTOM'?'REG':'FOUND',user:ut,coach:(coach||'COACH').toUpperCase().slice(0,14),custom:null,rosterMode,nflSourceWeek:rosterMode==='NFL'?opt.nflData.week:null,cc:rosterMode!=='CUSTOM'?30:20,fan:50,cap:rosterMode==='NFL'?240:CFG.cap,
   fac:{stad:1,train:1,rehab:1},oc:null,dc:null,staff:null,players:[],pmap:{},teams:TEAMS.map(t=>Object.assign({id:t.id,tq:rnd(4.3,6.9)},zeroRec())),
@@ -2949,8 +2950,9 @@ function kneel(){if(!canKneel())return;M.ballOn=Math.max(10.5,M.ballOn-1);M.down
 function timeout(){if(M.to<=0||!(M.runoff>0)||M.clock<=0||M.phase!=='pre')return;M.runoff=0;M.to--;banner('TIMEOUT',abbr(L.user)+' · '+M.to+' LEFT','#fff',1.2);sfx('whistle');}
 
 /* ---------- opponent drive (simulated) ---------- */
-function passY(e){return Math.round(clamp(Math.random()<0.3?ri(1,6):3+(-Math.log(Math.random()))*(7+e*8),-1,70));}
-function runY(e){return Math.round(clamp(3.4+gauss()*3.3+e*5+(Math.random()<0.05?(-Math.log(Math.random()))*14:0),-5,75));}
+/* simulated drives: tuned to about NFL scoring (~1.8 points a drive between even teams) */
+function passY(e){return Math.round(clamp(Math.random()<0.3?ri(1,7):3.5+(-Math.log(Math.random()))*(8+e*8),-1,70));}
+function runY(e){return Math.round(clamp(4+gauss()*3.3+e*5+(Math.random()<0.05?(-Math.log(Math.random()))*14:0),-5,75));}
 function simOppDrive(s0){
  const op=M.op,od=M.odep,R=teamRatings(op),U=teamRatings(L.user);
  const edge=clamp((R.off-U.def-8)/100+diffLvl()*0.1,-0.4,0.45),ql=L.settings.qlen,lines=[];   // hard: opponents drive and score much more
@@ -4931,6 +4933,7 @@ function buildCollegeLeague(o){
   for(const r of collegePickPlayers(o.rows[t],rmax())){
    const pos=mapNFLPosition(r.position),fn=String(r.first_name||r.firstName||'').trim(),ln=String(r.last_name||r.lastName||'').trim();if(!pos||!fn||!ln)continue;
    const yr=clamp(Number(r.year)||1,1,5),q=r.rating!=null&&!isNaN(+r.rating)?clamp(+r.rating,1,10):clamp(4.9+(pw-6)*0.6+yr*0.3+rnd(-0.7,0.7),2.6,8.8),p=genPlayer(pos,q,17+yr+ri(0,1));
+   if(r.rating!=null){for(let it=0;it<6;it++){const d=q-ovr(p);if(Math.abs(d)<0.25)break;const st=d>0?1:-1;for(const k of POSDEF[p.pos])p.a[k]=clamp(p.a[k]+st,1,10);}p.pot=Math.max(p.pot||0,Math.min(10,ovr(p)+(5-yr)*0.4));}   /* overall matches the file's rating */
    p.fn=fn;p.ln=ln;p.team=t;p.college=true;p.collegeYear=yr;if(r.jersey!=null&&r.jersey!=='')p.num=Number(r.jersey)||p.num;
    p.yrs=clamp(5-yr,1,4);p.seasons=yr-1;p.mor=78;applySavedLook(p);addPlayer(p);}
   fillAIRoster(t);}
