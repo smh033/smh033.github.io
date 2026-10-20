@@ -1781,7 +1781,7 @@ function pregameHTML(g){
 ACT.adv=()=>{UI.modal=null;advanceWeek();resumeFlow();};
 ACT.simpo=()=>{UI.modal=null;while(L.phase==='PO'&&!userGame())advanceWeek();resumeFlow();};
 ACT.play=()=>{if(L.online&&!(UI.scr==='olroom'))return olPlay(false);const g=userGame();if(!g)return;const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);};
-ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});};
+ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});};
 function simStats(us,th){
  const lu=lineup(L.user),ps={},S=p=>p?(ps[p.id]=ps[p.id]||{xp:0}):null,add=(p,k,v)=>{const s=S(p);if(s)s[k]=(s[k]||0)+v;};
  const tds=Math.floor(us/7),py=Math.round(rnd(140,300)*(0.7+us/60)),ry=Math.round(rnd(50,140));
@@ -2961,6 +2961,7 @@ function clockCheck(next){
  return overtime();
 }
 function halftime(){
+ olmSave('half');
  M.O=[];M.D=[];
  ovMsg('HALFTIME',`<div class="row ctr" style="gap:14px;align-items:center"><span>${abbr(L.user)}</span><span class="s16">${M.sc[0]} - ${M.sc[1]}</span><span>${abbr(M.op)}</span></div>PASSING ${M.ts.cmp}/${M.ts.att} · ${M.ts.pyd} YDS · RUSHING ${M.ts.ryd} YDS · TURNOVERS ${M.ts.to}`,[['2ND HALF',()=>{M.qtr=3;M.clock=L.settings.qlen;M.to=2;if(M.def)endDefDrive();if(L.settings.dir==='S'){M.udir=-M.udir;syncDir();}kickoffTo(M.firstRecv==='us'?'them':'us');},'y']]);
  crowd(1.2,.07);
@@ -2970,11 +2971,12 @@ function overtime(){
  ovMsg(M.qtr===5?'OVERTIME':'ANOTHER OT',`TIED ${M.sc[0]}-${M.sc[1]} · NEXT SCORE WINS<br>${us?'YOU WIN THE TOSS AND RECEIVE':esc(T(M.op).name.toUpperCase())+' RECEIVE'}`,[['KICK OFF',()=>kickoffTo(us?'us':'them'),'y']]);
 }
 function gameOver(){
+ olmSave('final');
  M.phase='ov';const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1];
  if(W)boom();else sfx('bad');
  M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div>`,acts:[finishMatch]};
 }
-function finishMatch(){if(M&&M.olg&&L&&L.net)return olHostEnd();if(L&&L.net){const R=M.sc.slice(),op=M.op,u=L.user;NET.last=abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op);NET.glast=abbr(op)+' '+R[1]+' - '+R[0]+' '+abbr(u);netSend({t:'end',last:NET.glast});M=null;L=null;NET.stage='lobby';go('online');netLobbySend();return;}if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
+function finishMatch(){if(L&&L.online&&!L.exh)olmClear();if(M&&M.olg&&L&&L.net)return olHostEnd();if(L&&L.net){const R=M.sc.slice(),op=M.op,u=L.user;NET.last=abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op);NET.glast=abbr(op)+' '+R[1]+' - '+R[0]+' '+abbr(u);netSend({t:'end',last:NET.glast});M=null;L=null;NET.stage='lobby';go('online');netLobbySend();return;}if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
  const ql=L.settings.qlen,rem=M.qtr<=4?(4-M.qtr)*ql+Math.max(0,M.clock):0,f=rem/(4*ql);
  const H=teamRatings(L.user),O=teamRatings(M.op);
@@ -2985,7 +2987,7 @@ function simRest(){
 }
 
 /* ---------- possessions ---------- */
-function kickoffTo(who){if(who==='us')return ourReturn(false);return ourKickoff();}
+function kickoffTo(who){olmSave('ko',who);if(who==='us')return ourReturn(false);return ourKickoff();}
 function ourReturn(free){if(M.def)endDefDrive();if(netHost()&&!free&&M.qtr===4&&!M.netKO)return netKickoffAsk();if(!playOffense()){const sp=free?ri(28,42):(Math.random()<0.45?35:ri(18,34));return simUserDrive(sp,[free?'FREE KICK RETURNED TO THE '+spotTxt(sp):'KICKOFF · BALL AT '+spotTxt(sp)]);}if(!free&&Math.random()<0.38)return startDrive(35,'TOUCHBACK');startReturn('ko',free?rnd(20,30):rnd(2,8),rnd(16,37));}
 function ourKickoff(){
  if(M.qtr>=5&&M.sc[0]!==M.sc[1])return gameOver();
@@ -3008,6 +3010,7 @@ function onsideKick(){
 }
 function startDrive(x,lab){if(M.def)endDefDrive();if(!playOffense()&&!M.fromSim)return simUserDrive(clamp(x,11,109),lab?[lab]:[]);M.to=2;M.cp=2;M.ballOn=clamp(x,10.5,109);M.down=1;M.fdX=Math.min(M.ballOn+10,110);M.ballY=26.67;M.runoff=0;M.conv=false;if(lab)banner(lab,'','#fff',1.3);clockCheck(toPre);}
 function toPre(){
+ olmSave('off');
  M.play=null;M.res=null;setupPlay();M.phase='pre';M.pc=PLAY_CLOCK;M.cam=clamp(M.ballOn+12,HALFW-CAM_PAD,120-HALFW+CAM_PAD);
  if(M.down===4&&!M.conv&&!M.went4){
   const opts=[['GO FOR IT',()=>{M.phase='pre';M.went4=true;},'y']];
@@ -3161,6 +3164,7 @@ function endDefDrive(){if(!M)return;M.def=false;M.ctl=null;M.aiQB=null;M.tackler
 function userBall(x,lab){x=clamp(Math.round(x),11,109);if(playOffense())return startDrive(x,lab);return simUserDrive(x,lab?[lab]:[]);}
 function defaultCtl(){const k=M.ctlKey||'LB0';return M.D.find(f=>f.key===k)||M.D.find(f=>f.role==='LB')||M.D[0];}
 function defPre(){
+ olmSave('def');
  M.play=null;M.res=null;setupPlay();M.phase='pre';M.pc=null;M.cam=clamp(M.ballOn+12,HALFW-CAM_PAD,120-HALFW+CAM_PAD);
  M.D.forEach((f,i)=>{f.key=f.role+M.D.filter((g,j)=>j<i&&g.role===f.role).length;});
  applyDefCall();M.ctl=defaultCtl();M.called=null;M.aiQB=null;M.tackler=null;
@@ -5719,12 +5723,13 @@ SCR.olmenu=()=>{cfbSync(null);const mine=olMine();
  ${OL_ERR?`<div class="rdt" style="text-align:center;max-width:520px;line-height:1.8">${esc(OL_ERR)}</div>`:''}</div>`;};
 ACT.olForgetQ=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl('REMOVE '+esc(d.c),true)}<div class="s7" style="line-height:1.9">REMOVES IT FROM THIS DEVICE'S LIST. THE LEAGUE ITSELF KEEPS GOING; YOU CAN REJOIN WITH THE CODE AND YOUR COACH NAME.</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt r" data-a="olForget2" data-c="${esc(d.c)}">REMOVE</button></div></div>`);
 ACT.olForget2=d=>{olForget(d.c);UI.modal=null;render();};
-ACT.olOpen=async d=>{const x=olMine().find(y=>y.code===d.c);if(!x)return;OL_ERR='';modal(`<div class="mp" style="width:300px;align-items:center">${ttl('LOADING',true)}<div class="blink">CONNECTING...</div></div>`);
+ACT.olOpen=async d=>{const resume=d.resume;const x=olMine().find(y=>y.code===d.c);if(!x)return;OL_ERR='';modal(`<div class="mp" style="width:300px;align-items:center">${ttl('LOADING',true)}<div class="blink">CONNECTING...</div></div>`);
  try{const got=await olGet(x.code,0,x.team);const S=got.data.seats&&got.data.seats[x.team];
   const kh=await olHash(x.code+':'+x.tk);
   if(!S||(S.tkh?S.tkh!==kh:S.tk!==x.tk)){olForget(x.code);UI.modal=null;OL_ERR='YOUR SPOT IN '+x.code+' IS GONE. JOIN AGAIN WITH THE CODE, YOUR COACH NAME AND PIN.';return render();}
   UI.modal=null;olBegin(x.code,x.team,x.tk,got);
   if(L.seats[x.team].tk){L.seats[x.team].tkh=kh;delete L.seats[x.team].tk;save();}   /* older leagues kept the key readable */
+  if(resume&&olmTry())return;
   olResume();}
  catch(e){UI.modal=null;OL_ERR=e.nf?'LEAGUE '+x.code+' NO LONGER EXISTS.':e.message===OL_OLD?OL_OLD:'CAN\'T REACH THE LEAGUE SERVER. CHECK YOUR CONNECTION.';render();}};
 /* ---------- create ---------- */
@@ -5861,7 +5866,7 @@ const olH2H=g=>!!(g&&L&&L.seats&&isHuman(g.h)&&isHuman(g.a));
 /* a game against the AI: make sure it hasn't been simmed meanwhile, then play as usual */
 function olPlay(sim){olTx(null).then(()=>{const g=userGame();if(!g){toast('THAT GAME IS ALREADY IN');return olResume();}
  if(olH2H(g))return olRoomOpen(g,UI.scr==='pregame'&&UI.sub.uU!=null?{uU:UI.sub.uU,uO:UI.sub.uO}:null);
- if(sim)return ACT.simg();const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);});}
+ if(sim)return ACT.simg();if(olmTry())return;const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);});}
 /* ---------- coach vs coach: the home coach hosts an Online Head to Head game ---------- */
 function olGameCode(g){const s=L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:L.week)+'|'+g.h+'|'+g.a;let h=2166136261;
  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}let c='';for(let i=0;i<4;i++){c+=String.fromCharCode(65+((h>>>0)%26));h=Math.imul(h^(h>>>13),2654435761);}return c;}
@@ -5952,6 +5957,42 @@ function olJobTx(t){UI.modal=null;
   for(const o of olOffers())if(o.st==='open'&&(o.from===old||o.to===old)){o.st='void';o.why='THE COACH CHANGED TEAMS';}
   switchTeam(t);OL.me=t;L.off.step='new';L.jobs=null;})
  .then(ok=>{if(ok&&OL&&OL.me===t){olRemember({code:OL.code,team:t,tk:OL.tk,name:L.coach});toast('WELCOME TO '+T(t).name.toUpperCase());}else if(ok)toast('THAT JOB IS GONE');olResume();});}
+/* ---------- online franchise: a game in progress survives a refresh ----------
+   Before every snap, kickoff, halftime and the final whistle of a game against the AI, the
+   score, clock, down and distance, timeouts and player stats are kept in this browser. Reload
+   the page and you're put back in that game at that moment (refreshing can't wipe a bad score:
+   PLAY and SIM GAME pick the same game back up). Coach vs coach games aren't kept: the live
+   link has to start over. */
+const OLM_KEY='rf_olm';
+function olGameKey(g){return L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:L.week)+'|'+g.h+'|'+g.a;}
+function olmGet(){try{return JSON.parse(localStorage.getItem(OLM_KEY)||'null');}catch(e){return null;}}
+function olmClear(){try{localStorage.removeItem(OLM_KEY);}catch(e){}}
+function olmSave(act,who){
+ if(!M||!L||!L.online||L.exh||M.olg||M.netGuest||!OL||OL.code!==L.online.code)return;
+ const c={code:OL.code,team:L.user,gk:olGameKey(M.g),at:Date.now(),act,who:who||null,
+  m:{sc:M.sc,qtr:M.qtr,clock:M.clock,to:M.to,cp:M.cp,oto:M.oto,ocp:M.ocp,ps:M.ps,ts:M.ts,plays:M.plays,carries:M.carries,night:M.night,wx:M.wx,wind:M.wind,rival:M.rival,
+   firstRecv:M.firstRecv,udir:M.udir,dcall:M.dcall,went4:!!M.went4,conv:!!M.conv,ballOn:M.ballOn,ballY:M.ballY,down:M.down,fdX:M.fdX,uU:M.uU,uO:M.uO}};
+ try{localStorage.setItem(OLM_KEY,JSON.stringify(c));}catch(e){}}
+/* the saved game for this matchup, if there is one */
+function olmFor(g){const c=olmGet();if(!c||!OL||c.code!==OL.code||c.team!==L.user)return null;if(!g||olH2H(g)||c.gk!==olGameKey(g)){olmClear();return null;}return c;}
+function olmTry(){const g=userGame(),c=g&&olmFor(g);if(!c){if(!g)olmClear();return false;}UI.modal=null;return olmResumeGame(c);}
+function olmResumeGame(c){const g=userGame(),m=c.m;if(!g)return false;
+ startMatch(g,{uU:m.uU,uO:m.uO});
+ Object.assign(M,{sc:m.sc,qtr:m.qtr,clock:m.clock,to:m.to,cp:m.cp,oto:m.oto,ocp:m.ocp,ps:m.ps||{},ts:m.ts||M.ts,plays:m.plays||0,carries:m.carries||0,night:m.night,wx:m.wx,wind:m.wind,rival:m.rival,
+  firstRecv:m.firstRecv,udir:m.udir,dcall:m.dcall,went4:m.went4,conv:m.conv,ballOn:m.ballOn,ballY:m.ballY,down:m.down,fdX:m.fdX,runoff:0});
+ M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
+ M.ov=null;M.O=[];M.D=[];M.def=c.act==='def';syncDir();
+ if(c.act==='def')defPre();
+ else if(c.act==='ko')kickoffTo(c.who);
+ else if(c.act==='half')halftime();
+ else if(c.act==='final')gameOver();
+ else toPre();
+ banner('GAME RESUMED',abbr(L.user)+' '+M.sc[0]+' - '+M.sc[1]+' '+abbr(M.op),'#ffe94a',2.2);
+ return true;}
+/* page just loaded: if a league game was in progress, reopen the league and the game */
+function olmBoot(){const c=olmGet();if(!c)return;
+ if(!olMine().some(y=>y.code===c.code&&y.team===c.team)||Date.now()-c.at>14*864e5){olmClear();return;}
+ ACT.olOpen({c:c.code,resume:1});}
 /* ---------- offseason waiting screens, draft picks, trades ---------- */
 function olOffWait(){const O=L.off;if(!O)return null;
  if(O.step==='draft'&&!L.draft)olAfterDraftStep();
@@ -6406,6 +6447,7 @@ ACT.colDynContinue=()=>{colMgmtOldContinue();if(CD){colMgmtEnsure();colDynSave()
 
 go('title');
 requestAnimationFrame(loop);
+olmBoot();
 </script>
 <div id="rot"><div>ROTATE YOUR DEVICE<br><br><span style="color:#b7c8ff;font-size:9px">RETRO FOOTBALL PLAYS IN LANDSCAPE</span></div></div>
 <style>#rot{display:none}@media (orientation:portrait) and (max-width:900px){#rot{display:flex;position:fixed;inset:0;z-index:999;background:#2f63e6;color:#fff;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.6;padding:20px}}</style>
