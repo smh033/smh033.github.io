@@ -1,0 +1,74 @@
+    {
+      "id": "osu-2026-001",
+      "first_name": "Brandon",
+      "last_name": "Inniss",
+      "position": "WR",
+      "year": 4,
+      "jersey": 0
+    },
+    {
+      "id": "osu-2026-059",
+      "first_name": "Nate",
+      "last_name": "Roberts",
+      "position": "TE",
+      "year": 2,
+      "jersey": 83
+    },
+    {
+      "id": "osu-2026-052",
+      "first_name": "Austin",
+      "last_name": "Siereveld",
+      "position": "OL",
+      "year": 4,
+      "jersey": 67
+    },
+    {
+      "id": "osu-2026-067",
+      "first_name": "Eddrick",
+      "last_name": "Houston",
+      "position": "DT",
+      "year": 3,
+      "jersey": 96
+    },
+    {
+      "id": "osu-2026-009",
+      "first_name": "Riley",
+      "last_name": "Pettijohn",
+      "position": "LB",
+      "year": 2,
+      "jersey": 5
+    },
+    {
+      "id": "osu-2026-011",
+      "first_name": "Devin",
+      "last_name": "Sanchez",
+      "position": "CB",
+      "year": 2,
+      "jersey": 6
+    },
+    {
+      "id": "osu-2026-068",
+      "first_name": "Connor",
+      "last_name": "Hawkins",
+      "position": "K",
+      "year": 3,
+      "jersey": 96
+    },
+    {
+      "id": "osu-2026-054",
+      "first_name": "Vasean",
+      "last_name": "Washington",
+      "position": "OL",
+      "year": 5,
+      "jersey": 73
+    },
+    {
+      "id": "osu-2026-014",
+      "first_name": "Jermaine",
+      "last_name": "Mathews Jr.",
+      "position": "CB",
+      "year": 4,
+      "jersey": 7
+    }
+  ]
+}
