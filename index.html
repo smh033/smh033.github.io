@@ -3222,7 +3222,7 @@ function ballDive(f,dt){const b=M.ball;if(!b||!b.F||b.done||f.eng||f.stun>0||f.d
  if(rem<=0.42){f.diveQ=false;
   if(dl<1.6){f.jump=0.45;f.reach=0.35;sfx('juke');steer(f,px,py,f.spd,f.acc+12,dt);return true;}
   if(dl>2.6)return false;   /* too far to lay out for it: keep running */
-  const T=Math.max(0.28,Math.min(0.36,rem+0.05)),v=Math.min(dl/T,f.spd*1.35);f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dl*v;f.vy=(py-f.y)/dl*v;f.dtk=false;f.reach=T;sfx('juke');return true;}
+  const T=Math.max(0.28,Math.min(0.36,rem+0.05)),v=Math.min(dl/T,f.spd*1.35);f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dl*v;f.vy=(py-f.y)/dl*v;f.dtk=false;f.reach=T;capDive(f,DIVE_YDS.ctch);sfx('juke');return true;}
  steer(f,px,py,dl<1.2?Math.min(f.spd,dl*4):f.spd*1.06,f.acc+14,dt);return true;}   /* get there and wait for it */
 /* the hands-on bonuses (reach, picks) only count while YOU are actually steering him / diving with him */
 function userCtl(f){return !!(M&&((M.def&&f===M.ctl&&(f.diveQ||f.dove||ctlActive()||M.pt-(M.ctlAt==null?-9:M.ctlAt)<1.0))||(!M.def&&f&&f===M.rctl&&(f.diveQ||f.dove||M.pt-(M.rAt==null?-9:M.rAt)<1.0))));}
@@ -3249,10 +3249,10 @@ function ctlTap(fx){
   if(dl<11&&!f.eng){f.diveQ=true;return;}}   /* break on the ball and lay out for it at the right moment (ballDive) */
  const c=M.carrier||(M.play==='pass'&&!M.thrown?M.qb:null);
  if(c&&d2(f,c)<2.8&&!f.eng){const lead=0.3,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y)||1,T=0.3,v=Math.min(dp/T,f.spd*1.2);
-  f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;sfx('juke');return;}
+  f.dove=true;f.dive=T;f.dv=T;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;capDive(f,DIVE_YDS.tkl);sfx('juke');return;}
  if(f.eng)return;
  {const sp=Math.hypot(f.vx,f.vy),T=0.38;let ux,uy;if(sp>0.8){ux=f.vx/sp;uy=f.vy/sp;}else{const t=c||M.qb;if(t){const d=Math.hypot(t.x-f.x,t.y-f.y)||1;ux=(t.x-f.x)/d;uy=(t.y-f.y)/d;}else{ux=-1;uy=0;}}
-  const v=Math.max(sp,f.spd)*1.0;f.dove=true;f.dive=T;f.dv=T;f.vx=ux*v;f.vy=uy*v;f.dtk=false;sfx('juke');}
+  const v=Math.max(sp,f.spd)*1.0;f.dove=true;f.dive=T;f.dv=T;f.vx=ux*v;f.vy=uy*v;f.dtk=false;capDive(f,DIVE_YDS.free);sfx('juke');}
 }
 /* ---------- AI offense: play calling ---------- */
 function aiLead(){return M.sc[1]-M.sc[0];}
@@ -3784,7 +3784,7 @@ function pickChaser(){const c=M.carrier;let best=null,bd=1e9;for(const f of M.O)
 function scrToField(px,py){return{x:M.cam+(M.dir<0?-1:1)*(px-CW/2)/PXY,y:(py-FT)/PYY};}
 function chaserDive(f0){const f=f0&&f0.side?f0:M.chaser,c=M.carrier;if(!f||!c||f.dive>0||f.down>0||f.stun>0||M.play!=='intret'||M.phase!=='live')return;
  const lead=0.28,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y)||1,v=Math.min(dp/0.3,f.spd*1.2);
- f.dove=true;f.dive=0.3;f.dv=0.38;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;sfx('juke');}
+ f.dove=true;f.dive=0.3;f.dv=0.38;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;capDive(f,DIVE_YDS.tkl);sfx('juke');}
 function intTackle(f,c,diving,quick){
  const p=clamp((diving?0.8:quick?0.5:0.68)+0.03*(A(f,'str')-A(c,'str'))+0.02*(A(f,'spd')-5)+(f===M.chaser?0.08:0),0.4,0.92);
  if(Math.random()<p){c.down=1;M.shake=4;sfx('hit');pop(diving?'DIVING TACKLE!':'TACKLED!',c.x,c.y,'#7dff8a');xpG(f.pl,8);cr(f.pl,'tkl',1);return endPlay('intdown',c.x,c.y,nm(f.pl)?'STOPPED BY '+nm(f.pl):'');}
@@ -3819,7 +3819,7 @@ function upIntRet(dt){
   if(react){steer(f,f.x+f.vx*0.3,f.y+f.vy*0.3,Math.hypot(f.vx,f.vy)*0.7,f.acc,dt);continue;}
   if(!M.def&&f===M.chaser&&ptr.down&&M.input==='chase'){const p=scrToField(ptr.x,ptr.y);steer(f,p.x,p.y,f.spd*1.04,f.acc+8,dt);}
   else if(M.def&&f===M.rchaser&&M.rchase&&performance.now()-M.rchase.rt<400){steer(f,M.rchase.x,M.rchase.y,f.spd*1.04,f.acc+8,dt);}
-  else{pursue(f,c,dt);if(M.def&&!f.dove&&!(c.down>0)&&d2(f,c)<2.2&&d2(f,c)>0.9&&Math.random()<dt*2.5){const lead=0.28,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y)||1,v=Math.min(dp/0.3,f.spd*1.2);f.dove=true;f.dive=0.3;f.dv=0.38;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;}}
+  else{pursue(f,c,dt);if(M.def&&!f.dove&&!(c.down>0)&&d2(f,c)<2.2&&d2(f,c)>0.9&&Math.random()<dt*2.5){const lead=0.28,px=c.x+c.vx*lead,py=c.y+c.vy*lead,dp=Math.hypot(px-f.x,py-f.y)||1,v=Math.min(dp/0.3,f.spd*1.2);f.dove=true;f.dive=0.3;f.dv=0.38;f.vx=(px-f.x)/dp*v;f.vy=(py-f.y)/dp*v;f.dtk=false;capDive(f,DIVE_YDS.tkl);}}
   if(d2(f,c)<1.05&&!(c.down>0)){intTackle(f,c,false);if(M.phase!=='live')return;}}
  separate(M.O);separate(M.D);
  for(const f of[...M.O,...M.D]){if(f!==c)f.y=clamp(f.y,-1,54.3);f.x=clamp(f.x,-2,121);}
@@ -3958,7 +3958,7 @@ function upChase(f,dt){
  if(f.dive>0){f.dive-=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;if(f.dive<=0){f.dive=0;f.down=1.2;f.vx=f.vy=0;}return;}
  if(b.t<(f.react||0.12)&&!f.dove){followRoute(f,dt);return;}   // brief reaction, then break to the ball
  // Dive only when he can't reach the catch point by running before the ball does.
- if(!f.dove&&rem<0.32&&d-1.3>f.spd*rem&&d<f.spd*rem+2.8){f.dove=true;f.dive=0.36;f.dv=0.36;const l=d||1;f.vx=(Lp.x-f.x)/l*f.spd*1.3;f.vy=(Lp.y-f.y)/l*f.spd*1.3;return;}
+ if(!f.dove&&rem<0.32&&d-1.3>f.spd*rem&&d<f.spd*rem+2.8){f.dove=true;f.dive=0.36;f.dv=0.36;const l=d||1;f.vx=(Lp.x-f.x)/l*f.spd*1.3;f.vy=(Lp.y-f.y)/l*f.spd*1.3;capDive(f,DIVE_YDS.ctch);return;}
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
@@ -4052,7 +4052,14 @@ function startCeleb(f){if(!f||f.side!=='O')return;/* clear any dive/jump/catch p
 /* Ball carrier leaps over a defender who dove at him and missed. */
 const HURDLE_T=0.42;
 function hurdle(c){if(!c||c.dive>0||c.down>0||c.hurdle>0)return;c.hurdle=HURDLE_T;c.jk=0;sfx('juke');}
-function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.34;c.dv=0.34;c.vx=M&&M.play==='intret'&&c.side==='D'?Math.min(-c.spd*1.05,(c.vx||0)*0.95):Math.max(c.spd*1.05,(c.vx||0)*0.95);c.vy=(c.vy||0)*0.35;c.ty=null;sfx('juke');}
+/* NFL-sized dives: a ball carrier lays out about 2 yards, a defender about 2.5, a receiver
+   stretching for a pass a bit under 3. Players keep their running speed in the air; a long dive
+   is shortened by cutting the airtime (down to 0.22 s), then by slowing it if it's still too long. */
+const DIVE_YDS={run:2.2,tkl:2.6,free:2.4,ctch:2.8};
+function capDive(f,max){const sp=Math.hypot(f.vx,f.vy),T=f.dive;if(!(sp>0)||!(T>0)||sp*T<=max)return;
+ const T2=Math.max(0.22,max/sp),k=T2/T;f.dive=T2;if(f.dv)f.dv*=k;if(f.reach>0)f.reach=Math.min(f.reach,T2);
+ if(sp*T2>max){const m=max/(sp*T2);f.vx*=m;f.vy*=m;}}
+function dive(c){if(!c||c.dive>0||c.down>0)return;c.dive=0.34;c.dv=0.34;c.vx=M&&M.play==='intret'&&c.side==='D'?Math.min(-c.spd*1.05,(c.vx||0)*0.95):Math.max(c.spd*1.05,(c.vx||0)*0.95);c.vy=(c.vy||0)*0.35;c.ty=null;capDive(c,DIVE_YDS.run);sfx('juke');}
 const STEP=3.6;
 /* run game balance (designed runs on your offense): carrier pace, arm tackles off blocks, pursuit, how long a run block holds */
 let RUN_SP=0.93,ARM_R=1.3,ARM_P=0.45,PURS=1.1,RUNBLK=1.4,CATCHUP=0.9;
