@@ -10,84 +10,96 @@
    "last_name": "Allar",
    "position": "QB",
    "year": 3,
-   "jersey": 15
+   "jersey": 15,
+   "rating": 7.1
   },
   {
    "first_name": "Nicholas",
    "last_name": "Singleton",
    "position": "RB",
    "year": 3,
-   "jersey": 10
+   "jersey": 10,
+   "rating": 6.8
   },
   {
    "first_name": "Trebor",
    "last_name": "Peña",
    "position": "WR",
    "year": 3,
-   "jersey": 8
+   "jersey": 8,
+   "rating": 6.8
   },
   {
    "first_name": "Devonte",
    "last_name": "Ross",
    "position": "WR",
    "year": 3,
-   "jersey": 5
+   "jersey": 5,
+   "rating": 6.8
   },
   {
    "first_name": "Luke",
    "last_name": "Reynolds",
    "position": "TE",
    "year": 3,
-   "jersey": 85
+   "jersey": 85,
+   "rating": 6.8
   },
   {
    "first_name": "Olaivavega",
    "last_name": "Ioane",
    "position": "OL",
    "year": 3,
-   "jersey": 71
+   "jersey": 71,
+   "rating": 6.8
   },
   {
    "first_name": "Anthony",
    "last_name": "Donkoh",
    "position": "OL",
    "year": 3,
-   "jersey": 68
+   "jersey": 68,
+   "rating": 6.8
   },
   {
    "first_name": "Dani",
    "last_name": "Dennis-Sutton",
    "position": "DL",
    "year": 3,
-   "jersey": 33
+   "jersey": 33,
+   "rating": 6.8
   },
   {
    "first_name": "Dominic",
    "last_name": "DeLuca",
    "position": "LB",
    "year": 3,
-   "jersey": 0
+   "jersey": 0,
+   "rating": 6.8
   },
   {
    "first_name": "Zakee",
    "last_name": "Wheatley",
    "position": "DB",
    "year": 3,
-   "jersey": 6
+   "jersey": 6,
+   "rating": 6.8
   },
   {
    "first_name": "Zion",
    "last_name": "Tracy",
    "position": "DB",
    "year": 3,
-   "jersey": 7
+   "jersey": 7,
+   "rating": 6.8
   },
   {
    "first_name": "Ryan",
    "last_name": "Barker",
    "position": "K",
    "year": 3,
-   "jersey": 94
+   "jersey": 94,
+   "rating": 6.6
   }
  ]
 }

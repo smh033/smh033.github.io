@@ -1,0 +1,119 @@
+{
+ "season": 2026,
+ "team": "Louisiana",
+ "team_id": "louisiana",
+ "source": "https://ragincajuns.com/sports/football/roster",
+ "note": "Twelve real players selected from the Louisiana Ragin' Cajuns official 2026 roster for Retro Football. Names, roster positions, and jersey numbers are from the school listing; defensive backs are normalized to DB and class years to 1-4 for game compatibility. Selection is not a confirmed official starting depth chart. Gameplay ratings are estimated by the game.",
+ "players": [
+  {
+   "id": "louisiana-2026-01",
+   "first_name": "Lunch",
+   "last_name": "Winfield",
+   "position": "QB",
+   "year": 3,
+   "jersey": 7,
+   "featured": true,
+   "rating": 5.7
+  },
+  {
+   "id": "louisiana-2026-02",
+   "first_name": "Steven",
+   "last_name": "Blanco",
+   "position": "RB",
+   "year": 2,
+   "jersey": 24,
+   "rating": 5.1
+  },
+  {
+   "id": "louisiana-2026-03",
+   "first_name": "Shelton",
+   "last_name": "Sampson Jr.",
+   "position": "WR",
+   "year": 3,
+   "jersey": 6,
+   "rating": 5.4
+  },
+  {
+   "id": "louisiana-2026-04",
+   "first_name": "KeDarius",
+   "last_name": "Wade",
+   "position": "WR",
+   "year": 3,
+   "jersey": 9,
+   "rating": 5.4
+  },
+  {
+   "id": "louisiana-2026-05",
+   "first_name": "Caden",
+   "last_name": "Jensen",
+   "position": "TE",
+   "year": 3,
+   "jersey": 88,
+   "rating": 5.4
+  },
+  {
+   "id": "louisiana-2026-06",
+   "first_name": "George",
+   "last_name": "Jackson",
+   "position": "OL",
+   "year": 4,
+   "jersey": 71,
+   "rating": 5.7
+  },
+  {
+   "id": "louisiana-2026-07",
+   "first_name": "Kaden",
+   "last_name": "Moreau",
+   "position": "OL",
+   "year": 4,
+   "jersey": 75,
+   "rating": 5.7
+  },
+  {
+   "id": "louisiana-2026-08",
+   "first_name": "Fitzgerald",
+   "last_name": "West Jr.",
+   "position": "DL",
+   "year": 4,
+   "jersey": 68,
+   "rating": 5.7
+  },
+  {
+   "id": "louisiana-2026-09",
+   "first_name": "Kailep",
+   "last_name": "Edwards",
+   "position": "LB",
+   "year": 4,
+   "jersey": 16,
+   "rating": 5.7
+  },
+  {
+   "id": "louisiana-2026-10",
+   "first_name": "Kody",
+   "last_name": "Jackson",
+   "position": "DB",
+   "year": 3,
+   "jersey": 8,
+   "rating": 5.4
+  },
+  {
+   "id": "louisiana-2026-11",
+   "first_name": "Curley",
+   "last_name": "Reed III",
+   "position": "DB",
+   "year": 3,
+   "jersey": 13,
+   "rating": 5.4
+  },
+  {
+   "id": "louisiana-2026-12",
+   "first_name": "Logan",
+   "last_name": "Klotz",
+   "position": "K",
+   "year": 4,
+   "jersey": 40,
+   "rating": 5.5
+  }
+ ],
+ "school": "Louisiana"
+}

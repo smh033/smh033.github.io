@@ -10,84 +10,96 @@
    "last_name": "Wiles",
    "position": "QB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.7
   },
   {
    "first_name": "Rashod",
    "last_name": "Dubinion",
    "position": "RB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Dalton",
    "last_name": "Stroman",
    "position": "WR",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Sam",
    "last_name": "Mbake",
    "position": "WR",
    "year": 3,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.1
   },
   {
    "first_name": "Izayah",
    "last_name": "Cummings",
    "position": "TE",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Shamarr",
    "last_name": "Jackson",
    "position": "OL",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Jayden",
    "last_name": "Ramsey",
    "position": "OL",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Shawn",
    "last_name": "Collins",
    "position": "DL",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Jaelin",
    "last_name": "Willis",
    "position": "LB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Ethan",
    "last_name": "Johnson",
    "position": "DB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Myles",
    "last_name": "Farmer",
    "position": "DB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.4
   },
   {
    "first_name": "Cash",
    "last_name": "McVay",
    "position": "K",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.2
   }
  ]
 }

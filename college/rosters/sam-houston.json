@@ -10,84 +10,96 @@
    "last_name": "Watson",
    "position": "QB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.8
   },
   {
    "first_name": "Elijah",
    "last_name": "Green",
    "position": "RB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.5
   },
   {
    "first_name": "Michael",
    "last_name": "Phoenix II",
    "position": "WR",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.5
   },
   {
    "first_name": "Qua'Vez",
    "last_name": "Humphreys",
    "position": "WR",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.5
   },
   {
    "first_name": "Austin",
    "last_name": "Smith",
    "position": "TE",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.5
   },
   {
    "first_name": "Luke",
    "last_name": "Eckardt",
    "position": "OL",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.5
   },
   {
    "first_name": "Graceson",
    "last_name": "Jackson-Smith",
    "position": "OL",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.5
   },
   {
    "first_name": "Christopher",
    "last_name": "Eaton Jr.",
    "position": "DL",
    "year": 5,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.8
   },
   {
    "first_name": "Antavious",
    "last_name": "Fish",
    "position": "LB",
    "year": 5,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.8
   },
   {
    "first_name": "Alonzo",
    "last_name": "Edwards Jr.",
    "position": "DB",
    "year": 5,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.8
   },
   {
    "first_name": "Cecil",
    "last_name": "Powell",
    "position": "DB",
    "year": 5,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.8
   },
   {
    "first_name": "RJ",
    "last_name": "Lopez",
    "position": "K",
    "year": 5,
-   "jersey": null
+   "jersey": null,
+   "rating": 5.6
   }
  ]
 }

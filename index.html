@@ -1531,7 +1531,7 @@ ACT.ng=d=>{UI.sub[d.k]=isNaN(+d.v)?d.v:+d.v;
  if(d.k==='rosterMode'&&d.v==='NFL'&&!window.__nflPrefetch){window.__nflPrefetch=loadNFLRosterData();window.__nflPrefetch.catch(()=>{window.__nflPrefetch=null;});}
  render();};
 ACT.ngBack=()=>{go('newgame',UI.sub);};
-ACT.ngPick=()=>{const s=UI.sub;if(s.rosterMode==='CFB')return go('pickschool',{coach:s.coach,rmax:s.rmax,diff:s.diff,dir:s.dir||'S',rosterMode:'CFB',conf:'SEC'});go('pickteam',{coach:s.coach,rmax:s.rmax,diff:s.diff,dir:s.dir||'S',rosterMode:s.rosterMode||'CUSTOM',c:'AFC'});};
+ACT.ngPick=()=>{const s=UI.sub;if(s.rosterMode==='CFB'){COLLEGE_MISSING.clear();return go('pickschool',{coach:s.coach,rmax:s.rmax,diff:s.diff,dir:s.dir||'S',rosterMode:'CFB',conf:'SEC'});}go('pickteam',{coach:s.coach,rmax:s.rmax,diff:s.diff,dir:s.dir||'S',rosterMode:s.rosterMode||'CUSTOM',c:'AFC'});};
 ACT.ngRand=()=>{const s=Object.assign({},UI.sub);if(s.rosterMode==='CFB')return beginCollegeFranchise(pick(COLLEGE_TEAMS.filter(t=>!COLLEGE_MISSING.has(t.id))).id,s);if((s.rosterMode||'CUSTOM')==='NFL')return beginNFLFranchise(ri(0,31),s);startFranchise(ri(0,31),s,'CUSTOM');};
 function startFranchise(t,s,rosterMode='CUSTOM',nflData=null){
  createLeague(t,(s.coach||'COACH').trim(),{rmax:+s.rmax||10,diff:+s.diff||0,dir:s.dir||'S',rosterMode,nflData});save();
@@ -4835,7 +4835,7 @@ function collegeError(why){
 async function collegeRoster(team){
  if(COLLEGE_CACHE.has(team.id))return COLLEGE_CACHE.get(team.id);
  const url='college/rosters/'+encodeURIComponent(team.id)+'.json';
- const r=await fetch(url,{cache:'force-cache'});
+ const r=await fetch(url,{cache:'no-cache'});
  if(!r.ok)throw new Error('Missing college roster for '+team.school+' ('+r.status+'). Run the one-time roster import workflow in GitHub: '+url);
  const data=await r.json();
  if(![2025,2026,'2025-26'].includes(data.season)||!Array.isArray(data.players)||!data.players.length)
@@ -4930,7 +4930,7 @@ function buildCollegeLeague(o){
  for(let t=0;t<32;t++){const pw=cfbPower(o.ids[t]);L.teams[t].tq=clamp(pw-0.6,3.6,8.2);
   for(const r of collegePickPlayers(o.rows[t],rmax())){
    const pos=mapNFLPosition(r.position),fn=String(r.first_name||r.firstName||'').trim(),ln=String(r.last_name||r.lastName||'').trim();if(!pos||!fn||!ln)continue;
-   const yr=clamp(Number(r.year)||1,1,5),q=clamp(4.9+(pw-6)*0.6+yr*0.3+rnd(-0.7,0.7),2.6,8.8),p=genPlayer(pos,q,17+yr+ri(0,1));
+   const yr=clamp(Number(r.year)||1,1,5),q=r.rating!=null&&!isNaN(+r.rating)?clamp(+r.rating,1,10):clamp(4.9+(pw-6)*0.6+yr*0.3+rnd(-0.7,0.7),2.6,8.8),p=genPlayer(pos,q,17+yr+ri(0,1));
    p.fn=fn;p.ln=ln;p.team=t;p.college=true;p.collegeYear=yr;if(r.jersey!=null&&r.jersey!=='')p.num=Number(r.jersey)||p.num;
    p.yrs=clamp(5-yr,1,4);p.seasons=yr-1;p.mor=78;applySavedLook(p);addPlayer(p);}
   fillAIRoster(t);}

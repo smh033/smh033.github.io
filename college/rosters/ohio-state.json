@@ -10,14 +10,16 @@
    "last_name": "Brickhandler",
    "position": "QB",
    "year": 5,
-   "jersey": null
+   "jersey": null,
+   "rating": 7.7
   },
   {
    "first_name": "CJ",
    "last_name": "Donaldson",
    "position": "RB",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 7.1
   },
   {
    "id": "osu-2026-001",
@@ -25,14 +27,16 @@
    "last_name": "Inniss",
    "position": "WR",
    "year": 4,
-   "jersey": 0
+   "jersey": 0,
+   "rating": 7.1
   },
   {
    "first_name": "Shawn",
    "last_name": "Lodge",
    "position": "WR",
    "year": 4,
-   "jersey": null
+   "jersey": null,
+   "rating": 7.1
   },
   {
    "id": "osu-2026-059",
@@ -40,7 +44,8 @@
    "last_name": "Roberts",
    "position": "TE",
    "year": 2,
-   "jersey": 83
+   "jersey": 83,
+   "rating": 6.5
   },
   {
    "id": "osu-2026-054",
@@ -48,7 +53,8 @@
    "last_name": "Washington",
    "position": "OL",
    "year": 5,
-   "jersey": 73
+   "jersey": 73,
+   "rating": 7.4
   },
   {
    "id": "osu-2026-052",
@@ -56,7 +62,8 @@
    "last_name": "Siereveld",
    "position": "OL",
    "year": 4,
-   "jersey": 67
+   "jersey": 67,
+   "rating": 7.1
   },
   {
    "id": "osu-2026-067",
@@ -64,7 +71,8 @@
    "last_name": "Houston",
    "position": "DL",
    "year": 3,
-   "jersey": 96
+   "jersey": 96,
+   "rating": 6.8
   },
   {
    "id": "osu-2026-009",
@@ -72,7 +80,8 @@
    "last_name": "Pettijohn",
    "position": "LB",
    "year": 2,
-   "jersey": 5
+   "jersey": 5,
+   "rating": 6.5
   },
   {
    "id": "osu-2026-014",
@@ -80,7 +89,8 @@
    "last_name": "Mathews Jr.",
    "position": "DB",
    "year": 4,
-   "jersey": 7
+   "jersey": 7,
+   "rating": 7.1
   },
   {
    "id": "osu-2026-011",
@@ -88,7 +98,8 @@
    "last_name": "Sanchez",
    "position": "DB",
    "year": 2,
-   "jersey": 6
+   "jersey": 6,
+   "rating": 6.5
   },
   {
    "id": "osu-2026-068",
@@ -96,7 +107,8 @@
    "last_name": "Hawkins",
    "position": "K",
    "year": 3,
-   "jersey": 96
+   "jersey": 96,
+   "rating": 6.6
   }
  ]
 }

@@ -10,84 +10,96 @@
    "last_name": "Barnes",
    "position": "QB",
    "year": 3,
-   "jersey": 16
+   "jersey": 16,
+   "rating": 5.7
   },
   {
    "first_name": "Miles",
    "last_name": "Davis",
    "position": "RB",
    "year": 3,
-   "jersey": 2
+   "jersey": 2,
+   "rating": 5.4
   },
   {
    "first_name": "Braden",
    "last_name": "Pegan",
    "position": "WR",
    "year": 3,
-   "jersey": 11
+   "jersey": 11,
+   "rating": 5.4
   },
   {
    "first_name": "Brady",
    "last_name": "Boyd",
    "position": "WR",
    "year": 3,
-   "jersey": 5
+   "jersey": 5,
+   "rating": 5.4
   },
   {
    "first_name": "Broc",
    "last_name": "Lane",
    "position": "TE",
    "year": 3,
-   "jersey": 87
+   "jersey": 87,
+   "rating": 5.4
   },
   {
    "first_name": "Jake",
    "last_name": "Eichorn",
    "position": "OL",
    "year": 3,
-   "jersey": 56
+   "jersey": 56,
+   "rating": 5.4
   },
   {
    "first_name": "Trey",
    "last_name": "Andersen",
    "position": "OL",
    "year": 3,
-   "jersey": 57
+   "jersey": 57,
+   "rating": 5.4
   },
   {
    "first_name": "Tyree",
    "last_name": "Morris",
    "position": "DL",
    "year": 3,
-   "jersey": 9
+   "jersey": 9,
+   "rating": 5.4
   },
   {
    "first_name": "John",
    "last_name": "Miller",
    "position": "LB",
    "year": 3,
-   "jersey": 20
+   "jersey": 20,
+   "rating": 5.4
   },
   {
    "first_name": "Ike",
    "last_name": "Larsen",
    "position": "DB",
    "year": 3,
-   "jersey": 18
+   "jersey": 18,
+   "rating": 5.4
   },
   {
    "first_name": "Noah",
    "last_name": "Avinger",
    "position": "DB",
    "year": 3,
-   "jersey": 1
+   "jersey": 1,
+   "rating": 5.4
   },
   {
    "first_name": "Carter",
    "last_name": "Brown",
    "position": "K",
    "year": 3,
-   "jersey": 21
+   "jersey": 21,
+   "rating": 5.2
   }
  ]
 }
