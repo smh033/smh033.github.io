@@ -1044,6 +1044,7 @@ function genProspect(){
  return p;
 }
 function setupDraft(founding){
+ if(L.cfbTeams&&!founding)return setupRecruiting();
  const extra=founding?0:Math.max(0,(L.picks||[1,1,1]).reduce((a,b)=>a+b,0)-3),n=(founding?40:28)+extra*2,pool=[];for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
  let slot;
  if(founding)slot=ri(6,20);
@@ -1839,7 +1840,8 @@ function pmHTML(p,o){
 /* ---------- full-screen player page ---------- */
 const MORW=m=>m>=90?'EXCEPTIONAL':m>=75?'GREAT':m>=60?'GOOD':m>=40?'OKAY':m>=20?'UNHAPPY':'FURIOUS';
 const CNDW=p=>p.inj>0?'INJURED ('+p.inj+' WK)':p.cond>=95?'PERFECT':p.cond>=80?'GOOD':p.cond>=60?'TIRED':p.cond>=40?'EXHAUSTED':'WORN OUT';
-const VALW=p=>{const r=tradeValue(p);return r?'RND '+r+' PICK':'NONE';};
+const FAN=()=>L&&L.cfbTeams?'TRANSFER PORTAL':'FREE AGENTS';
+const VALW=p=>{const r=tradeValue(p);if(L&&L.cfbTeams)return r===1?'HIGH':r===2?'GOOD':r===3?'FAIR':'LOW';return r?'RND '+r+' PICK':'NONE';};
 const potStars=p=>clamp(Math.round(p.pot)/2,0.5,5);
 const PENCIL='<svg width="14" height="14" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#fff" d="M6 0h1v1h1v1h-1v1h-1v1h-1v1h-1v1h-1v1h-2v-2h1v-1h1v-1h1v-1h1v-1h1z"/></svg>';
 function plist(t){return rosterOf(t).sort((a,b)=>POSL.indexOf(a.pos)-POSL.indexOf(b.pos)||ovr(b)-ovr(a));}
@@ -1903,7 +1905,7 @@ ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}<
  else if(p.pos==='K')R.push(['FG MADE',x=>x.fgm],['FG ATTEMPTS',x=>x.fga]);
  else if(p.pos!=='OL')R.push(['TACKLES',x=>x.tkl],['SACKS',x=>x.sck],['INTERCEPTIONS',x=>x.dint]);
  modal(`<div class="mp" style="width:380px">${ttl('STATS',true)}<table class="tbl"><tr><th></th><th class="r">${L.year}</th><th class="r">CAREER</th></tr>${R.map(r=>row(r[0],r[1])).join('')}</table><div class="row end"><button class="bt" data-a="close">OK</button></div></div>`);};
-ACT.pTrade=()=>{const p=P(UI.sub.id),r=tradeValue(p);if(!tradesOpen())return modal(`<div class="mp" style="width:420px;align-items:center;text-align:center">${ttl('TRADE DEADLINE',true)}<div class="s7" style="line-height:2">TRADES CLOSE AFTER WEEK ${TRADE_DEADLINE} AND REOPEN IN THE OFFSEASON. YOU CAN STILL RELEASE HIM.</div><div class="row"><button class="bt" data-a="close">OK</button><button class="bt r" data-a="release2" data-id="${p.id}">RELEASE</button></div></div>`);modal(`<div class="mp" style="width:440px;align-items:center;text-align:center">${ttl('TRADE',true)}<div>${esc(fullname(p).toUpperCase())}</div><div class="s7 dim" style="line-height:2">TRADE HIM TO ANOTHER TEAM FOR THEIR PLAYERS, OR ${r?'TAKE A ROUND '+r+' DRAFT PICK FOR HIM.':'RELEASE HIM (NO TEAM WILL GIVE A PICK).'}</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt r" data-a="release2" data-id="${p.id}">RELEASE</button>${r?`<button class="bt" data-a="pTrade2">RND ${r} PICK</button>`:''}<button class="bt y" data-a="trOpen" data-id="${p.id}">TRADE WITH A TEAM</button></div></div>`);};
+ACT.pTrade=()=>{const p=P(UI.sub.id),r=tradeValue(p);if(!tradesOpen())return modal(`<div class="mp" style="width:420px;align-items:center;text-align:center">${ttl('TRADE DEADLINE',true)}<div class="s7" style="line-height:2">TRADES CLOSE AFTER WEEK ${TRADE_DEADLINE} AND REOPEN IN THE OFFSEASON. YOU CAN STILL RELEASE HIM.</div><div class="row"><button class="bt" data-a="close">OK</button><button class="bt r" data-a="release2" data-id="${p.id}">RELEASE</button></div></div>`);modal(`<div class="mp" style="width:440px;align-items:center;text-align:center">${ttl('TRADE',true)}<div>${esc(fullname(p).toUpperCase())}</div><div class="s7 dim" style="line-height:2">TRADE HIM TO ANOTHER TEAM FOR THEIR PLAYERS, OR ${L.cfbTeams?'RELEASE HIM.':r?'TAKE A ROUND '+r+' DRAFT PICK FOR HIM.':'RELEASE HIM (NO TEAM WILL GIVE A PICK).'}</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt r" data-a="release2" data-id="${p.id}">RELEASE</button>${r&&!L.cfbTeams?`<button class="bt" data-a="pTrade2">RND ${r} PICK</button>`:''}<button class="bt y" data-a="trOpen" data-id="${p.id}">TRADE WITH A TEAM</button></div></div>`);};
 /* ---------- player-for-player trades with any team ----------
    Value grows faster than linearly with rating so one star is worth more than two
    average players. Young players with high potential are worth more, old ones less.
@@ -1937,10 +1939,10 @@ SCR.trade=()=>{
  const msg=!s.give.length&&!s.get.length&&!s.pk.some(x=>x)&&!s.gpk.some(x=>x)?'PICK PLAYERS ON BOTH SIDES':!E.rosOk?'YOUR ROSTER WOULD BE OVER '+rmax():!E.capOk?'OVER YOUR SALARY CAP':E.ok?'THEY WILL ACCEPT':E.ratio>0.8?'CLOSE · ADD A LITTLE MORE':'THEY WANT MORE';
  return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('TRADE')}</div><div class="coin">CAP ${fmtM(L.cap-E.cap)}</div></div>${L.phase==='REG'?`<div class="s7 ${L.week>=TRADE_DEADLINE-1?'yl':'dim'}" style="text-align:center;margin-top:-4px">TRADE DEADLINE: AFTER WEEK ${TRADE_DEADLINE}${L.week===TRADE_DEADLINE?' · LAST WEEK TO TRADE':''}</div>`:''}
  <div class="row stretch grow" style="gap:8px">
-  <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GIVE · ${esc(abbr(L.user))}</span><div class="scroll grow"><table class="tbl s7">${mine.map(p=>row(p,s.give.includes(p.id),'trG')).join('')}</table></div><div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(have)})</span>${pks}</div></div>
+  <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GIVE · ${esc(abbr(L.user))}</span><div class="scroll grow"><table class="tbl s7">${mine.map(p=>row(p,s.give.includes(p.id),'trG')).join('')}</table></div>${L.cfbTeams?'':`<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(have)})</span>${pks}</div>`}</div>
   <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GET</span>
    <div class="row" style="gap:4px;margin-bottom:3px"><button class="bt ico" data-a="trT" data-d="-1">&lt;</button><div class="grow" style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(teamName(t).toUpperCase())} <span class="dim">${recStr(t)}</span></div><button class="bt ico" data-a="trT" data-d="1">&gt;</button></div>
-   <div class="scroll grow"><table class="tbl s7">${theirs.map(p=>row(p,s.get.includes(p.id),'trR')).join('')}</table></div><div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(thv)})</span>${gpks}</div></div>
+   <div class="scroll grow"><table class="tbl s7">${theirs.map(p=>row(p,s.get.includes(p.id),'trR')).join('')}</table></div>${L.cfbTeams?'':`<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(thv)})</span>${gpks}</div>`}</div>
  </div>
  <div class="row" style="gap:8px"><button class="bt ico" data-a="trBack">${ICON.back}</button>
   <div class="col grow" style="gap:3px"><div class="bar" style="height:10px"><i style="width:${pct}%;background:${col}"></i></div><span class="s7 ${E.ok&&E.rosOk&&E.capOk?'grt':'dim'}">${msg}</span></div>
@@ -2082,10 +2084,10 @@ SCR.fo=()=>{
   <div class="col" style="flex:1;gap:11px">
    ${box('COORDINATORS',`<div class="row ctr" style="gap:8px">${co('oc','OF')}${co('dc','DF')}</div>`,'padding:11px 6px 6px')}
    <div class="row stretch" style="gap:6px">${box('OFFENSE',stars(R.offS,'o'),'flex:1','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1','c')}</div>
-   ${box('DRAFT PICKS','<div style="text-align:center">'+((L.picks||[1,1,1]).map((n,i)=>n?'R'+(i+1)+(n>1?'×'+n:''):'').filter(Boolean).join(' · ')||'NONE')+'</div>')}
+   ${L.cfbTeams?box('RECRUITING','<div style="text-align:center">'+RECRUIT_OFFERS+' SCHOLARSHIP OFFERS</div>'):box('DRAFT PICKS','<div style="text-align:center">'+((L.picks||[1,1,1]).map((n,i)=>n?'R'+(i+1)+(n>1?'×'+n:''):'').filter(Boolean).join(' · ')||'NONE')+'</div>')}
   </div>
  </div>
- <div class="row" style="gap:7px"><button class="bt ico" data-a="go" data-s="hub">${ICON.home}</button><button class="bt" style="display:inline-flex;align-items:center;gap:6px;flex:none;padding-left:10px;padding-right:10px" data-a="capUp" ${L.cc<capCost()?'disabled':''}><span>RAISE CAP · ${capCost()}</span><i class="cc" style="flex:none;vertical-align:0"></i></button><div class="sp"></div><button class="bt" data-a="trOpen" ${tradesOpen()?'':'disabled'}>${tradesOpen()?'TRADES':'DEADLINE PASSED'}</button><button class="bt" data-a="go" data-s="fa">FREE AGENTS</button><button class="bt" data-a="go" data-s="staff">STAFF HIRES</button></div></div>`;
+ <div class="row" style="gap:7px"><button class="bt ico" data-a="go" data-s="hub">${ICON.home}</button><button class="bt" style="display:inline-flex;align-items:center;gap:6px;flex:none;padding-left:10px;padding-right:10px" data-a="capUp" ${L.cc<capCost()?'disabled':''}><span>RAISE CAP · ${capCost()}</span><i class="cc" style="flex:none;vertical-align:0"></i></button><div class="sp"></div><button class="bt" data-a="trOpen" ${tradesOpen()?'':'disabled'}>${tradesOpen()?'TRADES':'DEADLINE PASSED'}</button><button class="bt" data-a="go" data-s="fa">${FAN()}</button><button class="bt" data-a="go" data-s="staff">STAFF HIRES</button></div></div>`;
 };
 ACT.fup=d=>{const lv=L.fac[d.k],c=facCost(lv);if(lv>=10||L.cc<c)return;L.cc-=c;L.fac[d.k]++;sfx('coin');save();render();};
 ACT.finfo=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl(FAC[d.k][0],true)}<div style="line-height:2">${FAC[d.k][1]}</div><div>LEVEL ${L.fac[d.k]}/10</div><button class="bt" data-a="close">OK</button></div>`);
@@ -2097,7 +2099,7 @@ SCR.fa=()=>{ensureFA();
  const f=UI.sub.f||'ALL',pg=UI.sub.pg||0;let r=faList();const cut=p=>p.rel&&p.rel.y>=L.year-1;if(f==='CUT')r=r.filter(cut);else if(f!=='ALL')r=r.filter(p=>p.pos===f);
  const per=rmax()===12?6:5,n=per*2,pages=Math.max(1,Math.ceil(r.length/n)),pr=r.slice(pg*n,pg*n+n);
  return`<div class="screen">
- <div class="row">${coinBox()}<div class="grow">${ttl('FREE AGENTS')}</div><div class="coin">CAP ${fmtM(capRoom())}</div></div>
+ <div class="row">${coinBox()}<div class="grow">${ttl(FAN())}</div><div class="coin">CAP ${fmtM(capRoom())}</div></div>
  <div class="row ctr" style="gap:4px">${['ALL','CUT',...POSL].map(x=>`<span class="chip ${f===x?'on':''}" data-a="faf" data-f="${x}">${x==='CUT'?'RELEASED':x}</span>`).join('')}</div>
  <div class="row grow" style="gap:6px"><button class="bt ico" data-a="fapg" data-d="-1" ${pg>0?'':'disabled'}>&lt;</button>
   <div class="grow" style="display:grid;grid-template-columns:repeat(${per},auto);justify-content:center;gap:8px 7px;align-content:center">${pr.map(p=>pcard(p,L.user,{sm:per===6,act:'faP',tag:cut(p)?`<span class="tg ex">CUT ${T(p.rel.t).abbr}</span>`:'',extra:`<div style="text-align:center;padding:2px 0 3px;background:#000" class="s7">${ccCost(p)} <i class="cc"></i> · ${p.sal.toFixed(0)}M</div>`})).join('')||'<div class="dim">NO FREE AGENTS</div>'}</div>
@@ -2232,7 +2234,7 @@ function cutLogoBg(src){return new Promise(res=>{const im=new Image();im.onload=
    DRAFT (founding + yearly)
    ===================================================================== */
 SCR.draft=()=>{
- const D=L.draft;if(!D)return SCR.hub();
+ const D=L.draft;if(!D)return SCR.hub();if(D.recruit)return SCR.recruit();
  const f=UI.sub.f||'ALL';let pool=D.pool.map(P).filter(Boolean);if(f!=='ALL')pool=pool.filter(p=>p.pos===f);
  pool.sort((a,b)=>(b.scout[0]+b.scout[1])-(a.scout[0]+a.scout[1]));
  const rows=pool.map(p=>`<tr><td><span class="${sideOf(p.pos)==='D'?'rdt':sideOf(p.pos)==='K'?'yl':'cyt'}">${p.pos}</span></td><td>${esc(pname(p).toUpperCase())}</td><td class="c">${p.age}</td><td>${stars(p.scout[0],'xs')}${p.scout[1]>p.scout[0]?' - '+stars(p.scout[1],'xs'):''}</td><td class="c">${p.potg}</td><td class="r">${D.done?'':`<button class="bt" style="padding:3px 6px 2px" data-a="dpick" data-id="${p.id}">DRAFT</button>`}</td></tr>`).join('');
@@ -2264,6 +2266,60 @@ ACT.dskip=()=>{if(!L.draft||L.draft.done)return;
 ACT.dsell=()=>{if(!L.draft||L.draft.done)return;const v=pickValue();L.cc+=v;news('You traded your round '+(L.draft.round+1)+' pick for '+v+' coins.');UI.modal=null;draftPick(null);sfx('coin');save();render();};
 ACT.dskipPick=()=>{if(!L.draft||L.draft.done)return;UI.modal=null;const p=autoPickTarget();if(!p){draftPick(null);save();return render();}ACT.dpick({id:p.id});};
 ACT.dfin=()=>{const founding=L.draft.founding;finishDraft();if(founding){L.phase='REG';news('The '+L.year+' season is about to begin!');save();go('hub');return;}afterDraft();};
+/* ===================== COLLEGE RECRUITING =====================
+   College has no draft. Each offseason a class of high-school recruits (1-5 stars) is out
+   there. You get a few scholarship offers: each offer is a roll against the recruit's interest
+   in your school (program strength, fan support, a campus visit). Recruits who say no sign
+   somewhere else, and the other schools sign recruits as you go, the best programs first. */
+const RECRUIT_OFFERS=3,VISIT_COST=3;
+function genRecruit(){
+ const pos=pick(['QB','RB','WR','WR','TE','OL','OL','K','DL','DL','LB','DB','DB','RB','LB']);
+ const q=clamp(2.2+Math.pow(Math.random(),1.5)*4.6,1.8,7);const p=genPlayer(pos,q,18);
+ p.pot=clamp(ovr(p)+rnd(1,3.8),1,10);p.rst=clamp(Math.round((p.pot+ovr(p))/2-3.2),1,5);
+ p.lvl=1;p.seasons=0;p.yrs=4;p.college=true;p.collegeYear=1;p.team=-2;p.sal=Math.round((0.6+p.rst*0.5)*10)/10;
+ const pg=p.pot-ovr(p);p.potg=pg>2.8?'A':pg>2?'B':pg>1.3?'C':'D';p.scout=[p.rst,p.rst];return p;}
+function prestige(t){const R=teamRatings(t),h=t===L.user&&L.hist&&L.hist[0];return R.raw+(h?((h.w||0)-(h.l||0))*0.04:0)+(t===L.user?(L.fan-50)/120:0);}
+function recruitChance(p){const pr=prestige(L.user)-5.6;return clamp(0.52+pr*0.16-(p.rst-3)*0.13+(p.visit?0.22:0),0.05,0.95);}
+function setupRecruiting(){
+ const pool=[];for(let i=0;i<30;i++){const p=genRecruit();addPlayer(p);pool.push(p.id);}
+ L.picks=[1,1,1];L.aiPicks={};
+ L.draft={recruit:true,pool,offers:RECRUIT_OFFERS,log:[],done:false,round:0,rounds:[RECRUIT_OFFERS],left:RECRUIT_OFFERS,slot:0};
+ recruitAI(2);
+}
+/* other schools sign recruits: better recruits tend to go to stronger programs */
+function recruitAI(n){const D=L.draft;
+ for(let i=0;i<n&&D.pool.length;i++){
+  const c=D.pool.map(P).filter(Boolean).sort((a,b)=>(b.rst+rnd(0,1.6))-(a.rst+rnd(0,1.6)));const p=c[Math.floor(Math.pow(Math.random(),2)*Math.min(4,c.length))];
+  recruitTo(p,pickSchool(p));}}
+function pickSchool(p){const ts=L.teams.filter(t=>t.id!==L.user).map(t=>({t:t.id,w:Math.pow(Math.max(0.5,prestige(t.id)-3+p.rst*0.15),3)}));let r=Math.random()*ts.reduce((s,x)=>s+x.w,0);for(const x of ts){r-=x.w;if(r<=0)return x.t;}return ts[0].t;}
+function recruitTo(p,t){const D=L.draft;D.pool.splice(D.pool.indexOf(p.id),1);delete p.scout;p.team=t;p.mor=t===L.user?82:70;
+ if(t!==L.user){const r=rosterOf(t);if(r.length>rmax()){const w=r.filter(x=>x!==p).sort((a,b)=>ovr(a)-ovr(b))[0];if(w){w.team=-1;w.yrs=1;w.rel={t,y:L.year,w:0};}}}
+ D.log.unshift({id:p.id,t,r:p.rst});}
+SCR.recruit=()=>{if(!L.draft)return SCR.hub();if(!L.draft.recruit)return SCR.draft();
+ const D=L.draft,f=UI.sub.f||'ALL';let pool=D.pool.map(P).filter(Boolean);if(f!=='ALL')pool=pool.filter(p=>p.pos===f);
+ pool.sort((a,b)=>b.rst-a.rst||b.pot-a.pot);
+ const rows=pool.map(p=>{const c=recruitChance(p),pc=Math.round(c*100);return`<tr><td><span class="${sideOf(p.pos)==='D'?'rdt':sideOf(p.pos)==='K'?'yl':'cyt'}">${p.pos}</span></td><td>${esc(pname(p).toUpperCase())}</td><td>${stars(p.rst,'xs')}</td><td class="c">${p.potg}</td><td class="c ${c>=0.65?'grt':c>=0.4?'yl':'rdt'}">${pc}%</td><td class="r" style="white-space:nowrap">${D.done?'':`${p.visit?'<span class="s7 dim">VISITED</span>':`<button class="bt" style="padding:3px 5px 2px" data-a="rVisit" data-id="${p.id}" ${L.cc<VISIT_COST?'disabled':''}>VISIT ${VISIT_COST}<i class="cc" style="margin-left:2px"></i></button>`} <button class="bt y" style="padding:3px 6px 2px" data-a="rOffer" data-id="${p.id}">OFFER</button>`}</td></tr>`;}).join('');
+ const mine=rosterOf(L.user).sort((a,b)=>POSL.indexOf(a.pos)-POSL.indexOf(b.pos)).map(p=>`<div class="row" style="gap:4px"><span style="width:20px">${p.pos}</span><span class="grow" style="overflow:hidden">${esc(p.ln.toUpperCase())}</span>${stars(starsOf(p),'xs')}</div>`).join('');
+ const log=D.log.slice(0,16).map(x=>{const p=P(x.id);return p?`<div style="white-space:nowrap;overflow:hidden">${x.t===L.user?'<span class="yl">':''}${'★'.repeat(x.r)} ${esc(abbr(x.t))}: ${p.pos} ${esc(p.ln.toUpperCase())}${x.t===L.user?'</span>':''}</div>`:'';}).join('');
+ return`<div class="screen">
+ <div class="row">${coinBox()}<div class="grow">${ttl(L.year+' RECRUITING')}</div><div class="coin">OFFERS ${D.offers}</div></div>
+ <div class="row ctr" style="gap:3px">${['ALL',...POSL].map(x=>`<span class="chip ${f===x?'on':''}" data-a="dff" data-f="${x}">${x}</span>`).join('')}</div>
+ <div class="row grow stretch" style="gap:8px">
+  <div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th>RECRUIT</th><th class="c">POT</th><th class="c">CHANCE</th><th></th></tr>${rows||'<tr><td colspan="6" class="dim">NO RECRUITS LEFT AT THIS POSITION</td></tr>'}</table></div>
+  <div class="col" style="width:178px;gap:10px">
+   ${box('YOUR TEAM '+rosterOf(L.user).length+'/'+rmax(),`<div class="col s7 scroll" style="gap:3px;max-height:96px">${mine}</div>`,'padding:10px 6px 5px')}
+   ${box('COMMITMENTS',`<div class="col s7 scroll" style="gap:3px;max-height:98px">${log||'<div class="dim">-</div>'}</div>`,'padding:10px 6px 5px;flex:1')}
+  </div>
+ </div>
+ <div class="row"><div class="sp"></div>${D.done?'<button class="bt y big" data-a="dfin">FINISH &gt;</button>':'<button class="bt" data-a="rDone">DONE RECRUITING</button>'}</div></div>`;};
+ACT.rVisit=d=>{const p=P(+d.id);if(!p||p.visit||!L.draft||L.draft.done)return;if(L.cc<VISIT_COST)return toast('NOT ENOUGH COINS');L.cc-=VISIT_COST;p.visit=1;sfx('coin');save();UI.keepScroll=true;render();};
+ACT.rOffer=d=>{const D=L.draft,p=P(+d.id);if(!D||D.done||D.offers<=0||!p||D.pool.indexOf(p.id)<0)return;
+ const ok=Math.random()<recruitChance(p);D.offers--;
+ if(ok){recruitTo(p,L.user);news(p.pos+' '+fullname(p)+' ('+p.rst+'-star recruit) commits to '+teamName(L.user)+'!');sfx('first');
+  modal(`<div class="mp" style="width:420px;align-items:center;text-align:center">${ttl('COMMITTED!',true)}<div class="row ctr" style="gap:12px">${pcard(p,L.user,{act:'close'})}<div class="col" style="align-items:flex-start;gap:5px">${POSDEF[p.pos].map(k=>`<div class="row s7" style="gap:5px"><span style="width:100px">${ATTR[k]}</span>${pips(p.a[k])}</div>`).join('')}<div class="s7">POTENTIAL ${p.potg}</div></div></div><button class="bt y" data-a="close">NICE</button></div>`);}
+ else{const t=pickSchool(p);recruitTo(p,t);sfx('bad');toast(p.ln.toUpperCase()+' COMMITS TO '+abbr(t)+' INSTEAD');}
+ recruitAI(3);if(D.offers<=0||!D.pool.length)D.done=true;save();render();};
+ACT.rDone=()=>{const D=L.draft;if(!D)return;D.done=true;recruitAI(Math.min(D.pool.length,12));save();render();};
 function afterDraft(){if(offersDue()){L.jobs=genOffers();L.off.step='jobs';}else L.off.step='new';save();go('off');}
 
 /* =====================================================================
@@ -2387,7 +2443,7 @@ SCR.off=()=>{
  if(O.step==='jobs'){const c=UI.sub.c||T(L.user).conf;return`<div class="screen">${ttl('JOB OFFERS')}
   <div class="row ctr" style="gap:10px"><button class="bt ${c==='AFC'?'y':''}" style="width:150px" data-a="jc" data-c="AFC">${CN('AFC')}</button><button class="bt ${c==='NFC'?'y':''}" style="width:150px" data-a="jc" data-c="NFC">${CN('NFC')}</button></div>
   ${teamGrid(c,L.jobs,'jobT')}<div class="row"><span class="s7 dim">${L.jobs.length} TEAMS NEED A HEAD COACH. YOU CAN SWITCH EVERY OTHER SEASON. YOUR COINS COME WITH YOU.</span><div class="sp"></div><button class="bt big" data-a="jobNo">STAY</button></div></div>`;}
- if(O.step==='new')return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">${ttl((L.year+1)+' SEASON')}<div class="s10">${esc(teamName(L.user).toUpperCase())}</div><div class="s7 dim" style="text-align:center;line-height:2">ROSTER ${rosterOf(L.user).length}/${rmax()} · CAP ROOM ${fmtM(capRoom())}<br>SIGN FREE AGENTS AND SPEND SKILL POINTS BEFORE KICKOFF.<br>NEXT CHANCE TO CHANGE TEAMS: AFTER THE ${L.year+Math.max(1,(L.lastOffer||1)+2-L.season)} SEASON</div><div class="row"><button class="bt" data-a="go" data-s="roster">ROSTER</button><button class="bt" data-a="go" data-s="fa">FREE AGENTS</button><button class="bt" data-a="go" data-s="fo">FRONT OFFICE</button></div><button class="bt y big" data-a="off5">START SEASON &gt;</button>${back}</div>`;
+ if(O.step==='new')return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">${ttl((L.year+1)+' SEASON')}<div class="s10">${esc(teamName(L.user).toUpperCase())}</div><div class="s7 dim" style="text-align:center;line-height:2">ROSTER ${rosterOf(L.user).length}/${rmax()} · CAP ROOM ${fmtM(capRoom())}<br>SIGN ${L.cfbTeams?'THE TRANSFER PORTAL':'FREE AGENTS'} AND SPEND SKILL POINTS BEFORE KICKOFF.<br>NEXT CHANCE TO CHANGE TEAMS: AFTER THE ${L.year+Math.max(1,(L.lastOffer||1)+2-L.season)} SEASON</div><div class="row"><button class="bt" data-a="go" data-s="roster">ROSTER</button><button class="bt" data-a="go" data-s="fa">${FAN()}</button><button class="bt" data-a="go" data-s="fo">FRONT OFFICE</button></div><button class="bt y big" data-a="off5">START SEASON &gt;</button>${back}</div>`;
  return'';
 };
 ACT.off1=()=>{runOffseasonAging();L.off.step='prog';save();render();};
