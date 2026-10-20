@@ -4877,9 +4877,9 @@ const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:''
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
  buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100,NET_VER=4;   /* bump whenever the messages change: both players must run the same version */
+const NET_DELAY=100,NET_VER=5;   /* bump whenever the messages change: both players must run the same version */
 /* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
-const netDelay=()=>clamp(NET.iv*1.15+NET.jit*2.5,45,320);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
+const netDelay=()=>clamp(NET.jit*2,25,140);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
 const NET_ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun.cloudflare.com:3478']},
  {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]};
@@ -5122,6 +5122,7 @@ function netDefReturn(kind,landX,landY){M.ov=null;M.def=true;syncDir();M.aiQB=nu
  M.D.forEach((f,i)=>{f.key='COV'+i;});M.ctl=M.D.slice().sort((a,b)=>Math.abs(a.y-landY)-Math.abs(b.y-landY))[0]||M.D[0];}
 function netHostMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'YOUR FRIEND LEFT THE GAME':'YOUR FRIEND LEFT');return;}
+ if(m.t==='needR'){NET.rN=Math.max(NET.rN||0,2);NET.lov=undefined;return;}
  if(m.t==='hb'){NET.rtt=m.rtt||0;netSend({t:'hbr',ts:m.ts});return;}
  if(m.t==='pick'){if(!NET.lob)return;NET.oldV=m.v!==NET_VER?(m.v||1):0;if(NET.oldV){NET.err=m.v>NET_VER?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':'YOUR FRIEND HAS AN OLD VERSION OF THE GAME. THEY NEED TO CLOSE THE TAB AND OPEN THE GAME AGAIN.';}else if(/VERSION/.test(NET.err))NET.err='';if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(UI.scr==='online')render();return;}
  if(!netHost())return;
@@ -5159,7 +5160,7 @@ function netHostTick(dt){if(!netHost())return;netRCtl();const now=performance.no
  if(!NET.wait&&NET.stage==='game'&&now-NET.lastRx>6000){NET.wait=true;NET.waitT=now;}   /* nothing from your friend for 6 s */
  if(M.ov&&M.ov.net&&!NET.wait){M.ov.wt+=dt;if(M.ov.wt>30){const f=M.ov.gacts[M.ov.dflt];M.ov=null;if(f)f();}}
  if(M.phase==='kick'&&M.kick&&M.kick.guest&&M.kick.st==='aim'&&!NET.wait){M.kick.wt+=dt;if(M.kick.wt>20)kickRelease(0,-clamp(kickNeed()+0.08,0.3,1.04)*170,true);}
- NET.sendAcc+=dt;if(NET.sendAcc<(netRelayOn()?0.08:0.05))return;NET.sendAcc=0;if(netBuffered()>20000)return;netSend(netSnapshot());}
+ NET.sendAcc+=dt;if(NET.sendAcc<(netRelayOn()?0.066:0.05))return;NET.sendAcc=0;if(netBuffered()>20000)return;netSend(netSnapshot());}
 function netBuffered(){const c=NET.conn;try{if(!c)return 0;if(c.mode==='relay')return c.sock&&c.sock.ws?c.sock.ws.bufferedAmount:0;return c.dataChannel?c.dataChannel.bufferedAmount:0;}catch(e){return 0;}}
 function netSnapshot(){
  const all=[...M.O,...M.D],ix=f=>f?all.indexOf(f):-1,now=performance.now();
@@ -5169,7 +5170,8 @@ function netSnapshot(){
   gt:M.oto==null?2:M.oto,ht:M.to,gcp:M.ocp||0,ro:r2(M.runoff||0),tk:M.tbOK?1:0,kr:ix(M.kr),ch:ix(M.def?M.rchaser:null),cl:M.def&&M.aiPlay?M.aiPlay.n:null,wt:NET.wait?1:0,
   la:M.land?[r2(M.land.x),r2(M.land.y)]:null,
   P:all.map(f=>{const a=[r1(f.x),r1(f.y),r1(f.vx),r1(f.vy),f.face||1,r2(f.t||0),(f.mv?1:0)|(f.ball?2:0)|(f.lk&&f.lk.nohelm?4:0),r2(f.down||0),r2(f.dive||0),r2(f.dv||0),r2(f.stun||0),r2(f.jump||0),r2(f.reach||0),r2(f.oneh||0),r2(f.hurdle||0),r2(f.throwT||0)];let n=a.length;while(n>7&&!a[n-1])n--;a.length=n;return a;})};
- if(M.O!==NET.lO||M.D!==NET.lD||all.length!==NET.lN||now-NET.rT>3000){NET.lO=M.O;NET.lD=M.D;NET.lN=all.length;NET.rT=now;s.R=all.map(f=>[f.pl?f.pl.id:-1,f.side,f.role,f.key||'',f.lk||null,f.star?1:0]);}
+ if(M.O!==NET.lO||M.D!==NET.lD||all.length!==NET.lN){NET.rN=3;}
+ if(NET.rN>0||now-NET.rT>3000){NET.rN=Math.max(0,(NET.rN||0)-1);NET.lO=M.O;NET.lD=M.D;NET.lN=all.length;NET.rT=now;s.R=all.map(f=>[f.pl?f.pl.id:-1,f.side,f.role,f.key||'',f.lk||null,f.star?1:0]);}
  if(M.ball){const b=M.ball;s.b={z0:b.z0,z1:b.z1,peak:b.peak,F:b.F||null,t:r2(b.t),T:b.T,Tg:b.Tg,x0:b.x0,y0:b.y0,x1:b.x1,y1:b.y1,tip:!!b.tip,bullet:!!b.bullet,done:!!b.done,ret:!!b.ret};}
  if(M.loose)s.lo={x:r2(M.loose.x),y:r2(M.loose.y),z:r2(M.loose.z),sp:r2(M.loose.sp||0)};
  if(M.helmets)s.hel=M.helmets;
@@ -5204,16 +5206,20 @@ function netTake(e){if(e.done)return;e.done=true;if(e.ov!==undefined)NET.ovH=e.o
  for(const x of e.ev||[]){try{if(x[0]==='p')pop(x[1],x[2],x[3],x[4]);else if(x[0]==='b')banner(x[1],/YOU|YOUR/.test(x[2]||'')?'':x[2],x[3],x[4]);else if(x[0]==='s')sfx(x[1]);else if(x[0]==='boom')boom();else if(x[0]==='cr')crowd(x[1],x[2]);}catch(err){}}}
 /* draw the host's game NET_DELAY ms in the past: the newest snapshot at or before that moment (a) sets the
    state and everyone's position is blended toward the next one (b), so players glide instead of stepping */
-function netApply(){const B=NET.buf;if(!B.length)return;const rt=performance.now()-netDelay();
+function netApply(dt){dt=dt||0.016;const B=NET.buf;if(!B.length)return;const rt=performance.now()-netDelay();
  while(B.length>1&&B[1].tm<=rt)netTake(B.shift());
  const ea=B[0],eb=B[1]||null,s=ea.s;netTake(ea);NET.snap=s;
  const u=eb&&eb.tm>ea.tm?clamp((rt-ea.tm)/(eb.tm-ea.tm),0,1):0;
  if(ea.R&&(ea.R!==NET.Rused||!NET.pup.length)){NET.Rused=ea.R;const p=netPuppets(ea.R);M.O=p.O;M.D=p.D;NET.pup=p.all;}
  const pup=NET.pup,at=i=>i>=0&&i<pup.length?pup[i]:null;
+ if(s.P&&s.P.length!==pup.length&&performance.now()-(NET.needT||0)>400){NET.needT=performance.now();netSend({t:'needR'});}
  if(s.P&&s.P.length===pup.length){const lp=eb&&eb.R===ea.R&&eb.s.P&&eb.s.P.length===s.P.length?eb.s.P:null;
   s.P.forEach((a,i)=>{const f=pup[i],z=k=>a[k]||0;f.x=a[0];f.y=a[1];f.vx=a[2];f.vy=a[3];f.face=a[4];f.t=a[5];f.down=z(7);f.dive=z(8);f.dv=z(9);f.stun=z(10);f.jump=z(11);f.reach=z(12);f.oneh=z(13);f.hurdle=z(14);f.throwT=z(15);
    if(lp&&u>0){const n=lp[i];if(Math.abs(n[0]-a[0])<6&&Math.abs(n[1]-a[1])<6){f.x=a[0]+(n[0]-a[0])*u;f.y=a[1]+(n[1]-a[1])*u;f.t=a[5]+(n[5]-a[5])*u;}}
-   f.mv=!!(a[6]&1);f.ball=!!(a[6]&2);if(a[6]&4&&f.lk&&!f.lk.nohelm){f.lk=Object.assign({},f.lk,{nohelm:true});}});}
+   f.mv=!!(a[6]&1);f.ball=!!(a[6]&2);if(a[6]&4&&f.lk&&!f.lk.nohelm){f.lk=Object.assign({},f.lk,{nohelm:true});}});
+  /* past the newest update: carry everyone on along their path, then ease out the small corrections so nobody pops */
+  const ext=!lp?clamp((rt-ea.tm)/1000,0,0.2):0,k=Math.min(1,dt*16),D=NET.dsp&&NET.dspR===ea.R?NET.dsp:null;NET.dsp=[];NET.dspR=ea.R;
+  pup.forEach((f,i)=>{if(ext&&!(f.down>0)){f.x+=f.vx*ext;f.y+=f.vy*ext;f.t+=ext;}const d=D&&D[i];if(d&&Math.hypot(f.x-d.x,f.y-d.y)<3){f.x=d.x+(f.x-d.x)*k;f.y=d.y+(f.y-d.y)*k;}NET.dsp[i]={x:f.x,y:f.y};});}
  const ph=s.ph==='replay'?'dead':s.ph;
  if(ph==='pre'&&!NET.wasPre){M.trick=null;M.called=null;M.aim=null;}NET.wasPre=ph==='pre';
  M.phase=ph;M.play=s.pl;M.sc=[s.sc[1],s.sc[0]];M.clock=s.clk;M.qtr=s.q;M.down=s.dn;M.ballOn=s.bo;M.ballY=s.by;M.los=s.los;M.fdX=s.fd;M.conv=s.cv;M.pc=s.pc;
@@ -5248,7 +5254,7 @@ function netGuestFrame(dt){
  NET.hbT+=dt;if(NET.hbT>1){NET.hbT=0;netSend({t:'hb',ts:Math.round(performance.now()),rtt:Math.round(NET.rtt)});}
  if(NET.connOpen&&now-NET.lastRx>5000)netDrop();
  if(NET.rc){if(now-NET.rc.t0>60000){netLost('LOST THE CONNECTION TO THE HOST');return;}if(now>=NET.rc.next)netGuestRetry();}
- netApply();
+ netApply(dt);
  M.tt+=dt;for(const p of M.pops)p.a+=dt;M.pops=M.pops.filter(p=>p.a<1.1);
  for(const c of M.conf){c.x+=c.vx*dt;c.y+=c.vy*dt;c.vy+=60*dt;c.l-=dt;}M.conf=M.conf.filter(c=>c.l>0&&c.y<CH+10);
  for(const p of M.parts){if(M.wx==='snow'){p.y+=22*p.s*dt;p.x+=Math.sin(M.tt+p.s*9)*8*dt+M.wind*0.6*dt;}else{p.y+=260*p.s*dt;p.x+=M.wind*2*dt-30*dt;}if(p.y>CH)p.y-=CH;if(p.x<0)p.x+=CW;if(p.x>CW)p.x-=CW;}
