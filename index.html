@@ -4031,7 +4031,7 @@ function looseFrom(b,bp,deflect){
  if(deflect)looseBall(bp.x,bp.y,Math.max(bp.z,1),-F.ux*v*0.18+rnd(-2.5,2.5),F.uy*v*0.1+rnd(-3,3),rnd(3,6.5));
  else looseBall(bp.x,bp.y,0.05,F.ux*v*0.5,F.uy*v*0.5,Math.abs(vz)*rnd(0.35,0.55)+1.5);}
 /* ---------- helmet popping off on a hit stick ---------- */
-function popHelmet(f,dir){if(!M||!f)return;const lk=f.lk||{};
+function popHelmet(f,dir){if(!M||!f)return;const lk=f.lk||{};if(lk.spr&&SKINS.img[lk.spr])return;   /* custom skins have no helmet to lose */
  M.helmets=M.helmets||[];M.helmets.push({x:f.x,y:f.y,z:2.2,vx:(dir||1)*rnd(3,6)+f.vx*0.3,vy:rnd(-3.5,3.5),vz:rnd(6,8.5),col:lk.helm||'#888',st:lk.stripe||'#fff',tm:lk.nohelm?null:lk.teamId,t:0,n:0,rot:0,vr:rnd(8,16)*(Math.random()<.5?-1:1)});
  // the player now shows his hair instead of a helmet
  const hc=f.pl?HAIRC[f.pl.hc||0]:'#16100c',bald=f.pl&&f.pl.hair===0,top=bald?(f.lk.skin):hc;
