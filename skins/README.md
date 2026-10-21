@@ -78,6 +78,9 @@ You can add any of these to a skin's line in `skins.json`:
 - `"scale": 0.5`: how big one sheet pixel is compared with the normal 12 × 16 player.
   For a 24 × 32 sheet, use 0.5 so the player is the normal size on the field.
 - `"tint": false`: turns off the team-color repaint, so the colors stay exactly as drawn.
+- `"carrySplit": 0.68`: when a skin runs with the ball, the game draws the carry frame's top part over the
+  run frames' legs so the legs move. This is where it cuts (0.68 = 68% down from the top). Raise it if the
+  ball gets cut off, lower it if the carry pose's legs show.
 - `"secret": true`: hidden (shown as SECRET) until it's unlocked by an easter egg.
 - `"egg": 1` or `"egg": 2`: this is the skin that easter egg unlocks (1 = tap FOOTBALL on the title
   screen 7 times, 2 = tap RETRO 7 times). Use it together with `"secret": true`.
