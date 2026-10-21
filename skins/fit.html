@@ -85,7 +85,8 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     <canvas id="big" class="chk"></canvas>
     <label>Actual size</label>
     <canvas id="out" class="chk" style="max-width:none"></canvas>
-    <p><a class="btn" id="dl" download="my-skin.png">DOWNLOAD PNG</a></p>
+    <p><button id="dl">SAVE PNG</button> <span id="dlmsg" class="small"></span></p>
+    <p class="small">On iPhone: tap SAVE PNG, then pick <b>Save to Files</b> (not Save Image, which can turn it into a JPG/WebP and drop the transparency). Upload it to GitHub from Files. Don't save the zoomed preview above, it's the wrong size.</p>
     <label>Add this line to the "skins" list in skins/skins.json</label>
     <pre id="json"></pre>
     <button class="sec" id="copy">COPY LINE</button>
@@ -112,7 +113,21 @@ async function gate(){
 }
 // ---- fitter ----
 const $=id=>document.getElementById(id);
-let IMG=null;
+let IMG=null,OUTNAME='my-skin.png';
+function savePng(){
+  const out=$('out'),m=$('dlmsg');
+  out.toBlob(async blob=>{
+    if(!blob){m.textContent='Could not make the PNG.';return}
+    const file=new File([blob],OUTNAME,{type:'image/png'});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});m.textContent='Saved '+OUTNAME;return}
+    }catch(e){if(e&&e.name==='AbortError')return}
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=OUTNAME;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    m.textContent='Downloaded '+OUTNAME+' ('+out.width+' × '+out.height+')';
+  },'image/png');
+}
 function init(){
   const drop=$('drop'),file=$('file');
   drop.onclick=()=>file.click();
@@ -122,6 +137,7 @@ function init(){
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
   ['fsz','bgm','tol','nfr','cut','tint','sid','sname'].forEach(id=>$(id).addEventListener('input',run));
   $('tol').addEventListener('input',()=>$('tolv').textContent=$('tol').value);
+  $('dl').onclick=savePng;
   $('copy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($('json').textContent);$('copy').textContent='COPIED';setTimeout(()=>$('copy').textContent='COPY LINE',1200)};
 }
 function load(f){
@@ -172,7 +188,7 @@ function run(){
   for(let i=1;i<n;i++){bx.beginPath();bx.moveTo(i*fw*z+.5,0);bx.lineTo(i*fw*z+.5,big.height);bx.stroke()}
   $('osz').textContent=out.width+' × '+fh+' px, '+n+' frame'+(n>1?'s':'')+' of '+fw+' × '+fh;
   const id=($('sid').value||'my-skin').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
-  $('dl').download=id+'.png';$('dl').href=out.toDataURL('image/png');
+  OUTNAME=id+'.png';
   const line={id,name:($('sname').value||id).toUpperCase(),file:id+'.png'};
   if(fw!==12||fh!==16){line.frame=[fw,fh];line.scale=+(12/fw).toFixed(4)}
   if($('tint').value==='false')line.tint=false;
