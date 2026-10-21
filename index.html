@@ -5807,10 +5807,15 @@ function loop(now){
 /* =====================================================================
    BOOT · scaling · mobile
    ===================================================================== */
+let FIT_S=0,FIT_O='';
+const fitTyping=()=>{const a=document.activeElement;return !!a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&!/^(file|checkbox|radio|range|button)$/i.test(a.type)));};
 function fit(){
- const vv=window.visualViewport,w=vv?vv.width:innerWidth,h=vv?vv.height:innerHeight;
- const s=Math.min(w/640,h/360);$('#stage').style.transform='scale('+s+')';
+ const vv=window.visualViewport,w=vv?vv.width:innerWidth,h=vv?vv.height:innerHeight,o=innerWidth>innerHeight?'L':'P';
+ /* the phone keyboard shrinks the screen height while typing: keep the current size instead of shrinking the game */
+ if(FIT_S&&fitTyping()&&o===FIT_O)return;
+ const s=Math.min(w/640,h/360);FIT_S=s;FIT_O=o;$('#stage').style.transform='scale('+s+')';
 }
+document.addEventListener('focusout',()=>setTimeout(()=>{if(!fitTyping())fit();},350));
 addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,250));
 if(window.visualViewport)visualViewport.addEventListener('resize',fit);
 fit();
