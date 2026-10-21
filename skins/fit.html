@@ -44,9 +44,10 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     </div>
     <div class="row">
       <div><label>Frame size</label><select id="fsz">
-        <option value="24x32" selected>24 × 32 (recommended)</option>
+        <option value="48x64" selected>48 × 64 (HD, recommended)</option>
+        <option value="72x96">72 × 96 (extra HD)</option>
+        <option value="24x32">24 × 32 (chunky retro)</option>
         <option value="12x16">12 × 16 (tiny, classic)</option>
-        <option value="36x48">36 × 48 (extra detail)</option>
       </select></div>
       <div><label>Background</label><select id="bgm">
         <option value="auto" selected>Auto-detect</option>
@@ -83,7 +84,7 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
   <div class="panel" id="outp" style="display:none">
     <label>Result (zoomed) · <span id="osz"></span></label>
     <canvas id="big" class="chk"></canvas>
-    <label>Actual size</label>
+    <label>Real file pixels (shown bigger in game)</label>
     <canvas id="out" class="chk" style="max-width:none"></canvas>
     <p><button id="dl">SAVE PNG</button> <span id="dlmsg" class="small"></span></p>
     <p class="small">On iPhone: tap SAVE PNG, then pick <b>Save to Files</b> (not Save Image, which can turn it into a JPG/WebP and drop the transparency). Upload it to GitHub from Files. Don't save the zoomed preview above, it's the wrong size.</p>
