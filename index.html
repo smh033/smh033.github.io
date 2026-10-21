@@ -2841,7 +2841,7 @@ function setupTrick(name){
  if(t==='wrpass'||t==='tepass'||(t==='throwback')){
   const pas=(t==='tepass'||P0.pass==='te')&&M.te?M.te:sideW;
   path(pas,[[bo-3.5,qy+s*7,0],[bo-6,qy+s*9]]);
-  T0.steps=[{to:pas,at:0.45}];T0.bite=[pas,M.rb,sideW];
+  T0.steps=[{to:pas,at:0.45}];T0.bite=pas===sideW?[pas,M.rb]:[pas];   /* only the men in the trick draw the defense (a TE pass used to freeze the corner on a deep receiver: wide open every time) */
   routeOthers([pas]);
   if(t==='throwback')T0.leak=true;   // QB slips out the other way after the pitch
  }else if(t==='rbpass'){
@@ -3241,6 +3241,9 @@ function ballAct(kind,fx){if(!M||(!M.def&&!fx)||M.phase!=='live'||M.play==='intr
 ACT.gCatch=()=>ballAct('catch');ACT.gSwat=()=>ballAct('swat');
 const ballAir=()=>!!(M&&M.ball&&M.ball.F&&!M.ball.done);
 const defAct=d=>d&&d.act&&d.actPlay===M.plays&&userCtl(d)?d.act:null;
+/* the computer QB throws: you take over the defender closest to where the ball is going (not vs a friend online) */
+function autoCtlBall(x,y){let best=null,bd=1e9;for(const f of M.D){if(f.role==='DL'||f.stun>0||(f.down>0&&!(f.dive>0))||f.eng)continue;const d=Math.hypot(f.x-x,f.y-y);if(d<bd){bd=d;best=f;}}
+ if(best&&best!==M.ctl){M.ctl=best;M.ctlKey=best.key||M.ctlKey;}}
 function switchCtl(){if(!M||!M.def)return;const t=M.carrier||(M.ball&&M.ball.F?{x:M.ball.x1,y:M.ball.y1}:M.qb);if(!t)return;
  let best=null,bd=1e9;for(const f of M.D){if(f===M.ctl||f.stun>0||(f.down>0&&!(f.dive>0)))continue;const d=Math.hypot(f.x-t.x,f.y-t.y);if(d<bd){bd=d;best=f;}}
  if(best){M.ctl=best;M.ctlKey=best.key||M.ctlKey;sfx('tick');}}
@@ -3269,7 +3272,7 @@ function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.o
  if(IS_MOBILE&&d>JOY.r*1.35){const k=(d-JOY.r*1.35)/d;JOY.ox+=dx*k;JOY.oy+=dy*k;dx=ptr.x-JOY.ox;dy=ptr.y-JOY.oy;d=Math.hypot(dx,dy);}   /* the stick follows your thumb */
  if(d<4)return{x:0,y:0,m:0};const m=Math.min(1,d/JOY.r);return{x:dx/d,y:dy/d,m};}
 function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
- const sp=6.5*v.m,nx=clamp(f.x+v.x*(M.dir<0?-1:1)*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
+ const sp=9*v.m,nx=clamp(f.x+v.x*(M.dir<0?-1:1)*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
  f.x=nx;f.y=ny;f.moved=true;
  if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
  preAnim(f,dx,dy,dt);}
@@ -3292,16 +3295,18 @@ function ballDive(f,dt){const b=M.ball;if(!b||!b.F||b.done||f.eng||f.stun>0||f.d
 /* the hands-on bonuses (reach, picks) only count while YOU are actually steering him / diving with him */
 function userCtl(f){return !!(M&&((M.def&&f===M.ctl&&(f.diveQ||f.dove||ctlActive()||M.pt-(M.ctlAt==null?-9:M.ctlAt)<1.0))||(!M.def&&f&&f===M.rctl&&(f.diveQ||f.dove||M.pt-(M.rAt==null?-9:M.rAt)<1.0))));}
 function ctlActive(){return M.def&&M.ctl&&((ptr.down&&(M.input==='dctl'||M.input==='joy'))||keys.up||keys.down||keys.left||keys.right);}
+/* the defender you steer is a step quicker than the computer's (top speed 1.18x, snappier cuts) */
+const UCTL_SP=0.78;
 function ctlMove(f,dt){
  M.ctlAt=M.pt;
- if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
+ if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(1.8+A(f,'str')*0.2)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  let tx,ty;
  const jv=joyVec();
- if(jv){if(!jv.m){steer(f,f.x,f.y,0,f.acc+10,dt);return;}steer(f,clamp(f.x+jv.x*(M.dir<0?-1:1)*5,-1,121),clamp(f.y+jv.y*5,0,53.3),f.spd*(0.35+0.68*jv.m),f.acc+12,dt);return;}
+ if(jv){if(!jv.m){steer(f,f.x,f.y,0,f.acc+10,dt);return;}steer(f,clamp(f.x+jv.x*(M.dir<0?-1:1)*5,-1,121),clamp(f.y+jv.y*5,0,53.3),f.spd*(0.4+UCTL_SP*jv.m),f.acc+22,dt);return;}
  if(ptr.down&&M.input==='dctl'){const p=scrToField(ptr.x,ptr.y);tx=p.x;ty=p.y;}
  else{const sx=(keys.right?1:0)-(keys.left?1:0),sy=(keys.down?1:0)-(keys.up?1:0);tx=f.x+sx*(M.dir<0?-1:1)*5;ty=f.y+sy*5;}
  if(Math.hypot(tx-f.x,ty-f.y)<0.4){steer(f,f.x,f.y,0,f.acc+10,dt);return;}
- steer(f,clamp(tx,-1,121),clamp(ty,0,53.3),f.spd*1.03,f.acc+12,dt);
+ steer(f,clamp(tx,-1,121),clamp(ty,0,53.3),f.spd*(0.4+UCTL_SP),f.acc+22,dt);
 }
 /* tap on defense: jump at a ball in the air near you, otherwise DIVE - at the ball carrier / QB when
    he's close, straight ahead the way you're running when he isn't. Never switches players on its own. */
@@ -3631,6 +3636,7 @@ function throwBall(ai){
  const d=Math.hypot(tx-ai.x0,ty-ai.y0),T=Math.max(0.12,d/ai.v);
  const F=makeFlight(ai.x0,ai.y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,T,ai.bullet?PASS.G:PASS.G_LOB);
  M.ball={F,t:0,T:F.T,Tg:F.Tg,x0:F.x0,y0:F.y0,x1:tx,y1:ty,bullet:ai.bullet};
+ if(M.def&&!netHost())autoCtlBall(tx,ty);
  window.__pass.last={plan:ai.F,actual:F,err:ai.err};
  M.thrown=true;M.aim=null;M.input=null;q.throwT=0.3;sfx('kick');
  // Who the throw was probably meant for: only used so that receiver keeps
@@ -3860,6 +3866,8 @@ function upIntRet(dt){
  for(const f of[...M.O,...M.D])tickF(f,dt);
  // returner diving forward: lands and is down there
  if(c.dive>0){c.dive-=dt;c.x+=c.vx*dt;c.y+=c.vy*dt;if(c.x<=10)return endPlay('pick6',c.x,c.y);if(c.dive<=0){c.dive=0;c.down=1;c.vx=c.vy=0;return endPlay('intdown',c.x,c.y);}}
+ // he went to the ground making the catch (a diving pick): down right there
+ else if(c.down>0&&M.intT>0.5)return endPlay('intdown',c.x,c.y);
  // returner: run for the end zone, slide away from tacklers in front of him
  else if(!(c.down>0)){let ty=c.y;for(const o of M.O){if(o.stun>0||o.down>0)continue;const dx=c.x-o.x,dy=c.y-o.y,dd=Math.hypot(dx,dy);if(dd<7&&dx>-1.5)ty+=Math.sign(dy||1)*(7-dd)/7*3.2;}
   ty=clamp(ty,2,51.3);const jv=M.def?joyVec():null,rj=!M.def&&netHost()&&netRActive()?M.rjoy:null;
@@ -3999,7 +4007,8 @@ function engage(b,d){
  const run=M.play!=='pass'||!!M.carrier,bk=A(b,'blk'),st=A(d,'str');
  // pass protection holds noticeably longer than run blocks: ~3-4 s of pocket on average
  let h=b.role==='OL'?(run?0.9+(bk-st)*0.16+rnd(0,0.9):2.0+(bk-st)*0.15+rnd(0,1.3)):0.7+(bk-st)*0.1+rnd(0,0.6);
- d.eng=b;d.engT=clamp(h,run?0.4:1.3,run?RUNBLK:5);b.blk=d;   /* even a dominant line only holds a run block so long */
+ const you=M.def&&d===M.ctl&&ctlActive();if(you)h*=0.45;   /* you're steering him (a blitz): blockers hold him less than half as long */
+ d.eng=b;d.engT=clamp(h,run?(you?0.25:0.4):(you?0.6:1.3),run?RUNBLK:5);b.blk=d;   /* even a dominant line only holds a run block so long */
 }
 function holdBlock(f,d,dt){const h=M.carrier||M.qb||f;const dx=h.x-d.x,dy=h.y-d.y,l=Math.hypot(dx,dy)||1;steer(f,d.x+dx/l*0.95,d.y+dy/l*0.95,4.5,30,dt);}
 function upOL(f,dt){
@@ -4027,7 +4036,7 @@ function upChase(f,dt){
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
-function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D'&&!M.def;steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,c.spd*CATCHUP):f.spd)*(dist<3.5?1.07:1),f.acc+6,dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
+function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D';steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,c.spd*CATCHUP):f.spd)*(dist<3.5?1.07:1),f.acc+6,dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
 function upDef(f,dt){
  if(f.eng){const h=M.carrier||M.qb||f.eng;const dx=h.x-f.x,dy=h.y-f.y,l=Math.hypot(dx,dy)||1;f.vx=dx/l*0.8;f.vy=dy/l*0.8;f.x+=f.vx*dt;f.y+=f.vy*dt;return;}
  const c=M.carrier;
@@ -4035,7 +4044,7 @@ function upDef(f,dt){
  if(M.play==='ret'){steer(f,M.land.x+2,M.land.y+(f.lane||0),f.spd,18,dt);return;}
  const b=M.ball;
  if(b&&f.hawk&&b.t>f.react){steer(f,b.x1,b.y1,f.spd,f.acc+4,dt);return;}
- if(f.role==='DL'||f.blitz){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&!M.def&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
+ if(f.role==='DL'||f.blitz){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
  if(f.role==='S'){
   // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
   // running vertically against a slower linebacker - instead of just floating in the middle.
