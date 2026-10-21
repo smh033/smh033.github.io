@@ -5,7 +5,7 @@
     { "id": "placeholder", "name": "ROBOT (TEMP)", "file": "placeholder.png" },
     { "id": "david-martinez", "name": "DAVID MARTINEZ", "file": "david-martinez.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "egg": 1 },
     { "id": "talia", "name": "TALIA", "file": "talia.png", "frame": [42, 39], "scale": 0.5, "tint": false, "secret": true, "egg": 2 },
-    { "id": "00-king", "name": "PLAYBOI CARTI", "file": "00-king.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "egg": 3, "eggTitle": "00 KING", "eggSub": "ANTAGONIST TOUR" },
+    { "id": "00-king", "name": "PLAYBOI CARTI", "file": "00-king.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "egg": 3, "eggTitle": "PLAYBOI CARTI", "eggSub": "ANTAGONIST TOUR" },
     { "id": "cross", "name": "TRAVIS SCOTT", "file": "cross.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "code": "TravvyPatty" }
   ]
 }
