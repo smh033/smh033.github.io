@@ -1503,7 +1503,8 @@ function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
  c.save();c.translate(Math.round(x),Math.round(y));
  if(o.shadow!==false){c.fillStyle='rgba(0,0,0,.28)';c.fillRect(-5*u,-u,10*u,2*u);}
- if(o.down){c.translate(0,-5*u);c.rotate((o.face<0?-1:1)*Math.PI/2);}
+ const skinOn=!!(lk.spr&&SKINS.img[lk.spr]);
+ if(o.down&&!(o.dive&&skinOn)){c.translate(0,-5*u);c.rotate((o.face<0?-1:1)*Math.PI/2);}   /* skin dive frames are already drawn lying flat */
  if(o.face<0)c.scale(-1,1);
  const fr=o.hurdle||o.pose?-1:o.fr!=null?o.fr:(o.run?Math.floor((o.t||0)*9)%4:-1),bob=(fr===1||fr===3)?-u:0;
  if(lk.spr&&SKINS.img[lk.spr]&&drawSkin(c,lk,o,fr,u)){c.restore();return;}
