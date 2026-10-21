@@ -1465,7 +1465,7 @@ function eggPlay3(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   for(let i=pops.length-1;i>=0;i--){const p=pops[i],a=t-p.a;if(a>0.9){pops.splice(i,1);continue;}g.save();g.translate(p.x,p.y-a*20);g.rotate(p.r);g.globalAlpha=1-a/0.9;txt(p.t,2,2,12,'#000');txt(p.t,0,0,12,Math.random()<0.5?GOLD:'#fff');g.restore();}g.globalAlpha=1;
   // titles
   if(t<1.7){txt('NOW PLAYING...',320,40,12,'#fff');txt('TRACK 00',320,62,8,GOLD);}
-  else if(t<4.4){drip('00 KING',320,38,26,Math.min(1,(t-1.7)/1.5));txt('BLOOD MOON TOUR',320,78,9,GOLD);}
+  else if(t<4.4){drip('00 KING',320,38,26,Math.min(1,(t-1.7)/1.5));txt('ANTAGONIST TOUR',320,78,9,GOLD);}
   else{drip('00 KING',320,38,26,1);txt('SECRET UNLOCKED',320,78,10,t%0.4<0.2?GOLD:'#fff');}
   if(hit>0.6&&t>1.7){g.fillStyle=`rgba(255,0,30,${(hit-0.6)*0.25})`;g.fillRect(-10,-10,660,380);}
   g.restore();
