@@ -1429,7 +1429,7 @@ function eggBeat3(dur){if(!sndOn())return null;const ac=audio();if(!ac)return nu
 function eggPlay3(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
  const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
  const g=cv.getContext('2d'),T0=performance.now(),D=6200,RED='#d1001f',BLOOD='#8a0010',GOLD='#ffcc33',BPM=140,beat=60/BPM;
- const id=(SKINS.list.find(x=>+x.egg===3)||{}).id;
+ const K3=SKINS.list.find(x=>+x.egg===3)||{},id=K3.id,TITLE=String(K3.eggTitle||K3.name||'00 KING').toUpperCase(),SUB=String(K3.eggSub||'ANTAGONIST TOUR').toUpperCase(),TSZ=Math.max(12,Math.min(26,Math.floor(560/Math.max(1,TITLE.length)/1.0)));
  const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#a56',key:'egg3',spr:id};
  let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
  const bats=[];for(let i=0;i<14;i++)bats.push({x:Math.random()*640,y:20+Math.random()*160,v:40+Math.random()*90,p:Math.random()*6,s:0.6+Math.random()*0.8});
@@ -1465,8 +1465,8 @@ function eggPlay3(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   for(let i=pops.length-1;i>=0;i--){const p=pops[i],a=t-p.a;if(a>0.9){pops.splice(i,1);continue;}g.save();g.translate(p.x,p.y-a*20);g.rotate(p.r);g.globalAlpha=1-a/0.9;txt(p.t,2,2,12,'#000');txt(p.t,0,0,12,Math.random()<0.5?GOLD:'#fff');g.restore();}g.globalAlpha=1;
   // titles
   if(t<1.7){txt('NOW PLAYING...',320,40,12,'#fff');txt('TRACK 00',320,62,8,GOLD);}
-  else if(t<4.4){drip('00 KING',320,38,26,Math.min(1,(t-1.7)/1.5));txt('ANTAGONIST TOUR',320,78,9,GOLD);}
-  else{drip('00 KING',320,38,26,1);txt('SECRET UNLOCKED',320,78,10,t%0.4<0.2?GOLD:'#fff');}
+  else if(t<4.4){drip(TITLE,320,38,TSZ,Math.min(1,(t-1.7)/1.5));txt(SUB,320,78,9,GOLD);}
+  else{drip(TITLE,320,38,TSZ,1);txt('SECRET UNLOCKED',320,78,10,t%0.4<0.2?GOLD:'#fff');}
   if(hit>0.6&&t>1.7){g.fillStyle=`rgba(255,0,30,${(hit-0.6)*0.25})`;g.fillRect(-10,-10,660,380);}
   g.restore();
   g.fillStyle='rgba(0,0,0,.18)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);

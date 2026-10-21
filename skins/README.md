@@ -85,6 +85,8 @@ You can add any of these to a skin's line in `skins.json`:
 - `"egg": 1`, `"egg": 2` or `"egg": 3`: this is the skin that easter egg unlocks (1 = tap FOOTBALL on the title
   screen 7 times, 2 = tap RETRO 7 times, 3 = tap the row of little players 7 times). Use it together with `"secret": true`.
 
+- `"eggTitle": "00 KING"` and `"eggSub": "ANTAGONIST TOUR"`: the big dripping title and the gold line under it in
+  easter egg 3's show (only used on the skin with `"egg": 3`). Long titles shrink to fit.
 - `"code": "Cross"`: players unlock this skin by typing the code on the title screen's CODES button
   (capitals don't matter). Use it together with `"secret": true`. Anyone who opens skins.json on GitHub can read it.
 
