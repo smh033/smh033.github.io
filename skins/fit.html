@@ -264,7 +264,33 @@ function figBoxes(mask,W,H,n){
   // relabel pixels to their group number
   const map=new Int32Array(comps.length+1);groups.forEach((g,k)=>g.ids.forEach(id=>map[id]=k+1));
   for(let i=0;i<W*H;i++)if(lab[i])lab[i]=map[lab[i]];
-  return groups.map((g,k)=>({x:g.x0,y:g.y0,w:g.x1-g.x0+1,h:g.y1-g.y0+1,g:k+1,lab}));
+  let boxes=groups.map((g,k)=>({x:g.x0,y:g.y0,w:g.x1-g.x0+1,h:g.y1-g.y0+1,g:k+1,lab}));
+  // poses that touch each other came out as one: split the widest box at its thinnest column until we have n
+  let nextG=boxes.length+1;
+  while(boxes.length<n){
+    const ws=boxes.map(b=>b.w).sort((a,b)=>a-b),med=ws[Math.floor(ws.length/2)]||1;
+    let bi=-1,bw=0;boxes.forEach((b,i)=>{if(b.w>bw){bw=b.w;bi=i}});
+    if(bi<0||bw<med*1.4)break;
+    const b=boxes[bi];
+    // cheapest top-to-bottom seam (may bend 1px per row) through the middle 60%, so it slips between a hand and a foot
+    const xa=Math.floor(b.w*0.2),xb=Math.ceil(b.w*0.8),sw=xb-xa,cost=new Float32Array(sw*b.h),from=new Int8Array(sw*b.h);
+    for(let yy=0;yy<b.h;yy++)for(let k=0;k<sw;k++){const x=b.x+xa+k,y=b.y+yy,c=(lab[y*W+x]===b.g?1:0)+Math.abs(k-sw/2)/(sw*50);
+      if(!yy){cost[k]=c;continue}let best=cost[(yy-1)*sw+k],d=0;if(k>0&&cost[(yy-1)*sw+k-1]<best){best=cost[(yy-1)*sw+k-1];d=-1}if(k<sw-1&&cost[(yy-1)*sw+k+1]<best){best=cost[(yy-1)*sw+k+1];d=1}
+      cost[yy*sw+k]=best+c;from[yy*sw+k]=d}
+    let k=0;for(let j=1;j<sw;j++)if(cost[(b.h-1)*sw+j]<cost[(b.h-1)*sw+k])k=j;
+    const seam=new Int32Array(b.h);for(let yy=b.h-1;yy>=0;yy--){seam[yy]=b.x+xa+k;k+=from[yy*sw+k]}
+    const ng=nextG++;
+    for(let yy=0;yy<b.h;yy++){const y=b.y+yy;for(let x=seam[yy];x<b.x+b.w;x++)if(lab[y*W+x]===b.g)lab[y*W+x]=ng}
+    const L=tightLab(lab,W,H,b.x,b.x+b.w,b.g),R=tightLab(lab,W,H,b.x,b.x+b.w,ng);
+    boxes.splice(bi,1,...[L,R].filter(Boolean));
+  }
+  boxes.sort((a,b)=>a.x+a.w/2-(b.x+b.w/2));
+  return boxes;
+}
+function tightLab(lab,W,H,x0,x1,g){
+  let y0=H,y1=-1,a=x1,b=x0-1;
+  for(let y=0;y<H;y++)for(let x=x0;x<x1;x++)if(lab[y*W+x]===g){if(y<y0)y0=y;if(y>y1)y1=y;if(x<a)a=x;if(x>b)b=x}
+  return y1<0?null:{x:a,y:y0,w:b-a+1,h:y1-y0+1,g,lab};
 }
 function gapBoxes(mask,W,H,n){
   const col=new Uint32Array(W);

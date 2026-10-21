@@ -1472,9 +1472,56 @@ function eggPlay3(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   g.fillStyle='rgba(0,0,0,.18)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
   requestAnimationFrame(frame);};
  requestAnimationFrame(frame);}
-/* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL), "egg": 2 (tap RETRO) or "egg": 3 (tap the row of players) */
+/* fourth easter egg: tap an empty spot on the title screen 7 times quickly -> see-through white paint splatters everywhere, PAINT unlocks */
+const EGG4={n:0,t:0};
+function eggTap4(){const now=performance.now();EGG4.n=now-EGG4.t<900?EGG4.n+1:1;EGG4.t=now;if(EGG4.n>=3&&EGG4.n<7)sfx('tick');if(EGG4.n>=7&&!EGG.on){EGG4.n=0;eggPlay4();}}
+function eggSplatSnd(big){if(!sndOn())return;const ac=audio();if(!ac)return;
+ if(!NOISE){const n=ac.sampleRate*2;NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
+ const t=ac.currentTime,src=ac.createBufferSource();src.buffer=NOISE;const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(big?2600:3800,t);f.frequency.exponentialRampToValueAtTime(300,t+0.25);
+ const g=ac.createGain();g.gain.setValueAtTime(big?0.5:0.28,t);g.gain.exponentialRampToValueAtTime(0.001,t+(big?0.35:0.2));src.connect(f).connect(g).connect(ac.destination);src.start(t,Math.random());src.stop(t+0.4);
+ const o=ac.createOscillator(),og=ac.createGain();o.type='sine';o.frequency.setValueAtTime(big?140:200,t);o.frequency.exponentialRampToValueAtTime(50,t+0.12);og.gain.setValueAtTime(big?0.35:0.15,t);og.gain.exponentialRampToValueAtTime(0.001,t+0.15);o.connect(og).connect(ac.destination);o.start(t);o.stop(t+0.16);}
+function eggPlay4(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
+ const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
+ const g=cv.getContext('2d'),T0=performance.now(),D=5600,K4=SKINS.list.find(x=>+x.egg===4)||{},id=K4.id;
+ const TITLE=String(K4.eggTitle||K4.name||'PAINT').toUpperCase(),SUB=String(K4.eggSub||'FRESH COAT').toUpperCase(),TSZ=Math.max(14,Math.min(34,Math.floor(560/Math.max(1,TITLE.length))));
+ const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#a76',key:'egg4',spr:id};
+ let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
+ // paint lives on its own layer: each splat is drawn solid there, the layer is shown see-through
+ const pl=document.createElement('canvas');pl.width=640;pl.height=360;const p=pl.getContext('2d');p.fillStyle='#fff';
+ const drips=[],splats=[];
+ const plan=[];for(let i=0;i<12;i++)plan.push({at:0.25+i*0.22+Math.random()*0.08,x:40+Math.random()*560,y:30+Math.random()*260,r:8+Math.random()*14,big:i%4===0});
+ plan.push({at:3.15,x:320,y:225,r:30,big:true});
+ const splat=(x,y,r)=>{p.beginPath();p.arc(x,y,r,0,Math.PI*2);p.fill();
+  const n=6+(Math.random()*5|0);for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,d=r*(0.7+Math.random()*0.6),rr=r*(0.25+Math.random()*0.35);p.beginPath();p.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,rr,0,Math.PI*2);p.fill();
+   // a streak flung outward ending in a droplet
+   const L=r*(0.5+Math.random()*1.0),ex=x+Math.cos(a)*(d+L),ey=y+Math.sin(a)*(d+L);p.lineWidth=Math.max(2,rr*0.45);p.lineCap='round';p.strokeStyle='#fff';p.beginPath();p.moveTo(x+Math.cos(a)*d,y+Math.sin(a)*d);p.lineTo(ex,ey);p.stroke();p.beginPath();p.arc(ex,ey,Math.max(2,rr*0.5),0,Math.PI*2);p.fill();}
+  for(let i=0;i<10;i++){const a=Math.random()*Math.PI*2,d=r*(1.4+Math.random()*1.8);p.beginPath();p.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,1+Math.random()*3,0,Math.PI*2);p.fill();}
+  const nd=1+(Math.random()*3|0);for(let i=0;i<nd;i++)drips.push({x:x+(Math.random()-0.5)*r*1.4,y:y+r*0.5,w:2+Math.random()*3,v:18+Math.random()*40,len:0,max:20+Math.random()*60});};
+ let last=T0,shake=0;
+ const frame=now=>{const t=(now-T0)/1000,dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(t>=D/1000){cv.remove();EGG.on=false;eggRewardN(4);return;}
+  while(plan.length&&plan[0].at<=t){const q=plan.shift();splat(q.x,q.y,q.r);splats.push({x:q.x,y:q.y,t});eggSplatSnd(q.big);shake=q.big?7:3;}
+  for(const d of drips){if(d.len<d.max){d.len=Math.min(d.max,d.len+d.v*dt);d.v*=0.995;}p.fillRect(Math.round(d.x-d.w/2),Math.round(d.y),Math.round(d.w),Math.round(d.len));p.beginPath();p.arc(d.x,d.y+d.len,d.w*0.7,0,Math.PI*2);p.fill();}
+  shake*=0.85;g.save();g.translate((Math.random()-0.5)*shake,(Math.random()-0.5)*shake);
+  // deep suit-blue backdrop with a soft spotlight
+  g.fillStyle='#0e1626';g.fillRect(-10,-10,660,380);const sg=g.createRadialGradient(320,190,10,320,190,260);sg.addColorStop(0,'rgba(90,120,170,.45)');sg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=sg;g.fillRect(0,0,640,360);
+  // canvas texture lines
+  g.fillStyle='rgba(255,255,255,.025)';for(let y=0;y<360;y+=4)g.fillRect(0,y,640,1);
+  // the paint, slightly see-through
+  g.globalAlpha=0.6;g.drawImage(pl,0,0);g.globalAlpha=1;
+  if(fig&&t>2.4){const k=Math.min(1,(t-2.4)/0.5);g.globalAlpha=k;g.drawImage(fig,320-90,330-166);g.globalAlpha=1;}
+  // fresh-hit flash rings
+  for(const q of splats){const a=t-q.t;if(a<0.18){g.strokeStyle=`rgba(255,255,255,${0.6*(1-a/0.18)})`;g.lineWidth=3;g.beginPath();g.arc(q.x,q.y,20+a*300,0,Math.PI*2);g.stroke();}}
+  // title painted on with a brush sweep
+  if(t>3.3){const k=Math.min(1,(t-3.3)/0.7);g.font=TSZ+'px "Press Start 2P",monospace';g.textAlign='center';g.textBaseline='middle';const w=g.measureText(TITLE).width;
+   g.save();g.beginPath();g.rect(320-w/2-10,40-TSZ,(w+20)*k,TSZ*2+4);g.clip();g.fillStyle='rgba(14,22,38,.55)';g.fillRect(320-w/2-14,40-TSZ*0.9,w+28,TSZ*1.8);g.fillStyle='#000';g.fillText(TITLE,323,43);g.fillStyle='#fff';g.fillText(TITLE,320,40);g.restore();
+   if(k>=1){g.font='9px "Press Start 2P",monospace';g.fillStyle=t>4.4?(t%0.4<0.2?'#cfe0ff':'#fff'):'#cfe0ff';g.fillText(t>4.4?'SECRET UNLOCKED':SUB,320,40+TSZ+8);}}
+  g.restore();
+  requestAnimationFrame(frame);};
+ requestAnimationFrame(frame);}
+/* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL), "egg": 2 (tap RETRO) or "egg": 3 (tap the row of players) or "egg": 4 (tap an empty spot) */
 function eggRewardN(n){const k=SKINS.list.find(x=>+x.egg===n);if(!k){toast('NO SKIN IS SET FOR THIS EASTER EGG YET');return;}
- eggReward(k.id,String(k.name||k.id).toUpperCase(),n===3?'#d1001f':n===2?'#ff2b8a':'#ff2bd6',n===3?'#ffcc33':n===2?'#ff5cc8':'#00e5ff');}
+ eggReward(k.id,String(k.name||k.id).toUpperCase(),n===4?'#e8eefc':n===3?'#d1001f':n===2?'#ff2b8a':'#ff2bd6',n===4?'#8fb0e8':n===3?'#ffcc33':n===2?'#ff5cc8':'#00e5ff');}
 function eggReward(id,nm,c1,c2){id=id||'neon-runner';nm=nm||'NEON RUNNER';c1=c1||'#ff2bd6';c2=c2||'#00e5ff';const was=skinOpen(id);unlockSkin(id);sfx('td');
  const t=L&&L.user!=null?L.user:13,lk=Object.assign(lookFor(null,t,0),{spr:id});lk.key+='|egg';let src='';
  try{const cc=document.createElement('canvas');cc.width=120;cc.height=104;drawMan(cc.getContext('2d'),60,101,lk,{u:5,shadow:false,face:1});src=cc.toDataURL();}catch(e){}
@@ -1718,7 +1765,7 @@ SCR.title=()=>{
  if(!hasSave()){let best=0,bt=-1;for(let n=1;n<=SLOTS_N;n++){const s=slotInfo(n);if(s&&s.at>bt){bt=s.at;best=n;}}if(best)setSlot(best);}
  const sv=hasSave()?loadSave():null;
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-4);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
- return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">
+ return`<div class="screen" style="align-items:center;justify-content:center;gap:12px" data-a="egg4">
   <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
   <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
@@ -5699,7 +5746,7 @@ ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
 loadSkins();
-ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;
+ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;ACT.egg4=eggTap4;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){
