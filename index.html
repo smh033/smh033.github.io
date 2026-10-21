@@ -1348,7 +1348,7 @@ function eggPlay(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;
  const glitchText=(t,x,y,sz,amt)=>{const j=()=>(Math.random()-0.5)*amt;g.globalCompositeOperation='lighter';txt(t,x+j()-3,y+j(),sz,'rgba(255,43,214,.9)');txt(t,x+j()+3,y+j(),sz,'rgba(0,229,255,.9)');g.globalCompositeOperation='source-over';txt(t,x,y,sz,'#fff');};
  let lastBeep=0;
  const frame=now=>{const t=(now-T0)/1000,p=t/(D/1000);
-  if(p>=1){cv.remove();EGG.on=false;eggReward();return;}
+  if(p>=1){cv.remove();EGG.on=false;eggRewardN(1);return;}
   if(t-lastBeep>0.18){lastBeep=t;sfx(Math.random()<0.5?'juke':'tick');}
   // background: the screen you were on, breaking up, then a neon city grid
   g.fillStyle='#05030c';g.fillRect(0,0,640,360);
@@ -1408,7 +1408,10 @@ function eggPlay2(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   g.fillStyle='rgba(0,0,0,.25)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
   requestAnimationFrame(frame);};
  requestAnimationFrame(frame);}
-function eggReward2(){eggReward('talia','TALIA','#ff2b8a','#ff5cc8');}
+function eggReward2(){eggRewardN(2);}
+/* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL) or "egg": 2 (tap RETRO) */
+function eggRewardN(n){const k=SKINS.list.find(x=>+x.egg===n);if(!k){toast('NO SKIN IS SET FOR THIS EASTER EGG YET');return;}
+ eggReward(k.id,String(k.name||k.id).toUpperCase(),n===2?'#ff2b8a':'#ff2bd6',n===2?'#ff5cc8':'#00e5ff');}
 function eggReward(id,nm,c1,c2){id=id||'neon-runner';nm=nm||'NEON RUNNER';c1=c1||'#ff2bd6';c2=c2||'#00e5ff';const was=skinOpen(id);unlockSkin(id);sfx('td');
  const t=L&&L.user!=null?L.user:13,lk=Object.assign(lookFor(null,t,0),{spr:id});lk.key+='|egg';let src='';
  try{const cc=document.createElement('canvas');cc.width=120;cc.height=104;drawMan(cc.getContext('2d'),60,101,lk,{u:5,shadow:false,face:1});src=cc.toDataURL();}catch(e){}

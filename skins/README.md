@@ -79,6 +79,8 @@ You can add any of these to a skin's line in `skins.json`:
   For a 24 × 32 sheet, use 0.5 so the player is the normal size on the field.
 - `"tint": false`: turns off the team-color repaint, so the colors stay exactly as drawn.
 - `"secret": true`: hidden (shown as SECRET) until it's unlocked by an easter egg.
+- `"egg": 1` or `"egg": 2`: this is the skin that easter egg unlocks (1 = tap FOOTBALL on the title
+  screen 7 times, 2 = tap RETRO 7 times). Use it together with `"secret": true`.
 
 Example: `{ "id": "hero", "name": "HERO", "file": "hero.png", "frame": [24, 32], "scale": 0.5 }`
 

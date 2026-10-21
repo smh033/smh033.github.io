@@ -36,7 +36,8 @@
       ],
       "scale": 0.5,
       "tint": false,
-      "secret": true
+      "secret": true,
+      "egg": 2
     }
   ]
 }
