@@ -4843,7 +4843,7 @@ function drawLogoLayer(sh,maxY){
   if(o.face<0)m=m.scale(-1,1);
   m=m.translate(-6*u,-16*u+bob);if(o.pose)m=m.translate((o.pose.dx||0)*u,(o.pose.dy||0)*u);return m;};
  const boxes=Q.map(q=>{const o=q.o||{},u=o.u||2;return{x0:q.sx-5*u,x1:q.sx+5*u,y0:q.sy-(o.down?7:15)*u,y1:q.sy};});
- for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||lk.nohelm)continue;if(L&&lk.teamId===L.user&&L.custom&&L.custom.helmLogo===false)continue;
+ for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||lk.nohelm||(lk.spr&&SKINS.img[lk.spr]))continue;/* custom skins: no team logo */if(L&&lk.teamId===L.user&&L.custom&&L.custom.helmLogo===false)continue;
   const u=o.u||2,S=4.2*u,m=mat(q),c=m.transformPoint(new DOMPoint(4.2*u,2.6*u));
   if(maxY!=null&&c.y+S/2>maxY)continue;
   /* hidden if a player drawn in front covers the helmet */
