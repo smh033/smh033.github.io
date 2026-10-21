@@ -5681,14 +5681,23 @@ function olStepOf(t){const s=seatOf(t),o=s&&s.off;return o?OL_STEPS.indexOf(o.st
 function olGateReady(){
  if(!L||!L.seats||!L.online||L.online.st!=='on')return false;
  if(L.draft&&L.draft.q&&!L.draft.done){const it=L.draft.q[L.draft.qi];if(it&&it.t!=null&&!isHuman(it.t))return true;}
- if(L.phase==='REG')return humans().every(t=>olWkOf(t)>L.week);   /* the league week follows the coach who is furthest behind */
+ if(L.phase==='REG')return olAiBehind()||humans().every(t=>olWkOf(t)>L.week);   /* the league week follows the coach who is furthest behind */
  if(L.phase==='PO'){if(L.po.champ!=null)return false;return !curGames().some(g=>g.hs==null&&(isHuman(g.h)||isHuman(g.a)));}
  if(L.phase==='OFF'){const H=humans(),st=H.map(olStepOf);
   if(!L.draft&&L.offDraft!==L.year&&st.every(s=>s>=OL_DW))return true;
   if(st.every(s=>s>=OL_SW))return true;}
  return false;}
+/* a coach whose game for their week is already in is past that week for the computer games (even before they tap CONTINUE) */
+function olDoneWk(t){const w=olWkOf(t),g=w<=18?teamGame(w,t):null;return g&&g.hs!=null?w+1:w;}
+/* computer-only games are played as soon as any coach is past that week, so the standings keep up
+   with whoever is furthest ahead (the league week itself still waits for everyone) */
+function olAiWeeks(){if(!L||!L.seats||L.phase!=='REG')return 0;return Math.min(18,Math.max(0,...humans().map(t=>olDoneWk(t)-1)));}
+function olAiBehind(){const W=olAiWeeks();for(let w=L.week;w<=W;w++)if((L.sched[w-1]||[]).some(g=>g.hs==null&&!isHuman(g.h)&&!isHuman(g.a)))return true;return false;}
+function olSimAhead(){const W=olAiWeeks();for(let w=L.week;w<=W;w++)for(const g of L.sched[w-1]||[])if(g.hs==null&&!isHuman(g.h)&&!isHuman(g.a)){const[hs,as]=simScore(g.h,g.a,false);finishGame(g,hs,as);}}
 function olGates(){
+ if(L&&L.seats&&L.phase==='REG')olSimAhead();
  for(let n=0;n<40&&olGateReady();n++){
+  if(L.phase==='REG'&&!humans().every(t=>olWkOf(t)>L.week)){olSimAhead();break;}
   if(L.draft&&L.draft.q&&!L.draft.done){const it=L.draft.q[L.draft.qi];if(it&&it.t!=null&&!isHuman(it.t)){L.draft.left=0;olDraftRun();continue;}}
   if(L.phase==='REG'||L.phase==='PO'){advanceWeek();continue;}
   if(L.phase==='OFF'){const st=humans().map(olStepOf);
