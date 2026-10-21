@@ -20,6 +20,7 @@
       "name": "ROBOT (TEMP)",
       "file": "placeholder.png"
     },
+    {"id": "david-martinez-png", "name": "DAVID MARTINEZ", "file": "david-martinez-png.png", "frame": [24,32], "scale": 0.5, "tint": false}
     {
       "id": "david-martinez",
       "name": "David Martinez",
