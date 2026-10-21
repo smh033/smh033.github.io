@@ -1432,7 +1432,10 @@ function skinSheet(id,lk){const im=SKINS.img[id];if(!im)return null;const K=SKIN
 function drawSkin(c,lk,o,fr,u){const sh=skinSheet(lk.spr,lk);if(!sh)return false;const K=SKINS.list.find(x=>x.id===lk.spr)||{},fw=(K.frame&&+K.frame[0])||SKINS.fw,fh=(K.frame&&+K.frame[1])||SKINS.fh,sc=+K.scale||1,n=Math.max(1,Math.floor(sh.width/fw));
  let i=o.dive?5:o.throw?7:(o.reach||o.oneh)?8:o.ball?6:o.hurdle?2:fr>=0?1+fr:0;if(i>=n)i=i>=1&&i<=4&&n>1?1+((i-1)%Math.min(4,n-1)):0;
  const bob=(!o.dive&&(fr===1||fr===3))?-u:0;c.imageSmoothingEnabled=false;
- const dw=fw*sc*u,dh=fh*sc*u;c.drawImage(sh,i*fw,0,fw,fh,Math.round(-dw/2+(o.pose?(o.pose.dx||0)*u:0)),Math.round(-dh+bob+(o.pose?(o.pose.dy||0)*u:0)),Math.round(dw),Math.round(dh));return true;}
+ const dw=fw*sc*u,dh=fh*sc*u,X=Math.round(-dw/2+(o.pose?(o.pose.dx||0)*u:0)),Y=Math.round(-dh+bob+(o.pose?(o.pose.dy||0)*u:0));
+ if(i===6&&fr>=0&&n>=7){/* running with the ball: carry pose's upper body over the run cycle's legs */const sp=Math.round(fh*(+K.carrySplit||0.68)),r=1+(fr%4),dsp=Math.round(dh*sp/fh);
+  c.drawImage(sh,i*fw,0,fw,sp,X,Y,Math.round(dw),dsp);c.drawImage(sh,r*fw,sp,fw,fh-sp,X,Y+dsp,Math.round(dw),Math.round(dh)-dsp);return true;}
+ c.drawImage(sh,i*fw,0,fw,fh,X,Y,Math.round(dw),Math.round(dh));return true;}
 function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
  c.save();c.translate(Math.round(x),Math.round(y));
