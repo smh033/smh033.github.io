@@ -1519,6 +1519,53 @@ function eggPlay4(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   g.restore();
   requestAnimationFrame(frame);};
  requestAnimationFrame(frame);}
+/* shows a code can play before its skin unlocks: "codeShow": "america" in skins.json */
+const CODE_SHOWS={america:k=>showAmerica(k)};
+function showAmerica(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
+ const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
+ const g=cv.getContext('2d'),T0=performance.now(),D=6400,RED='#c8102e',BLUE='#0a3161',WHITE='#ffffff';
+ const TITLE=String(K.eggTitle||K.name||K.id).toUpperCase(),SUB=String(K.eggSub||'LAND OF THE FREE').toUpperCase(),TSZ=Math.max(14,Math.min(36,Math.floor(560/Math.max(1,TITLE.length))));
+ const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#c96',key:'usa',spr:K.id};
+ let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
+ // sound: brass fanfare, snare roll and firework pops
+ const ac=sndOn()?audio():null;
+ if(ac&&!NOISE){const n=ac.sampleRate*2;NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
+ const horn=(t,f,d)=>{if(!ac)return;[1,2.01,3].forEach((m,i)=>{const o=ac.createOscillator(),gg=ac.createGain();o.type=i?'sawtooth':'square';o.frequency.value=f*m;gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(0.05/(i+1),t+0.03);gg.gain.setValueAtTime(0.05/(i+1),t+d-0.05);gg.gain.linearRampToValueAtTime(0,t+d);o.connect(gg).connect(ac.destination);o.start(t);o.stop(t+d+0.02);});};
+ const snare=(t,v)=>{if(!ac)return;const s=ac.createBufferSource();s.buffer=NOISE;const fl=ac.createBiquadFilter();fl.type='bandpass';fl.frequency.value=2200;const gg=ac.createGain();gg.gain.setValueAtTime(v,t);gg.gain.exponentialRampToValueAtTime(0.001,t+0.08);s.connect(fl).connect(gg).connect(ac.destination);s.start(t,Math.random());s.stop(t+0.1);};
+ const boom=()=>{if(!ac)return;const t=ac.currentTime,s=ac.createBufferSource();s.buffer=NOISE;const fl=ac.createBiquadFilter();fl.type='lowpass';fl.frequency.setValueAtTime(1800,t);fl.frequency.exponentialRampToValueAtTime(120,t+0.5);const gg=ac.createGain();gg.gain.setValueAtTime(0.45,t);gg.gain.exponentialRampToValueAtTime(0.001,t+0.7);s.connect(fl).connect(gg).connect(ac.destination);s.start(t,Math.random());s.stop(t+0.75);
+  for(let i=0;i<8;i++)snare(t+0.25+Math.random()*0.5,0.06);};
+ if(ac){const t0=ac.currentTime+0.05;for(let i=0;i<16;i++)snare(t0+i*0.06,0.08+i*0.01);
+  const b=t0+1.0,q=0.22;[[392,1],[392,1],[523.3,2],[659.3,1],[784,3],[0,1],[659.3,1],[784,1],[1046.5,4]].reduce((t,[f,n])=>{if(f)horn(t,f,q*n*0.95);return t+q*n;},b);
+  [523.3,659.3,784].forEach(f=>horn(b+q*14,f,1.2));}
+ const fw=[],sparks=[];let nextFw=1.6;
+ const launch=()=>{fw.push({x:60+Math.random()*520,y:360,ty:50+Math.random()*120,v:330+Math.random()*80,c:[RED,WHITE,'#3c78ff'][(Math.random()*3)|0]});};
+ const flagW=640,stripeH=360/13;
+ const frame=now=>{const t=(now-T0)/1000,dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(t>=D/1000){cv.remove();EGG.on=false;eggReward(K.id,String(K.name||K.id).toUpperCase(),RED,'#3c78ff');return;}
+  // waving flag fills the screen, drawn in vertical slices
+  const fade=Math.min(1,t/0.6);
+  for(let x=0;x<flagW;x+=8){const wv=Math.sin(x*0.018-t*4)*8+Math.sin(x*0.007-t*2)*5,shade=1+Math.cos(x*0.018-t*4)*0.12;
+   for(let s2=0;s2<13;s2++){g.fillStyle=s2%2?WHITE:RED;g.fillRect(x,s2*stripeH+wv,8,stripeH+1);}
+   if(x<256){g.fillStyle=BLUE;g.fillRect(x,wv,8,stripeH*7);}
+   g.fillStyle=shade<1?`rgba(0,0,0,${(1-shade)*1.6})`:`rgba(255,255,255,${(shade-1)*0.8})`;g.fillRect(x,-10,8,380);}
+  // stars on the blue
+  g.fillStyle=WHITE;for(let r=0;r<9;r++)for(let c=0;c<(r%2?5:6);c++){const x=(r%2?42:21)+c*42,y=12+r*20,wv=Math.sin(x*0.018-t*4)*8+Math.sin(x*0.007-t*2)*5;g.fillRect(x-2,y+wv-1,5,3);g.fillRect(x-1,y+wv-2,3,5);}
+  g.fillStyle=`rgba(0,0,0,${0.5+0.25*(1-fade)})`;g.fillRect(0,0,640,360);
+  // fireworks
+  if(t>nextFw&&t<5.6){launch();nextFw=t+0.35+Math.random()*0.35;}
+  for(let i=fw.length-1;i>=0;i--){const f=fw[i];f.y-=f.v*dt;g.fillStyle='#ffe9a8';g.fillRect(f.x-1,f.y,2,6);
+   if(f.y<=f.ty){fw.splice(i,1);boom();for(let k=0;k<46;k++){const a=k/46*Math.PI*2,sp=60+Math.random()*90;sparks.push({x:f.x,y:f.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:1.3,c:f.c});}}}
+  for(let i=sparks.length-1;i>=0;i--){const p=sparks[i];p.l-=dt;if(p.l<=0){sparks.splice(i,1);continue;}p.vy+=60*dt;p.vx*=0.985;p.x+=p.vx*dt;p.y+=p.vy*dt;g.globalAlpha=Math.min(1,p.l);g.fillStyle=Math.random()<0.15?'#fff':p.c;g.fillRect(p.x|0,p.y|0,3,3);}g.globalAlpha=1;
+  // CK steps up with a spotlight
+  if(fig&&t>1.0){const k=Math.min(1,(t-1.0)/0.5),sg=g.createRadialGradient(320,260,10,320,260,150);sg.addColorStop(0,`rgba(255,240,200,${0.35*k})`);sg.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=sg;g.fillRect(0,0,640,360);
+   g.globalAlpha=k;g.drawImage(fig,320-90,340-166-(1-k)*30);g.globalAlpha=1;}
+  // titles
+  const txt=(s3,x,y,sz,col)=>{g.font=sz+'px "Press Start 2P",monospace';g.textAlign='center';g.textBaseline='middle';g.fillStyle='#000';g.fillText(s3,x+3,y+3);g.fillStyle=col;g.fillText(s3,x,y);};
+  if(t<1.6){const k=Math.min(1,t/0.4);txt('U',260,140,40*k,RED);if(t>0.4)txt('S',320,140,40,WHITE);if(t>0.8)txt('A',380,140,40,'#3c78ff');}
+  else{txt(TITLE,320,42,TSZ,WHITE);txt(t>4.6?'SECRET UNLOCKED':SUB,320,42+TSZ/2+16,9,t>4.6&&t%0.4<0.2?'#ffd23f':'#cfe0ff');
+   if(t>2.2&&t<4.6&&Math.floor(t*2.5)%2===0)txt('U-S-A! U-S-A!',320,310,10,'#ffd23f');}
+  requestAnimationFrame(frame);};
+ let last=T0;requestAnimationFrame(frame);}
 /* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL), "egg": 2 (tap RETRO) or "egg": 3 (tap the row of players) or "egg": 4 (tap an empty spot) */
 function eggRewardN(n){const k=SKINS.list.find(x=>+x.egg===n);if(!k){toast('NO SKIN IS SET FOR THIS EASTER EGG YET');return;}
  eggReward(k.id,String(k.name||k.id).toUpperCase(),n===4?'#e8eefc':n===3?'#d1001f':n===2?'#ff2b8a':'#ff2bd6',n===4?'#8fb0e8':n===3?'#ffcc33':n===2?'#ff5cc8':'#00e5ff');}
@@ -1785,7 +1832,7 @@ ACT.codeGo=()=>{const i=$('#codeIn'),m=$('#codeMsg');if(!i)return;const c=(i.val
  const k=SKINS.list.find(x=>x.code!=null&&String(x.code).trim().toLowerCase().replace(/\s+/g,' ')===c);
  if(!k){sfx('juke');say('INVALID CODE','#ff5a5a');i.select();return;}
  if(skinOpen(k.id)){say(String(k.name||k.id).toUpperCase()+' IS ALREADY UNLOCKED','#ffd23f');return;}
- closeModal();eggReward(k.id,String(k.name||k.id).toUpperCase(),'#ffd23f','#ffffff');};
+ closeModal();const show=CODE_SHOWS[String(k.codeShow||'').toLowerCase()];if(show&&!EGG.on)show(k);else eggReward(k.id,String(k.name||k.id).toUpperCase(),'#ffd23f','#ffffff');};
 ACT.cont=()=>{L=loadSave();if(!L)return toast('NO SAVE FOUND');indexPlayers();parityFix();resumeFlow();};
 /* older saves: spread the league back out once */
 function parityFix(){if(!L||L.phase==='FOUND')return;try{let ch=false;if(!L.parity){balanceLeague(true);ch=true;}if(!L.fa1){aiFreeAgency(true);L.fa1=1;ch=true;}if(!L.qbpot){for(const p of L.players)qbPotBoost(p);L.qbpot=1;ch=true;}if(ch)save();}catch(e){console.error(e);}}
