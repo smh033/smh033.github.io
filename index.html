@@ -1409,9 +1409,72 @@ function eggPlay2(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   requestAnimationFrame(frame);};
  requestAnimationFrame(frame);}
 function eggReward2(){eggRewardN(2);}
-/* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL) or "egg": 2 (tap RETRO) */
+/* third easter egg: tap the row of little players on the title screen 7 times quickly -> a blood-moon rap show, 00 KING unlocks */
+const EGG3={n:0,t:0};
+function eggTap3(){const now=performance.now();EGG3.n=now-EGG3.t<900?EGG3.n+1:1;EGG3.t=now;if(EGG3.n>=3&&EGG3.n<7)sfx('tick');if(EGG3.n>=7&&!EGG.on){EGG3.n=0;eggPlay3();}}
+/* a tiny trap beat: 808 kick, clap, rolling hats and a dark bell */
+function eggBeat3(dur){if(!sndOn())return null;const ac=audio();if(!ac)return null;
+ if(!NOISE){const n=ac.sampleRate*2;NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
+ const out=ac.createGain();out.gain.value=0.9;out.connect(ac.destination);const t0=ac.currentTime+0.05,bt=60/140/4; // 16th notes at 140 bpm
+ const k808=(t,f)=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(f*2.6,t);o.frequency.exponentialRampToValueAtTime(f,t+0.08);g.gain.setValueAtTime(0.55,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.7);o.connect(g).connect(out);o.start(t);o.stop(t+0.75);};
+ const nz=(t,d,v,type,fq)=>{const s=ac.createBufferSource();s.buffer=NOISE;const fl=ac.createBiquadFilter();fl.type=type;fl.frequency.value=fq;const g=ac.createGain();g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);s.connect(fl).connect(g).connect(out);s.start(t,Math.random());s.stop(t+d+0.02);};
+ const bell=(t,f)=>{const o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(0.09,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(g).connect(out);o.start(t);o.stop(t+0.55);};
+ const steps=Math.floor(dur/bt),mel=[311.1,0,0,293.7,0,0,261.6,0,233.1,0,0,261.6,0,0,196,0],bass=[49,0,0,0,0,0,49,0,0,0,58.3,0,0,0,0,0];
+ for(let i=0;i<steps;i++){const t=t0+i*bt,s=i%16,bar=Math.floor(i/16);
+  if(bar>=1&&bass[s])k808(t,bass[s]);
+  if(bar>=1&&(s===4||s===12))nz(t,0.18,0.35,'bandpass',1500);
+  if(bar>=1){nz(t,0.04,0.12,'highpass',7000);if(s===14||s===15)nz(t+bt/2,0.03,0.09,'highpass',7000);}
+  if(mel[s])bell(t,mel[s]*(bar%2?1:2));}
+ return {t0,bt,stop:()=>{try{out.gain.setTargetAtTime(0,ac.currentTime,0.05)}catch(e){}}};}
+function eggPlay3(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
+ const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
+ const g=cv.getContext('2d'),T0=performance.now(),D=6200,RED='#d1001f',BLOOD='#8a0010',GOLD='#ffcc33',BPM=140,beat=60/BPM;
+ const id=(SKINS.list.find(x=>+x.egg===3)||{}).id;
+ const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#a56',key:'egg3',spr:id};
+ let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
+ const bats=[];for(let i=0;i<14;i++)bats.push({x:Math.random()*640,y:20+Math.random()*160,v:40+Math.random()*90,p:Math.random()*6,s:0.6+Math.random()*0.8});
+ const adlibs=['YEAH','WHAT','00!','LET\'S GO','UH','KING','SHEESH','BLOOD MOON'],pops=[];
+ const txt=(t,x,y,sz,col,al)=>{g.font=sz+'px "Press Start 2P",monospace';g.textAlign=al||'center';g.textBaseline='middle';g.fillStyle=col;g.fillText(t,x,y);};
+ const drip=(t,x,y,sz,k)=>{txt(t,x+3,y+3,sz,'#000');txt(t,x,y,sz,RED);g.font=sz+'px "Press Start 2P",monospace';const w=g.measureText(t).width;
+  for(let i=0;i<9;i++){const dx=x-w/2+((i*53)%Math.max(1,w)),len=Math.max(0,(k*60-((i*17)%30)))*(0.5+((i*7)%5)/6);g.fillStyle=RED;g.fillRect(Math.round(dx),y+sz/2,3,len);g.fillRect(Math.round(dx)-1,y+sz/2+len-2,5,4);}};
+ const bat=(x,y,s,fl)=>{g.fillStyle='#050005';const w=Math.round(10*s),h=Math.round((fl?6:2)*s);g.fillRect(x-2*s,y-2*s,4*s,4*s);g.beginPath();g.moveTo(x,y);g.lineTo(x-w,y-h);g.lineTo(x-w*0.6,y+1);g.lineTo(x-w*0.3,y-h*0.4);g.closePath();g.fill();g.beginPath();g.moveTo(x,y);g.lineTo(x+w,y-h);g.lineTo(x+w*0.6,y+1);g.lineTo(x+w*0.3,y-h*0.4);g.closePath();g.fill();};
+ const snd=eggBeat3(D/1000);
+ let last=T0,lastB=-1;
+ const frame=now=>{const t=(now-T0)/1000,dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(t>=D/1000){cv.remove();EGG.on=false;eggRewardN(3);return;}
+  const bt=t/beat,bi=Math.floor(bt),ph=bt-bi,hit=Math.max(0,1-ph*3)*(t>60/BPM*4?1:0.3); // pulse on every beat
+  if(bi!==lastB){lastB=bi;if(t>1.7&&bi%2===0)pops.push({t:adlibs[(Math.random()*adlibs.length)|0],x:90+Math.random()*460,y:80+Math.random()*190,a:t,r:(Math.random()-0.5)*0.4});}
+  const sh=hit*(t>1.7?6:2);g.save();g.translate((Math.random()-0.5)*sh,(Math.random()-0.5)*sh);
+  // night sky going red
+  const red=Math.min(1,t/1.6);g.fillStyle=`rgb(${10+40*red|0},0,${12-6*red|0})`;g.fillRect(-10,-10,660,380);
+  // blood moon
+  const mg=g.createRadialGradient(320,120,10,320,120,140+hit*30);mg.addColorStop(0,'rgba(255,40,40,.9)');mg.addColorStop(0.35,'rgba(170,0,20,.55)');mg.addColorStop(1,'rgba(60,0,0,0)');g.fillStyle=mg;g.fillRect(0,0,640,360);
+  g.fillStyle=`rgb(${200+55*hit|0},${20+30*hit|0},30)`;g.beginPath();g.arc(320,120,58+hit*4,0,Math.PI*2);g.fill();g.fillStyle='rgba(90,0,10,.45)';[[300,104,9],[338,130,12],[318,146,6],[344,98,5]].forEach(c=>{g.beginPath();g.arc(c[0],c[1],c[2],0,Math.PI*2);g.fill();});
+  // bats
+  for(const b of bats){b.x+=b.v*dt;if(b.x>670){b.x=-30;b.y=20+Math.random()*160;}bat(Math.round(b.x),Math.round(b.y+Math.sin(t*3+b.p)*8),b.s,Math.sin(t*16+b.p)>0);}
+  // spinning vinyl behind him
+  if(t>0.6){g.save();g.translate(320,212);g.rotate(t*4);g.fillStyle='#0b0b0b';g.beginPath();g.arc(0,0,96,0,Math.PI*2);g.fill();g.strokeStyle='#1d1d1d';g.lineWidth=1;for(let r=30;r<94;r+=6){g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.stroke();}
+   g.fillStyle=RED;g.beginPath();g.arc(0,0,26,0,Math.PI*2);g.fill();g.fillStyle='#000';g.font='10px "Press Start 2P",monospace';g.textAlign='center';g.textBaseline='middle';g.fillText('00',0,0);g.fillStyle='#fff';g.fillRect(-1,-1,2,2);g.restore();}
+  // the king, bouncing on the beat
+  if(fig&&t>1.1){const k=Math.min(1,(t-1.1)/0.4),sc=1+hit*0.06;g.save();g.globalAlpha=k;g.translate(320,300);g.scale(sc,sc);g.drawImage(fig,-90,-166-hit*6);g.restore();g.globalAlpha=1;}
+  // stage lights
+  if(t>1.7){g.globalCompositeOperation='lighter';[[60,RED],[580,GOLD]].forEach(([x,c],i)=>{const a=Math.sin(t*2+i*2)*0.5;g.save();g.translate(x,0);g.rotate(a*(i?-1:1)+(i?-0.35:0.35));const lg=g.createLinearGradient(0,0,0,360);lg.addColorStop(0,c);lg.addColorStop(1,'rgba(0,0,0,0)');g.globalAlpha=0.18+hit*0.15;g.fillStyle=lg;g.beginPath();g.moveTo(-6,0);g.lineTo(6,0);g.lineTo(70,380);g.lineTo(-70,380);g.closePath();g.fill();g.restore();});g.globalAlpha=1;g.globalCompositeOperation='source-over';}
+  // equalizer
+  for(let i=0;i<32;i++){const h=(t>1.7?(10+Math.abs(Math.sin(i*1.7+t*9))*40)*(0.5+hit*0.7):4);g.fillStyle=i%2?BLOOD:RED;g.fillRect(i*20+3,360-h,14,h);}
+  // ad-libs
+  for(let i=pops.length-1;i>=0;i--){const p=pops[i],a=t-p.a;if(a>0.9){pops.splice(i,1);continue;}g.save();g.translate(p.x,p.y-a*20);g.rotate(p.r);g.globalAlpha=1-a/0.9;txt(p.t,2,2,12,'#000');txt(p.t,0,0,12,Math.random()<0.5?GOLD:'#fff');g.restore();}g.globalAlpha=1;
+  // titles
+  if(t<1.7){txt('NOW PLAYING...',320,40,12,'#fff');txt('TRACK 00',320,62,8,GOLD);}
+  else if(t<4.4){drip('00 KING',320,38,26,Math.min(1,(t-1.7)/1.5));txt('BLOOD MOON TOUR',320,78,9,GOLD);}
+  else{drip('00 KING',320,38,26,1);txt('SECRET UNLOCKED',320,78,10,t%0.4<0.2?GOLD:'#fff');}
+  if(hit>0.6&&t>1.7){g.fillStyle=`rgba(255,0,30,${(hit-0.6)*0.25})`;g.fillRect(-10,-10,660,380);}
+  g.restore();
+  g.fillStyle='rgba(0,0,0,.18)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
+  requestAnimationFrame(frame);};
+ requestAnimationFrame(frame);}
+/* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL), "egg": 2 (tap RETRO) or "egg": 3 (tap the row of players) */
 function eggRewardN(n){const k=SKINS.list.find(x=>+x.egg===n);if(!k){toast('NO SKIN IS SET FOR THIS EASTER EGG YET');return;}
- eggReward(k.id,String(k.name||k.id).toUpperCase(),n===2?'#ff2b8a':'#ff2bd6',n===2?'#ff5cc8':'#00e5ff');}
+ eggReward(k.id,String(k.name||k.id).toUpperCase(),n===3?'#d1001f':n===2?'#ff2b8a':'#ff2bd6',n===3?'#ffcc33':n===2?'#ff5cc8':'#00e5ff');}
 function eggReward(id,nm,c1,c2){id=id||'neon-runner';nm=nm||'NEON RUNNER';c1=c1||'#ff2bd6';c2=c2||'#00e5ff';const was=skinOpen(id);unlockSkin(id);sfx('td');
  const t=L&&L.user!=null?L.user:13,lk=Object.assign(lookFor(null,t,0),{spr:id});lk.key+='|egg';let src='';
  try{const cc=document.createElement('canvas');cc.width=120;cc.height=104;drawMan(cc.getContext('2d'),60,101,lk,{u:5,shadow:false,face:1});src=cc.toDataURL();}catch(e){}
@@ -1656,7 +1719,7 @@ SCR.title=()=>{
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-4);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">
   <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
-  <div class="row" style="gap:10px">${show}</div>
+  <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button></div>
@@ -5623,7 +5686,7 @@ ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
 loadSkins();
-ACT.egg=eggTap;ACT.egg2=eggTap2;
+ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){

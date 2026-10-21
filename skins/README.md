@@ -82,8 +82,8 @@ You can add any of these to a skin's line in `skins.json`:
   run frames' legs so the legs move. This is where it cuts (0.68 = 68% down from the top). Raise it if the
   ball gets cut off, lower it if the carry pose's legs show.
 - `"secret": true`: hidden (shown as SECRET) until it's unlocked by an easter egg.
-- `"egg": 1` or `"egg": 2`: this is the skin that easter egg unlocks (1 = tap FOOTBALL on the title
-  screen 7 times, 2 = tap RETRO 7 times). Use it together with `"secret": true`.
+- `"egg": 1`, `"egg": 2` or `"egg": 3`: this is the skin that easter egg unlocks (1 = tap FOOTBALL on the title
+  screen 7 times, 2 = tap RETRO 7 times, 3 = tap the row of little players 7 times). Use it together with `"secret": true`.
 
 Example: `{ "id": "hero", "name": "HERO", "file": "hero.png", "frame": [24, 32], "scale": 0.5 }`
 
