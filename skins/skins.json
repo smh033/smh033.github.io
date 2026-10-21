@@ -1,8 +1,42 @@
 {
-  "frame": [12, 16],
-  "frames": ["stand", "run1", "run2", "run3", "run4", "dive", "carry", "throw", "reach"],
+  "frame": [
+    12,
+    16
+  ],
+  "frames": [
+    "stand",
+    "run1",
+    "run2",
+    "run3",
+    "run4",
+    "dive",
+    "carry",
+    "throw",
+    "reach"
+  ],
   "skins": [
-    { "id": "placeholder", "name": "ROBOT (TEMP)", "file": "placeholder.png" },
-    { "id": "david-martinez", "name": "David Martinez", "file": "david-martinez.png", "secret": true }
+    {
+      "id": "placeholder",
+      "name": "ROBOT (TEMP)",
+      "file": "placeholder.png"
+    },
+    {
+      "id": "david-martinez",
+      "name": "David Martinez",
+      "file": "david-martinez.png",
+      "secret": true
+    },
+    {
+      "id": "talia",
+      "name": "TALIA",
+      "file": "talia.png",
+      "frame": [
+        42,
+        39
+      ],
+      "scale": 0.5,
+      "tint": false,
+      "secret": true
+    }
   ]
 }

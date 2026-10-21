@@ -1371,11 +1371,49 @@ function eggPlay(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;
   g.fillStyle='rgba(0,0,0,.22)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
   requestAnimationFrame(frame);};
  requestAnimationFrame(frame);}
-function eggReward(){const id='neon-runner';const was=skinOpen(id);unlockSkin(id);sfx('td');
+/* second easter egg: tap RETRO on the title screen 7 times quickly -> an incoming netrunner transmission, TALIA unlocks */
+const EGG2={n:0,t:0};
+function eggTap2(){const now=performance.now();EGG2.n=now-EGG2.t<900?EGG2.n+1:1;EGG2.t=now;if(EGG2.n>=3&&EGG2.n<7)sfx('tick');if(EGG2.n>=7&&!EGG.on){EGG2.n=0;eggPlay2();}}
+function eggPlay2(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
+ const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
+ const g=cv.getContext('2d'),T0=performance.now(),D=5000,PINK='#ff2b8a',HOT='#ff5cc8',RED='#ff1744',drops=[];for(let i=0;i<70;i++)drops.push({x:Math.random()*640,y:Math.random()*360,v:120+Math.random()*260,l:6+Math.random()*22});
+ const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#c88',key:'egg2',spr:'talia'};
+ let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
+ const txt=(t,x,y,sz,col)=>{g.font=sz+'px "Press Start 2P",monospace';g.textAlign='center';g.textBaseline='middle';g.fillStyle=col;g.fillText(t,x,y);};
+ const glitch=(t,x,y,sz,amt)=>{const j=()=>(Math.random()-0.5)*amt;g.globalCompositeOperation='lighter';txt(t,x+j()-3,y+j(),sz,'rgba(255,23,68,.85)');txt(t,x+j()+3,y+j(),sz,'rgba(255,92,200,.85)');g.globalCompositeOperation='source-over';txt(t,x,y,sz,'#fff');};
+ let lb=0,last=T0;
+ const frame=now=>{const t=(now-T0)/1000,dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(t>=D/1000){cv.remove();EGG.on=false;eggReward2();return;}
+  if(t-lb>0.22){lb=t;sfx(Math.random()<0.6?'tick':'juke');}
+  g.fillStyle='rgba(8,0,6,.55)';g.fillRect(0,0,640,360);
+  // pink data rain
+  for(const d of drops){d.y+=d.v*dt;if(d.y>380){d.y=-20;d.x=Math.random()*640;}g.fillStyle=Math.random()<0.1?'#fff':PINK;g.fillRect(Math.round(d.x),Math.round(d.y),2,d.l);}
+  // hologram: the figure builds up line by line inside a scanning frame
+  if(fig&&t>0.8){const k=Math.min(1,(t-0.8)/2.2),fx=320-90,fy=78,shown=Math.round(170*k);
+   g.strokeStyle=HOT;g.lineWidth=2;g.strokeRect(fx-14,fy-10,208,190);
+   for(let y=0;y<shown;y+=2){const off=Math.random()<0.12?(Math.random()-0.5)*20:0;g.globalAlpha=0.75+Math.random()*0.25;g.drawImage(fig,0,y,180,2,fx+off,fy+y,180,2);}g.globalAlpha=1;
+   const sy=fy+shown;g.fillStyle='rgba(255,92,200,.8)';g.fillRect(fx-14,sy,208,2);
+   g.fillStyle='rgba(255,43,138,.12)';g.fillRect(fx-14,fy-10,208,190);}
+  // corner readouts
+  g.font='7px "Press Start 2P",monospace';g.textAlign='left';g.fillStyle=HOT;
+  ['NET.LINK  ▲ '+Math.floor(80+Math.random()*20)+'%','ICE  BYPASSED','SIG  '+(Math.random()*999|0).toString(16).toUpperCase()].forEach((l,i)=>g.fillText(l,14,22+i*12));
+  g.textAlign='right';['TRACE '+(t*311|0)+'MS','NODE 0x'+(t*4096|0).toString(16).toUpperCase(),'CRYPT '+(Math.random()<0.5?'ON':'..')].forEach((l,i)=>g.fillText(l,626,22+i*12));
+  // glitch bars + flashes
+  for(let i=0;i<6;i++){g.fillStyle=Math.random()<0.5?'rgba(255,23,68,.45)':'rgba(255,92,200,.4)';g.fillRect(Math.random()*640,Math.random()*360,30+Math.random()*200,2+Math.random()*8);}
+  if(Math.random()<0.12){g.fillStyle='rgba(255,43,138,.15)';g.fillRect(0,0,640,360);}
+  // messages
+  if(t<1.8)glitch('INCOMING TRANSMISSION',320,40,14,t<0.6?16:5);
+  else if(t<3.4)glitch('DECRYPTING IDENTITY...',320,40,12,5);
+  else{glitch('IDENTITY: TALIA',320,40,16,t<3.7?14:3);glitch('NETRUNNER ONLINE',320,300,10,3);}
+  g.fillStyle='rgba(0,0,0,.25)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
+  requestAnimationFrame(frame);};
+ requestAnimationFrame(frame);}
+function eggReward2(){eggReward('talia','TALIA','#ff2b8a','#ff5cc8');}
+function eggReward(id,nm,c1,c2){id=id||'neon-runner';nm=nm||'NEON RUNNER';c1=c1||'#ff2bd6';c2=c2||'#00e5ff';const was=skinOpen(id);unlockSkin(id);sfx('td');
  const t=L&&L.user!=null?L.user:13,lk=Object.assign(lookFor(null,t,0),{spr:id});lk.key+='|egg';let src='';
- try{const cc=document.createElement('canvas');cc.width=60;cc.height=85;drawMan(cc.getContext('2d'),30,82,lk,{u:5,shadow:false,face:1});src=cc.toDataURL();}catch(e){}
- modal(`<div class="mp" style="width:380px;align-items:center;text-align:center;gap:8px;border-color:#ff2bd6;box-shadow:0 0 0 2px #00e5ff">${ttl(was?'ALREADY YOURS':'SECRET SKIN UNLOCKED',true)}
- ${src?`<img src="${src}" width="60" height="85" style="image-rendering:pixelated">`:''}<div class="s12" style="color:#ff2bd6;text-shadow:2px 2px 0 #00e5ff">NEON RUNNER</div>
+ try{const cc=document.createElement('canvas');cc.width=120;cc.height=104;drawMan(cc.getContext('2d'),60,101,lk,{u:5,shadow:false,face:1});src=cc.toDataURL();}catch(e){}
+ modal(`<div class="mp" style="width:380px;align-items:center;text-align:center;gap:8px;border-color:${c1};box-shadow:0 0 0 2px ${c2}">${ttl(was?'ALREADY YOURS':'SECRET SKIN UNLOCKED',true)}
+ ${src?`<img src="${src}" width="120" height="104" style="image-rendering:pixelated">`:''}<div class="s12" style="color:${c1};text-shadow:2px 2px 0 ${c2}">${esc(nm)}</div>
  <div class="s7" style="line-height:2">OPEN ANY OF YOUR PLAYERS AND TAP <span class="yl">SKIN</span> TO PUT IT ON.<br>ONLINE OPPONENTS SEE IT TOO.</div><button class="bt y" data-a="close">NICE</button></div>`);}
 const skinName=id=>{const k=SKINS.list.find(x=>x.id===id);return k?k.name:'NONE';};
 /* the sheet with the key colors swapped for this team's uniform: #FF00FF jersey, #00FFFF trim, #FFFF00 helmet */
@@ -1611,7 +1649,7 @@ SCR.title=()=>{
  const sv=hasSave()?loadSave():null;
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-4);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">
-  ${ttl('RETRO',true)}<div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
+  <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
   <div class="row" style="gap:10px">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
@@ -5579,7 +5617,7 @@ ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
 loadSkins();
-ACT.egg=eggTap;
+ACT.egg=eggTap;ACT.egg2=eggTap2;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){
