@@ -90,12 +90,17 @@ remove the placeholder entry.
 
 ## Prompt you can give another AI
 
-> Make a pixel-art sprite sheet PNG for a retro football game. Transparent
-> background, exactly 108×16 pixels: 9 frames of 12×16 pixels side by side, 1 pixel = 1
-> pixel, no anti-aliasing, no outline (the game adds one). The character faces right
-> and his feet touch the bottom row. Frames left to right: 0 standing, 1–4 a 4-step
-> running cycle, 5 diving forward (low and stretched, arms out front), 6 running with a
-> football tucked under one arm, 7 throwing (arm cocked back holding the ball),
-> 8 reaching up with both hands. Paint the jersey in pure #FF00FF, the trim/second color
-> in pure #00FFFF and the helmet in pure #FFFF00 so the game can recolor them per team.
-> The character is: **[describe your skin here, e.g. a ninja with a black mask]**.
+Image AIs can't output exact pixel sizes, so ask for a 10× grid and then shrink it to
+216 × 32 (24 × 32 frames, `"frame": [24, 32], "scale": 0.5`).
+
+> Pixel-art sprite sheet for a retro football game, side view, character faces RIGHT.
+> One horizontal row of exactly 9 equal-width frames, no gaps, borders or labels. Each
+> frame is a 24×32 pixel-art grid drawn at 10× scale (every art pixel is a 10×10 block),
+> so each frame is 240×320 and the sheet is 2160×320. Fully transparent background, no
+> shadows or floor. Character fills each frame's height, feet on the bottom edge (except
+> the dive), centered in its own frame, same size in every frame. Frames left to right:
+> 1 standing, 2–5 a 4-step run cycle, 6 diving forward low and horizontal with arms out
+> front (still inside its frame), 7 running with a football tucked under one arm,
+> 8 throwing with the arm cocked back holding the ball, 9 jumping with both hands up to
+> catch. Crisp hard-edged pixels, no anti-aliasing, blur or gradients, limited palette,
+> thin dark outline. The character is: **[describe your character here]**.

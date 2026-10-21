@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Not found</title>
+<style>
+:root{--bg:#10131a;--panel:#1a1f2b;--line:#2c3345;--txt:#e8ecf4;--dim:#8a93a8;--acc:#ffd23f;--bad:#ff5a5a;--ok:#5ad17a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 ui-monospace,Menlo,Consolas,monospace}
+#locked{padding:40px 16px;color:var(--dim)}
+#app{display:none;max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 14px;color:var(--acc)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px}
+label{display:block;color:var(--dim);font-size:13px;margin:8px 0 4px}
+input[type=text],select{width:100%;background:#0c0f15;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
+input[type=range]{width:100%}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:140px}
+button,.btn{background:var(--acc);color:#111;border:0;border-radius:6px;padding:10px 14px;font:inherit;font-weight:bold;cursor:pointer;display:inline-block;text-decoration:none}
+button.sec{background:#2c3345;color:var(--txt)}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--dim);cursor:pointer}
+.drop.on{border-color:var(--acc);color:var(--acc)}
+canvas{image-rendering:pixelated;max-width:100%;display:block}
+.chk{background:repeating-conic-gradient(#2a2f3a 0 25%,#1d212a 0 50%) 0 0/16px 16px;border-radius:6px}
+#msg{margin:8px 0;min-height:1.4em}#msg.bad{color:var(--bad)}#msg.ok{color:var(--ok)}
+pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;word-break:break-all;font-size:12px}
+.small{color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<div id="locked">404 · not found</div>
+<div id="app">
+  <h1>SPRITE SHEET FITTER</h1>
+  <div class="panel">
+    <div class="drop" id="drop">Tap to pick an image, or drop one here<br><span class="small">any size · the AI's output is fine</span></div>
+    <input type="file" id="file" accept="image/*" hidden>
+  </div>
+
+  <div class="panel" id="opts" style="display:none">
+    <div class="row">
+      <div><label>Skin id / file name</label><input type="text" id="sid" value="my-skin"></div>
+      <div><label>Name in game</label><input type="text" id="sname" value="MY SKIN"></div>
+    </div>
+    <div class="row">
+      <div><label>Frame size</label><select id="fsz">
+        <option value="24x32" selected>24 × 32 (recommended)</option>
+        <option value="12x16">12 × 16 (tiny, classic)</option>
+        <option value="36x48">36 × 48 (extra detail)</option>
+      </select></div>
+      <div><label>Background</label><select id="bgm">
+        <option value="auto" selected>Auto-detect</option>
+        <option value="alpha">Already transparent</option>
+        <option value="flood">Remove from edges only (keeps dark clothes)</option>
+        <option value="all">Remove that color everywhere</option>
+      </select></div>
+    </div>
+    <div class="row">
+      <div><label>Background tolerance: <span id="tolv">40</span></label><input type="range" id="tol" min="0" max="160" value="40"></div>
+      <div><label>Frames to find</label><select id="nfr">
+        <option value="9" selected>9 (full sheet)</option><option value="5">5 (stand + run)</option><option value="1">1 (single pose)</option>
+      </select></div>
+    </div>
+    <div class="row">
+      <div><label>Find frames by</label><select id="cut">
+        <option value="gaps" selected>Gaps between poses</option>
+        <option value="even">Equal-width slices</option>
+      </select></div>
+      <div><label>Team colors</label><select id="tint">
+        <option value="false" selected>Keep colors as drawn</option>
+        <option value="true">Recolor #FF00FF / #00FFFF / #FFFF00 per team</option>
+      </select></div>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="panel" id="srcp" style="display:none">
+    <label>Your image · yellow boxes = the frames it found</label>
+    <canvas id="src" class="chk"></canvas>
+  </div>
+
+  <div class="panel" id="outp" style="display:none">
+    <label>Result (zoomed) · <span id="osz"></span></label>
+    <canvas id="big" class="chk"></canvas>
+    <label>Actual size</label>
+    <canvas id="out" class="chk" style="max-width:none"></canvas>
+    <p><a class="btn" id="dl" download="my-skin.png">DOWNLOAD PNG</a></p>
+    <label>Add this line to the "skins" list in skins/skins.json</label>
+    <pre id="json"></pre>
+    <button class="sec" id="copy">COPY LINE</button>
+    <p class="small">Upload the PNG into the skins folder on GitHub with exactly this file name, then add the line (put a comma after the line before it).</p>
+  </div>
+</div>
+
+<script>
+// ---- device lock: unlocked once per browser with ?key=..., remembered in localStorage ----
+const KEY_HASH='708fb806a1bc6cb0bdb5b7b779712007d8b9143f2f9fd20e9b5d584010a4685d';
+const LS='rf_fit_unlocked';
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function gate(){
+  let ok=false;try{ok=localStorage.getItem(LS)===KEY_HASH}catch(e){}
+  const k=new URLSearchParams(location.search).get('key');
+  if(!ok&&k&&crypto.subtle&&await sha(k)===KEY_HASH){ok=true;try{localStorage.setItem(LS,KEY_HASH)}catch(e){}}
+  if(k)history.replaceState(null,'',location.pathname);
+  if(!ok)return;
+  if(new URLSearchParams(location.search).has('lock')){try{localStorage.removeItem(LS)}catch(e){}return}
+  document.title='Sprite Fitter';
+  document.getElementById('locked').style.display='none';
+  document.getElementById('app').style.display='block';
+  init();
+}
+// ---- fitter ----
+const $=id=>document.getElementById(id);
+let IMG=null;
+function init(){
+  const drop=$('drop'),file=$('file');
+  drop.onclick=()=>file.click();
+  file.onchange=()=>file.files[0]&&load(file.files[0]);
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};
+  drop.ondragleave=()=>drop.classList.remove('on');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
+  ['fsz','bgm','tol','nfr','cut','tint','sid','sname'].forEach(id=>$(id).addEventListener('input',run));
+  $('tol').addEventListener('input',()=>$('tolv').textContent=$('tol').value);
+  $('copy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($('json').textContent);$('copy').textContent='COPIED';setTimeout(()=>$('copy').textContent='COPY LINE',1200)};
+}
+function load(f){
+  const base=f.name.replace(/\.[^.]*$/,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'my-skin';
+  if($('sid').value==='my-skin'){$('sid').value=base;$('sname').value=base.replace(/-/g,' ').toUpperCase()}
+  const im=new Image();
+  im.onload=()=>{IMG=im;$('opts').style.display='';$('srcp').style.display='';run()};
+  im.onerror=()=>msg('Could not open that image.',1);
+  im.src=URL.createObjectURL(f);
+}
+function msg(t,bad){const m=$('msg');m.textContent=t;m.className=bad?'bad':'ok'}
+
+function run(){
+  if(!IMG)return;
+  // work on a copy no wider than 4000px
+  const sc=Math.min(1,4000/IMG.width);
+  const W=Math.round(IMG.width*sc),H=Math.round(IMG.height*sc);
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(IMG,0,0,W,H);
+  const d=x.getImageData(0,0,W,H),p=d.data;
+  const mask=bgMask(p,W,H);           // 1 = character pixel
+  const [fw,fh]=$('fsz').value.split('x').map(Number);
+  const n=+$('nfr').value;
+  const boxes=$('cut').value==='even'?evenBoxes(mask,W,H,n):gapBoxes(mask,W,H,n);
+  drawSrc(c,boxes);
+  if(!boxes.length){msg('No character found. Try a different Background setting or tolerance.',1);$('outp').style.display='none';return}
+  // one scale for every frame so the character keeps the same size
+  let s=0;for(const b of boxes)s=Math.max(s,b.w/fw,b.h/fh);
+  const out=$('out');out.width=fw*n;out.height=fh;
+  const o=out.getContext('2d');o.clearRect(0,0,out.width,out.height);
+  const od=o.createImageData(out.width,fh);
+  boxes.forEach((b,i)=>{
+    const tw=Math.max(1,Math.round(b.w/s)),th=Math.max(1,Math.round(b.h/s));
+    const ox=i*fw+Math.floor((fw-tw)/2),oy=fh-th; // centered, feet on bottom row
+    for(let ty=0;ty<th;ty++)for(let tx=0;tx<tw;tx++){
+      const col=blockColor(p,mask,W,b.x+tx*s,b.y+ty*s,s);
+      if(!col)continue;
+      const k=((oy+ty)*out.width+ox+tx)*4;
+      od.data[k]=col[0];od.data[k+1]=col[1];od.data[k+2]=col[2];od.data[k+3]=255;
+    }
+  });
+  o.putImageData(od,0,0);
+  const big=$('big'),z=Math.max(2,Math.floor(Math.min(860,innerWidth-48)/out.width));
+  big.width=out.width*z;big.height=fh*z;
+  const bx=big.getContext('2d');bx.imageSmoothingEnabled=false;bx.clearRect(0,0,big.width,big.height);
+  bx.drawImage(out,0,0,big.width,big.height);
+  bx.strokeStyle='rgba(255,210,63,.5)';bx.lineWidth=1;
+  for(let i=1;i<n;i++){bx.beginPath();bx.moveTo(i*fw*z+.5,0);bx.lineTo(i*fw*z+.5,big.height);bx.stroke()}
+  $('osz').textContent=out.width+' × '+fh+' px, '+n+' frame'+(n>1?'s':'')+' of '+fw+' × '+fh;
+  const id=($('sid').value||'my-skin').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+  $('dl').download=id+'.png';$('dl').href=out.toDataURL('image/png');
+  const line={id,name:($('sname').value||id).toUpperCase(),file:id+'.png'};
+  if(fw!==12||fh!==16){line.frame=[fw,fh];line.scale=+(12/fw).toFixed(4)}
+  if($('tint').value==='false')line.tint=false;
+  $('json').textContent=JSON.stringify(line).replace(/,"/g,', "').replace(/":/g,'": ');
+  $('outp').style.display='';
+  msg(boxes.length===n?'Found '+n+' frame'+(n>1?'s':'')+'. Check the result below.':'Found '+boxes.length+' of '+n+' frames. Try "Equal-width slices" or a different background setting.',boxes.length!==n);
+}
+
+// background → mask
+function bgMask(p,W,H){
+  const m=new Uint8Array(W*H);let mode=$('bgm').value;const tol=+$('tol').value;
+  const cornerA=[0,W-1,(H-1)*W,H*W-1].map(i=>p[i*4+3]);
+  if(mode==='auto')mode=cornerA.every(a=>a<20)?'alpha':'flood';
+  if(mode==='alpha'){for(let i=0;i<W*H;i++)m[i]=p[i*4+3]>=128?1:0;return m}
+  // background color = most common border color
+  const cnt=new Map();
+  const add=i=>{const k=(p[i*4]>>3)<<10|(p[i*4+1]>>3)<<5|(p[i*4+2]>>3);cnt.set(k,(cnt.get(k)||0)+1)};
+  for(let x=0;x<W;x++){add(x);add((H-1)*W+x)}for(let y=0;y<H;y++){add(y*W);add(y*W+W-1)}
+  let best=0,bk=0;cnt.forEach((v,k)=>{if(v>best){best=v;bk=k}});
+  const br=((bk>>10)&31)*8+4,bg=((bk>>5)&31)*8+4,bb=(bk&31)*8+4;
+  const isBg=i=>p[i*4+3]<128||Math.abs(p[i*4]-br)+Math.abs(p[i*4+1]-bg)+Math.abs(p[i*4+2]-bb)<=tol;
+  if(mode==='all'){for(let i=0;i<W*H;i++)m[i]=isBg(i)?0:1;return m}
+  // flood from the edges
+  m.fill(1);const st=[];
+  const push=i=>{if(m[i]&&isBg(i)){m[i]=0;st.push(i)}};
+  for(let x=0;x<W;x++){push(x);push((H-1)*W+x)}for(let y=0;y<H;y++){push(y*W);push(y*W+W-1)}
+  while(st.length){const i=st.pop(),x=i%W;if(x>0)push(i-1);if(x<W-1)push(i+1);if(i>=W)push(i-W);if(i<W*(H-1))push(i+W)}
+  return m;
+}
+// tight vertical box of character pixels inside columns [x0,x1)
+function tight(mask,W,H,x0,x1){
+  let y0=H,y1=-1,a=x1,b=x0-1;
+  for(let y=0;y<H;y++)for(let x=x0;x<x1;x++)if(mask[y*W+x]){if(y<y0)y0=y;if(y>y1)y1=y;if(x<a)a=x;if(x>b)b=x}
+  return y1<0?null:{x:a,y:y0,w:b-a+1,h:y1-y0+1};
+}
+function gapBoxes(mask,W,H,n){
+  const col=new Uint32Array(W);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)col[x]+=mask[y*W+x];
+  const noise=Math.max(1,Math.round(H*0.004));
+  let runs=[],s=-1;
+  for(let x=0;x<=W;x++){const on=x<W&&col[x]>noise;if(on&&s<0)s=x;if(!on&&s>=0){runs.push([s,x]);s=-1}}
+  // drop specks, then merge the closest neighbours until we have n
+  let tot=0;runs.forEach(r=>{for(let x=r[0];x<r[1];x++)tot+=col[x]});
+  runs=runs.filter(r=>{let t=0;for(let x=r[0];x<r[1];x++)t+=col[x];return t>tot*0.01});
+  while(runs.length>n){let bi=0,bg=1e9;for(let i=0;i<runs.length-1;i++){const g=runs[i+1][0]-runs[i][1];if(g<bg){bg=g;bi=i}}runs.splice(bi,2,[runs[bi][0],runs[bi+1][1]])}
+  return runs.map(r=>tight(mask,W,H,r[0],r[1])).filter(Boolean);
+}
+function evenBoxes(mask,W,H,n){
+  const out=[];for(let i=0;i<n;i++){const b=tight(mask,W,H,Math.round(i*W/n),Math.round((i+1)*W/n));if(b)out.push(b)}return out;
+}
+// majority color of one source block (null = transparent)
+function blockColor(p,mask,W,x0,y0,s){
+  const xa=Math.floor(x0),ya=Math.floor(y0),xb=Math.max(xa+1,Math.floor(x0+s)),yb=Math.max(ya+1,Math.floor(y0+s));
+  const step=Math.max(1,Math.floor((xb-xa)/6));
+  let on=0,all=0;const cnt=new Map();
+  for(let y=ya;y<yb;y+=step)for(let x=xa;x<xb;x+=step){
+    all++;const i=y*W+x;if(!mask[i])continue;on++;
+    const k=(p[i*4]>>4)<<8|(p[i*4+1]>>4)<<4|(p[i*4+2]>>4);
+    const e=cnt.get(k);if(e){e[0]++;e[1]+=p[i*4];e[2]+=p[i*4+1];e[3]+=p[i*4+2]}else cnt.set(k,[1,p[i*4],p[i*4+1],p[i*4+2]]);
+  }
+  if(on*2<all)return null;
+  let best=null;cnt.forEach(v=>{if(!best||v[0]>best[0])best=v});
+  return [Math.round(best[1]/best[0]),Math.round(best[2]/best[0]),Math.round(best[3]/best[0])];
+}
+function drawSrc(c,boxes){
+  const s=$('src'),k=Math.min(1,1600/c.width);s.width=Math.round(c.width*k);s.height=Math.round(c.height*k);
+  const x=s.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(c,0,0,s.width,s.height);
+  x.strokeStyle='#ffd23f';x.lineWidth=Math.max(2,3*k);
+  boxes.forEach(b=>x.strokeRect(b.x*k,b.y*k,b.w*k,b.h*k));
+}
+gate();
+</script>
+</body>
+</html>
