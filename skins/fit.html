@@ -205,9 +205,9 @@ function bgMask(p,W,H){
   const cornerA=[0,W-1,(H-1)*W,H*W-1].map(i=>p[i*4+3]);
   if(mode==='auto')mode=cornerA.every(a=>a<20)?'alpha':'flood';
   if(mode==='alpha'){
-    for(let i=0;i<W*H;i++)m[i]=p[i*4+3]>=128?1:0;
+    for(let i=0;i<W*H;i++)m[i]=p[i*4+3]>=60?1:0;
     // peel the white/see-through halo AI images leave around the character (stops at the dark outline)
-    const lim=255-Math.max(tol,20),halo=i=>p[i*4+3]<240||(Math.min(p[i*4],p[i*4+1],p[i*4+2])>lim&&Math.max(p[i*4],p[i*4+1],p[i*4+2])-Math.min(p[i*4],p[i*4+1],p[i*4+2])<40);
+    const lim=255-Math.max(tol,20),halo=i=>{const r=p[i*4],g=p[i*4+1],b=p[i*4+2],mn=Math.min(r,g,b),sat=Math.max(r,g,b)-mn;return sat<40&&(mn>lim||(p[i*4+3]<200&&mn>lim-60))};const _h=i=>(Math.min(p[i*4],p[i*4+1],p[i*4+2])>lim&&Math.max(p[i*4],p[i*4+1],p[i*4+2])-Math.min(p[i*4],p[i*4+1],p[i*4+2])<40);
     const st=[];for(let i=0;i<W*H;i++)if(!m[i])st.push(i);
     const push=i=>{if(m[i]&&halo(i)){m[i]=0;st.push(i)}};
     while(st.length){const i=st.pop(),x=i%W;if(x>0)push(i-1);if(x<W-1)push(i+1);if(i>=W)push(i-W);if(i<W*(H-1))push(i+W)}
@@ -248,7 +248,7 @@ function figBoxes(mask,W,H,n){
   if(!comps.length)return [];
   const big=Math.max(...comps.map(c=>c.area));
   // drop dust, then pick the large pieces as poses and hang small pieces on the nearest pose
-  const parts=comps.filter(c=>c.area>=big*0.004);
+  const parts=comps.filter(c=>c.area>=big*0.0004); // keep thin hair strands; far-away dust is dropped below
   const sorted=[...parts].sort((a,b)=>b.area-a.area);
   let seeds=sorted.filter(c=>c.area>=big*0.2);
   const groups=seeds.map(c=>({ids:[c.id],x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,area:c.area,cx:c.cx}));
@@ -256,7 +256,7 @@ function figBoxes(mask,W,H,n){
   const dist=(g,c)=>Math.max(0,g.x0-c.x1,c.x0-g.x1)+Math.max(0,g.y0-c.y1,c.y0-g.y1)+Math.abs(g.cx-c.cx)*0.25;
   // too few big pieces (a pose split in two)? promote the next biggest pieces
   for(const c of sorted){if(groups.length>=n)break;if(!seeds.includes(c)&&c.area>=big*0.05){seeds.push(c);groups.push({ids:[c.id],x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,area:c.area,cx:c.cx})}}
-  for(const c of parts){if(seeds.includes(c))continue;let bg=null,bd=1e9;for(const g of groups){const d=dist(g,c);if(d<bd){bd=d;bg=g}}add(bg,c)}
+  const reach=H*0.12;for(const c of parts){if(seeds.includes(c))continue;let bg=null,bd=1e9;for(const g of groups){const d=dist(g,c);if(d<bd){bd=d;bg=g}}if(bd-Math.abs(bg.cx-c.cx)*0.25<=reach||c.area>=big*0.004)add(bg,c)}
   // more pose groups than wanted: merge the two closest (a pose that came apart)
   while(groups.length>n){let bi=0,bj=1,bd=1e9;for(let i=0;i<groups.length;i++)for(let j=i+1;j<groups.length;j++){const d=Math.abs(groups[i].cx-groups[j].cx);if(d<bd){bd=d;bi=i;bj=j}}
     const gj=groups[bj];gj.ids.forEach((id,k)=>{});add(groups[bi],{id:-1,area:gj.area,x0:gj.x0,x1:gj.x1,y0:gj.y0,y1:gj.y1,cx:gj.cx});groups[bi].ids.pop();groups[bi].ids.push(...gj.ids);groups.splice(bj,1)}
@@ -291,7 +291,7 @@ function blockColor(p,isOn,W,x0,y0,s){
     const k=(p[i*4]>>4)<<8|(p[i*4+1]>>4)<<4|(p[i*4+2]>>4);
     const e=cnt.get(k);if(e){e[0]++;e[1]+=p[i*4];e[2]+=p[i*4+1];e[3]+=p[i*4+2]}else cnt.set(k,[1,p[i*4],p[i*4+1],p[i*4+2]]);
   }
-  if(on*2<all)return null;
+  if(on*3<all)return null; // a third covered is enough, so thin hair strands survive the shrink
   let best=null;cnt.forEach(v=>{if(!best||v[0]>best[0])best=v});
   return [Math.round(best[1]/best[0]),Math.round(best[2]/best[0]),Math.round(best[3]/best[0])];
 }
