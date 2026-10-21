@@ -1330,9 +1330,56 @@ const SKINS={list:[],img:{},tint:new Map(),fw:12,fh:16,ok:false};
 function loadSkins(){fetch('skins/skins.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.skins))return;
  if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}SKINS.list=j.skins.filter(x=>x&&x.id&&x.file);SKINS.ok=true;
  for(const k of SKINS.list){const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};im.src='skins/'+k.file;}}).catch(()=>{});}
+const SKU_KEY='rf_skins_unlocked',SKM_KEY='rf_skin_map';
+const skinsUnlocked=()=>{try{return JSON.parse(localStorage.getItem(SKU_KEY)||'[]')||[];}catch(e){return[];}};
+const skinOpen=id=>{const k=SKINS.list.find(x=>x.id===id);return !!k&&(!k.secret||skinsUnlocked().includes(id));};
+function unlockSkin(id){const a=skinsUnlocked();if(!a.includes(id)){a.push(id);try{localStorage.setItem(SKU_KEY,JSON.stringify(a));}catch(e){}}}
+const skinMap=()=>{try{return JSON.parse(localStorage.getItem(SKM_KEY)||'{}')||{};}catch(e){return{};}};
+function skinMapSet(p){const m=skinMap(),k=lookKey(p);if(!k)return;if(p.spr)m[k]=p.spr;else delete m[k];try{localStorage.setItem(SKM_KEY,JSON.stringify(m));}catch(e){}}
+/* ---------- easter egg: tap FOOTBALL on the title screen 7 times quickly ----------
+   A cyberpunk system-breach glitch takes over the screen, then the secret NEON RUNNER skin unlocks. */
+const EGG={n:0,t:0,on:false};
+function eggTap(){const now=performance.now();EGG.n=now-EGG.t<900?EGG.n+1:1;EGG.t=now;if(EGG.n>=3&&EGG.n<7)sfx('tick');if(EGG.n>=7&&!EGG.on){EGG.n=0;eggPlay();}}
+function eggPlay(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
+ const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated;pointer-events:auto';st.appendChild(cv);
+ const g=cv.getContext('2d'),T0=performance.now(),D=4200,PINK='#ff2bd6',CYAN='#00e5ff',hexs='0123456789ABCDEF';
+ let snap=null;try{const gc=document.getElementById('cv');if(gc){snap=document.createElement('canvas');snap.width=640;snap.height=360;snap.getContext('2d').drawImage(gc,0,0,640,360);}}catch(e){}
+ const txt=(t,x,y,sz,col,al)=>{g.font=sz+'px "Press Start 2P",monospace';g.textAlign=al||'center';g.textBaseline='middle';g.fillStyle=col;g.fillText(t,x,y);};
+ const glitchText=(t,x,y,sz,amt)=>{const j=()=>(Math.random()-0.5)*amt;g.globalCompositeOperation='lighter';txt(t,x+j()-3,y+j(),sz,'rgba(255,43,214,.9)');txt(t,x+j()+3,y+j(),sz,'rgba(0,229,255,.9)');g.globalCompositeOperation='source-over';txt(t,x,y,sz,'#fff');};
+ let lastBeep=0;
+ const frame=now=>{const t=(now-T0)/1000,p=t/(D/1000);
+  if(p>=1){cv.remove();EGG.on=false;eggReward();return;}
+  if(t-lastBeep>0.18){lastBeep=t;sfx(Math.random()<0.5?'juke':'tick');}
+  // background: the screen you were on, breaking up, then a neon city grid
+  g.fillStyle='#05030c';g.fillRect(0,0,640,360);
+  if(snap&&t<1.2){for(let y=0;y<360;y+=6){const off=(Math.random()<0.35?(Math.random()-0.5)*90*t:0);g.drawImage(snap,0,y,640,6,off,y,640,6);}g.fillStyle='rgba(5,3,12,'+Math.min(0.85,t*0.7)+')';g.fillRect(0,0,640,360);}
+  if(t>0.6){const hz=200;g.strokeStyle='rgba(255,43,214,'+Math.min(0.8,(t-0.6))+')';g.lineWidth=1;
+   for(let i=0;i<14;i++){const yy=hz+Math.pow(i/14,2)*160+((t*40)%12);g.beginPath();g.moveTo(0,yy);g.lineTo(640,yy);g.stroke();}
+   for(let i=-12;i<=12;i++){g.beginPath();g.moveTo(320+i*8,hz);g.lineTo(320+i*80,360);g.stroke();}
+   g.fillStyle='rgba(0,229,255,.08)';for(let i=0;i<9;i++){const bx=(i*79+30)%640,bh=40+(i*37)%90;g.fillRect(bx,hz-bh,34,bh);}}
+  // falling hex code
+  g.fillStyle='rgba(0,229,255,.55)';g.font='8px "Press Start 2P",monospace';g.textAlign='left';
+  for(let i=0;i<26;i++){const x=(i*25+7)%640,y=((t*160+i*53)%420)-30;let str='';for(let k=0;k<4;k++)str+=hexs[Math.floor(Math.random()*16)];g.fillText(str,x,y);}
+  // glitch slices and color blocks
+  for(let i=0;i<(t<3?10:4);i++){g.fillStyle=Math.random()<0.5?'rgba(255,43,214,.55)':'rgba(0,229,255,.5)';g.fillRect(Math.random()*640,Math.random()*360,20+Math.random()*180,2+Math.random()*10);}
+  if(Math.random()<0.18){g.fillStyle='rgba(255,255,255,.12)';g.fillRect(0,0,640,360);}
+  // the messages
+  if(t>0.5&&t<2.6){glitchText('SYSTEM BREACH',320,130,24,t<1.2?18:6);glitchText('JACKING IN...',320,172,10,4);
+   const w=Math.min(1,(t-0.5)/1.8);g.strokeStyle=CYAN;g.strokeRect(170,196,300,12);g.fillStyle=PINK;g.fillRect(172,198,296*w,8);txt(Math.round(w*100)+'%',320,222,8,'#fff');}
+  if(t>=2.6){glitchText('ACCESS GRANTED',320,140,22,t<2.9?14:3);glitchText('SECRET UNLOCKED',320,182,12,3);}
+  // scanlines + vignette
+  g.fillStyle='rgba(0,0,0,.22)';for(let y=0;y<360;y+=3)g.fillRect(0,y,640,1);
+  requestAnimationFrame(frame);};
+ requestAnimationFrame(frame);}
+function eggReward(){const id='neon-runner';const was=skinOpen(id);unlockSkin(id);sfx('td');
+ const t=L&&L.user!=null?L.user:13,lk=Object.assign(lookFor(null,t,0),{spr:id});lk.key+='|egg';let src='';
+ try{const cc=document.createElement('canvas');cc.width=60;cc.height=85;drawMan(cc.getContext('2d'),30,82,lk,{u:5,shadow:false,face:1});src=cc.toDataURL();}catch(e){}
+ modal(`<div class="mp" style="width:380px;align-items:center;text-align:center;gap:8px;border-color:#ff2bd6;box-shadow:0 0 0 2px #00e5ff">${ttl(was?'ALREADY YOURS':'SECRET SKIN UNLOCKED',true)}
+ ${src?`<img src="${src}" width="60" height="85" style="image-rendering:pixelated">`:''}<div class="s12" style="color:#ff2bd6;text-shadow:2px 2px 0 #00e5ff">NEON RUNNER</div>
+ <div class="s7" style="line-height:2">OPEN ANY OF YOUR PLAYERS AND TAP <span class="yl">SKIN</span> TO PUT IT ON.<br>ONLINE OPPONENTS SEE IT TOO.</div><button class="bt y" data-a="close">NICE</button></div>`);}
 const skinName=id=>{const k=SKINS.list.find(x=>x.id===id);return k?k.name:'NONE';};
 /* the sheet with the key colors swapped for this team's uniform: #FF00FF jersey, #00FFFF trim, #FFFF00 helmet */
-function skinSheet(id,lk){const im=SKINS.img[id];if(!im)return null;const key=id+'|'+lk.jersey+lk.trim+lk.helm;let c=SKINS.tint.get(key);if(c)return c;
+function skinSheet(id,lk){const im=SKINS.img[id];if(!im)return null;const K=SKINS.list.find(x=>x.id===id)||{};if(K.tint===false)return im;const key=id+'|'+lk.jersey+lk.trim+lk.helm;let c=SKINS.tint.get(key);if(c)return c;
  c=document.createElement('canvas');c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);
  try{const d=g.getImageData(0,0,c.width,c.height),a=d.data,hx=h=>{h=String(h||'#888').replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];};
   const J=hx(lk.jersey),Tr=hx(lk.trim),He=hx(lk.helm);
@@ -1341,10 +1388,10 @@ function skinSheet(id,lk){const im=SKINS.img[id];if(!im)return null;const key=id
   g.putImageData(d,0,0);}catch(e){}
  if(SKINS.tint.size>300)SKINS.tint.clear();SKINS.tint.set(key,c);return c;}
 /* frame order on the sheet: 0 stand, 1-4 run, 5 dive, 6 carry, 7 throw, 8 reach */
-function drawSkin(c,lk,o,fr,u){const sh=skinSheet(lk.spr,lk);if(!sh)return false;const fw=SKINS.fw,fh=SKINS.fh,n=Math.max(1,Math.floor(sh.width/fw));
+function drawSkin(c,lk,o,fr,u){const sh=skinSheet(lk.spr,lk);if(!sh)return false;const K=SKINS.list.find(x=>x.id===lk.spr)||{},fw=(K.frame&&+K.frame[0])||SKINS.fw,fh=(K.frame&&+K.frame[1])||SKINS.fh,sc=+K.scale||1,n=Math.max(1,Math.floor(sh.width/fw));
  let i=o.dive?5:o.throw?7:(o.reach||o.oneh)?8:o.ball?6:o.hurdle?2:fr>=0?1+fr:0;if(i>=n)i=i>=1&&i<=4&&n>1?1+((i-1)%Math.min(4,n-1)):0;
  const bob=(!o.dive&&(fr===1||fr===3))?-u:0;c.imageSmoothingEnabled=false;
- c.drawImage(sh,i*fw,0,fw,fh,-6*u+(o.pose?(o.pose.dx||0)*u:0),-16*u+bob+(o.pose?(o.pose.dy||0)*u:0),fw*u,fh*u);return true;}
+ const dw=fw*sc*u,dh=fh*sc*u;c.drawImage(sh,i*fw,0,fw,fh,Math.round(-dw/2+(o.pose?(o.pose.dx||0)*u:0)),Math.round(-dh+bob+(o.pose?(o.pose.dy||0)*u:0)),Math.round(dw),Math.round(dh));return true;}
 function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
  c.save();c.translate(Math.round(x),Math.round(y));
@@ -1564,7 +1611,7 @@ SCR.title=()=>{
  const sv=hasSave()?loadSave():null;
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-4);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px">
-  ${ttl('RETRO',true)}<div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
+  ${ttl('RETRO',true)}<div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
   <div class="row" style="gap:10px">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
@@ -1991,7 +2038,7 @@ function plist(t){return rosterOf(t).sort((a,b)=>POSL.indexOf(a.pos)-POSL.indexO
 const LOOKS_KEY='rf_looks_v1';
 function lookTable(){try{return JSON.parse(localStorage.getItem(LOOKS_KEY)||'{}')||{};}catch(e){return{};}}
 function lookKey(p){return(String(p.fn||'')+' '+String(p.ln||'')).toUpperCase().replace(/[^A-Z0-9 ]/g,'').trim();}
-function applySavedLook(p){const v=lookTable()[lookKey(p)];if(v){p.skin=v.skin;p.hair=v.hair;p.hc=v.hc;p.beard=v.beard;}}
+function applySavedLook(p){const k=lookKey(p),v=lookTable()[k];if(v){p.skin=v.skin;p.hair=v.hair;p.hc=v.hc;p.beard=v.beard;}const sm=skinMap()[k];if(sm&&!p.spr)p.spr=sm;}
 const HAIRN=['BALD','BUZZ','SHORT','AFRO','DREADS','MOHAWK','HEADBAND'],BEARDN=['NONE','STUBBLE','BEARD'];
 ACT.pLook=()=>{const p=P(UI.sub.id);if(!p)return;UI.look={skin:p.skin||0,hair:p.hair||0,hc:p.hc||0,beard:p.beard||0};lookModal();};
 function lookModal(){const p=P(UI.sub.id),v=UI.look,prev=Object.assign({},p,v,{id:'prev'+Math.random()});
@@ -2048,9 +2095,9 @@ ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)l
  const prev=id=>{const lk=lookFor(Object.assign({},p,{spr:id||null}),L.user);const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();};
  const cell=(id,nm)=>`<button class="bt ${(p.spr||null)===(id||null)?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 4px;min-width:0" data-a="pSkin2" data-v="${esc(id||'')}"><img src="${prev(id)}" width="36" height="51" style="image-rendering:pixelated"><span class="s7" style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span></button>`;
  modal(`<div class="mp" style="width:520px;align-items:center;gap:8px">${ttl('SKIN · '+esc(pname(p).toUpperCase()),true)}
- <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.map(k=>cell(k.id,k.name)).join('')}</div>
+ <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.map(k=>skinOpen(k.id)?cell(k.id,k.name):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">SECRET</span></div>`).join('')}</div>
  ${SKINS.ok?'':'<div class="s7 dim">LOADING SKINS...</div>'}<button class="bt" data-a="close">DONE</button></div>`);};
-ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;p.spr=d.v||null;if(!p.spr)delete p.spr;try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
+ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(d.v&&!skinOpen(d.v))return;p.spr=d.v||null;if(!p.spr)delete p.spr;skinMapSet(p);try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
 ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+myWk();const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
 ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`;
@@ -5097,7 +5144,7 @@ function netWire(c){
  const isCand=()=>NET.role==='host'&&(NET.cands||[]).includes(c);
  c.on('open',()=>{if(c!==NET.conn&&!isCand())return;
   if(NET.role==='host'){if(isCand())return;NET.connOpen=true;NET.on=true;NET.stage='lobby';NET.lastRx=performance.now();netLobbySend();}
-  else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER});}}
+  else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER,sk:skinMap()});}}
   sfx('first');if(UI.scr==='online'||UI.scr==='olroom')render();});
  c.on('data',m=>{try{
   if(isCand()){if(m&&m.t==='rejoin'&&m.tok&&m.tok===NET.gtok){const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
@@ -5223,7 +5270,7 @@ const netMine=()=>NET.role==='host'?'h':'g',netTheirs=()=>NET.role==='host'?'g':
 ACT.netTeam=d=>{const me=NET.lob[netMine()],them=NET.lob[netTheirs()],ord=H2H_ORDER();let i=ord.indexOf(me.team);do{i=(i+ +d.d+ord.length)%ord.length;}while(ord[i]===them.team);me.team=ord[i];me.uni=NET.role==='host'?0:1;netAfterPick();};
 ACT.netUni=d=>{const me=NET.lob[netMine()],n=uniformsFor(me.team).length;me.uni=((me.uni||0)+ +d.d+n)%n;netAfterPick();};
 ACT.netSet=d=>{if(NET.role!=='host')return;const v=isNaN(+d.v)?d.v:+d.v;NET.lob[d.k]=v;netAfterPick();};
-function netAfterPick(){if(NET.role==='host')netLobbySend();else netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER});render();}
+function netAfterPick(){if(NET.role==='host')netLobbySend();else netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER,sk:skinMap()});render();}
 SCR.online=()=>{cfbSync(null);const s=NET;
  const head=`<div class="row" style="width:100%"><button class="bt ico" data-a="netBack">${ICON.back}</button><div class="grow">${ttl('ONLINE')}</div><div style="width:32px"></div></div>`;
  const err=s.err?`<div class="rdt" style="max-width:520px;text-align:center;line-height:1.8">${esc(s.err)}</div>${/YOU HAVE AN OLD VERSION/.test(s.err)?'<button class="bt y" data-a="netReload">RELOAD</button>':''}`:'';
@@ -5265,7 +5312,8 @@ function teamRatings0(t){try{return L&&L.teams&&L.players?teamRatings(t):null;}c
 ACT.netGo=async()=>{if(NET.role!=='host'||!NET.connOpen)return;if(NET.oldV){render();return;}const o=NET.lob;
  const s={you:o.h.team,opp:o.g.team,uU:o.h.uni||0,uO:o.g.uni||0,rm:o.rm,diff:1,mode:'both',qlen:o.qlen,home:o.home==='h',arc:null};
  if(s.rm==='NFL'&&!H2H_NFL){try{H2H_NFL=await loadNFLRosterData();}catch(e){s.rm='CUSTOM';}}
- const g=h2hBuild(s);L.net=true;L.settings.play='both';L.settings.replay=false;L.settings.arc=null;
+ const g=h2hBuild(s);{const hm=skinMap(),gm=NET.gsk||{};for(const p of L.players){if(p.team!==o.h.team&&p.team!==o.g.team)continue;const m=p.team===o.h.team?hm:gm,id=m[lookKey(p)];if(id)p.spr=String(id).slice(0,40);else delete p.spr;}}   /* everyone wears his own skins: the friend's come over in his picks */
+ L.net=true;L.settings.play='both';L.settings.replay=false;L.settings.arc=null;
  Object.assign(NET,{lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],sendAcc:0,wait:false,cands:[],lastRx:performance.now()});
  startMatch(g,{uU:s.uU,uO:s.uO});M.oto=2;M.ocp=2;NET.stage='game';
  const pl=L.players.filter(p=>p.team===g.h||p.team===g.a),Lc=Object.assign({},L,{players:pl});delete Lc.pmap;
@@ -5334,7 +5382,7 @@ function netHostMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'YOUR FRIEND LEFT THE GAME':'YOUR FRIEND LEFT');return;}
  if(m.t==='needR'){NET.rN=Math.max(NET.rN||0,2);NET.lov=undefined;return;}
  if(m.t==='hb'){NET.rtt=m.rtt||0;netSend({t:'hbr',ts:m.ts});return;}
- if(m.t==='pick'){if(!NET.lob)return;NET.oldV=m.v!==NET_VER?(m.v||1):0;if(NET.oldV){NET.err=m.v>NET_VER?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':'YOUR FRIEND HAS AN OLD VERSION OF THE GAME. THEY NEED TO CLOSE THE TAB AND OPEN THE GAME AGAIN.';}else if(/VERSION/.test(NET.err))NET.err='';if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(OLG){if(NET.oldV&&UI.scr==='olroom')render();olNetGo();return;}if(UI.scr==='online'||UI.scr==='olroom')render();return;}
+ if(m.t==='pick'){if(!NET.lob)return;if(m.sk&&typeof m.sk==='object')NET.gsk=m.sk;NET.oldV=m.v!==NET_VER?(m.v||1):0;if(NET.oldV){NET.err=m.v>NET_VER?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':'YOUR FRIEND HAS AN OLD VERSION OF THE GAME. THEY NEED TO CLOSE THE TAB AND OPEN THE GAME AGAIN.';}else if(/VERSION/.test(NET.err))NET.err='';if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(OLG){if(NET.oldV&&UI.scr==='olroom')render();olNetGo();return;}if(UI.scr==='online'||UI.scr==='olroom')render();return;}
  if(!netHost())return;
  if(m.t==='ans'){if(M.ov&&M.ov.net&&M.ov.gacts&&+m.q===M.ov.qid){const f=M.ov.gacts[+m.i];M.ov=null;if(f)f();}return;}
  const pre=M.phase==='pre'&&!M.ov,live=M.phase==='live';
@@ -5531,6 +5579,7 @@ ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
 loadSkins();
+ACT.egg=eggTap;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){

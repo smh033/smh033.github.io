@@ -69,6 +69,19 @@ Any other color stays exactly as drawn.
    - `file`: the PNG's file name in this folder.
 3. Commit and push. The new skin shows up in the SKIN picker after a reload.
 
+### Optional settings per skin
+
+You can add any of these to a skin's line in `skins.json`:
+
+- `"frame": [24, 32]`: this sheet's frame size in pixels, if it isn't 12 × 16. A bigger,
+  more detailed drawing works too: keep all 9 frames the same size, side by side.
+- `"scale": 0.5`: how big one sheet pixel is compared with the normal 12 × 16 player.
+  For a 24 × 32 sheet, use 0.5 so the player is the normal size on the field.
+- `"tint": false`: turns off the team-color repaint, so the colors stay exactly as drawn.
+- `"secret": true`: hidden (shown as SECRET) until it's unlocked by an easter egg.
+
+Example: `{ "id": "hero", "name": "HERO", "file": "hero.png", "frame": [24, 32], "scale": 0.5 }`
+
 To **replace the temporary robot**, either draw over `placeholder.png` (same file
 name, so players already wearing it update automatically) or add a new skin and
 remove the placeholder entry.
