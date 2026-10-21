@@ -3,7 +3,7 @@
   "frames": ["stand", "run1", "run2", "run3", "run4", "dive", "carry", "throw", "reach"],
   "skins": [
     { "id": "placeholder", "name": "ROBOT (TEMP)", "file": "placeholder.png" },
-    { "id": "david-martinez", "name": "DAVID MARTINEZ", "file": "david-martinez-png.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "egg": 1 },
+    { "id": "david-martinez", "name": "DAVID MARTINEZ", "file": "david-martinez.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "egg": 1 },
     { "id": "talia", "name": "TALIA", "file": "talia.png", "frame": [42, 39], "scale": 0.5, "tint": false, "secret": true, "egg": 2 }
   ]
 }
