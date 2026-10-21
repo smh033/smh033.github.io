@@ -85,6 +85,9 @@ You can add any of these to a skin's line in `skins.json`:
 - `"egg": 1`, `"egg": 2` or `"egg": 3`: this is the skin that easter egg unlocks (1 = tap FOOTBALL on the title
   screen 7 times, 2 = tap RETRO 7 times, 3 = tap the row of little players 7 times). Use it together with `"secret": true`.
 
+- `"code": "Cross"`: players unlock this skin by typing the code on the title screen's CODES button
+  (capitals don't matter). Use it together with `"secret": true`. Anyone who opens skins.json on GitHub can read it.
+
 Example: `{ "id": "hero", "name": "HERO", "file": "hero.png", "frame": [24, 32], "scale": 0.5 }`
 
 To **replace the temporary robot**, either draw over `placeholder.png` (same file

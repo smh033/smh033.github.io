@@ -1433,7 +1433,7 @@ function eggPlay3(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
  const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#a56',key:'egg3',spr:id};
  let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
  const bats=[];for(let i=0;i<14;i++)bats.push({x:Math.random()*640,y:20+Math.random()*160,v:40+Math.random()*90,p:Math.random()*6,s:0.6+Math.random()*0.8});
- const adlibs=['YEAH','WHAT','00!','LET\'S GO','UH','KING','SHEESH','BLOOD MOON'],pops=[];
+ const adlibs=['YEAH','WHAT','00!','LET\'S GO','UH','KING','FWAEH','SEEYUH'],pops=[];
  const txt=(t,x,y,sz,col,al)=>{g.font=sz+'px "Press Start 2P",monospace';g.textAlign=al||'center';g.textBaseline='middle';g.fillStyle=col;g.fillText(t,x,y);};
  const drip=(t,x,y,sz,k)=>{txt(t,x+3,y+3,sz,'#000');txt(t,x,y,sz,RED);g.font=sz+'px "Press Start 2P",monospace';const w=g.measureText(t).width;
   for(let i=0;i<9;i++){const dx=x-w/2+((i*53)%Math.max(1,w)),len=Math.max(0,(k*60-((i*17)%30)))*(0.5+((i*7)%5)/6);g.fillStyle=RED;g.fillRect(Math.round(dx),y+sz/2,3,len);g.fillRect(Math.round(dx)-1,y+sz/2+len-2,5,4);}};
@@ -1722,10 +1722,22 @@ SCR.title=()=>{
   <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
-   <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button></div>
+   <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
+/* CODES: type a code to unlock a skin. Codes live in skins/skins.json as "code": "..." (not case-sensitive) */
+ACT.codes=()=>{modal(`<div class="mp" style="width:380px">${ttl('CODES',true)}<div class="s7">TYPE A CODE TO UNLOCK A SKIN</div>
+ <input class="txt" id="codeIn" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ENTER CODE" onkeydown="if(event.key==='Enter'){event.preventDefault();ACT.codeGo();}">
+ <div id="codeMsg" class="s7" style="min-height:12px"></div>
+ <div class="row end"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="codeGo">REDEEM</button></div></div>`);setTimeout(()=>{const i=$('#codeIn');if(i)i.focus();},50);};
+ACT.codeGo=()=>{const i=$('#codeIn'),m=$('#codeMsg');if(!i)return;const c=(i.value||'').trim().toLowerCase().replace(/\s+/g,' ');if(!c)return;
+ const say=(t,col)=>{if(m){m.textContent=t;m.style.color=col;}};
+ if(!SKINS.ok){say(SKINS.err||'SKINS NOT LOADED YET, TRY AGAIN','#ff5a5a');return;}
+ const k=SKINS.list.find(x=>x.code!=null&&String(x.code).trim().toLowerCase().replace(/\s+/g,' ')===c);
+ if(!k){sfx('juke');say('INVALID CODE','#ff5a5a');i.select();return;}
+ if(skinOpen(k.id)){say(String(k.name||k.id).toUpperCase()+' IS ALREADY UNLOCKED','#ffd23f');return;}
+ closeModal();eggReward(k.id,String(k.name||k.id).toUpperCase(),'#ffd23f','#ffffff');};
 ACT.cont=()=>{L=loadSave();if(!L)return toast('NO SAVE FOUND');indexPlayers();parityFix();resumeFlow();};
 /* older saves: spread the league back out once */
 function parityFix(){if(!L||L.phase==='FOUND')return;try{let ch=false;if(!L.parity){balanceLeague(true);ch=true;}if(!L.fa1){aiFreeAgency(true);L.fa1=1;ch=true;}if(!L.qbpot){for(const p of L.players)qbPotBoost(p);L.qbpot=1;ch=true;}if(ch)save();}catch(e){console.error(e);}}
