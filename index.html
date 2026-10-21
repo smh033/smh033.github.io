@@ -3256,10 +3256,18 @@ function dragPre(dt){const f=M.dragD;if(!f||!ptr.down||M.input!=='dctl'){M.dragD
    Bottom-left of the screen whenever you're on defense. Push it to run your highlighted
    defender; before the snap it walks him (corners, linebackers, anyone) to a new spot.
    A second finger taps to dive / jump, or taps another defender to switch to him. */
-const JOY={x:62,y:284,r:30,hit:48};
+/* Touch screens: like Roblox, put your thumb down ANYWHERE on the left side of the field and the
+   stick appears under it; drag past the edge and it follows your thumb. A quick tap there (no drag)
+   picks the defender you tapped before the snap, or dives during the play. */
+const JOY={x:66,y:278,r:38,hit:52,ox:66,oy:278};
+const JOY_ZONE={x1:270,y0:70,y1:332};
 function joyOn(){return !!(M&&M.def&&!M.ov&&(M.phase==='pre'||M.phase==='live'));}
-function joyHit(p){return joyOn()&&Math.hypot(p.x-JOY.x,p.y-JOY.y)<=JOY.hit;}
-function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.x,dy=ptr.y-JOY.y;const d=Math.hypot(dx,dy);if(d<4)return{x:0,y:0,m:0};const m=Math.min(1,d/JOY.r);return{x:dx/d,y:dy/d,m};}
+function joyHit(p){if(!joyOn())return false;
+ if(IS_MOBILE&&p.x<JOY_ZONE.x1&&p.y>JOY_ZONE.y0&&p.y<JOY_ZONE.y1){JOY.ox=clamp(p.x,JOY.r+6,CW-JOY.r-6);JOY.oy=clamp(p.y,JOY.r+6,CH-JOY.r-6);return true;}
+ if(Math.hypot(p.x-JOY.x,p.y-JOY.y)<=JOY.hit){JOY.ox=JOY.x;JOY.oy=JOY.y;return true;}return false;}
+function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.ox,dy=ptr.y-JOY.oy;let d=Math.hypot(dx,dy);
+ if(IS_MOBILE&&d>JOY.r*1.35){const k=(d-JOY.r*1.35)/d;JOY.ox+=dx*k;JOY.oy+=dy*k;dx=ptr.x-JOY.ox;dy=ptr.y-JOY.oy;d=Math.hypot(dx,dy);}   /* the stick follows your thumb */
+ if(d<4)return{x:0,y:0,m:0};const m=Math.min(1,d/JOY.r);return{x:dx/d,y:dy/d,m};}
 function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
  const sp=6.5*v.m,nx=clamp(f.x+v.x*(M.dir<0?-1:1)*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
  f.x=nx;f.y=ny;f.moved=true;
@@ -3267,11 +3275,11 @@ function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
  preAnim(f,dx,dy,dt);}
 /* running legs for a defender you're moving before the snap */
 function preAnim(f,dx,dy,dt){const sp=Math.hypot(dx,dy)/Math.max(dt,1e-3);if(sp<0.3)return;f.mv=true;f.preMv=true;f.t+=dt*(0.35+Math.min(sp,9)*0.17);if(Math.abs(dx)>0.002)f.face=dx>0?1:-1;}
-function drawJoy(){if(!joyOn())return;const v=joyVec(),kx=JOY.x+(v?v.x*v.m*JOY.r:0),ky=JOY.y+(v?v.y*v.m*JOY.r:0);
- cx.save();cx.globalAlpha=v?0.75:0.45;cx.fillStyle='rgba(0,0,30,.55)';cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.fill();
- cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(JOY.x,JOY.y,JOY.r+6,0,Math.PI*2);cx.stroke();
- cx.fillStyle='#fff';for(const[a,b]of[[0,-1],[0,1],[-1,0],[1,0]]){const tx=JOY.x+a*(JOY.r+1),ty=JOY.y+b*(JOY.r+1);cx.fillRect(tx-2+(a?a:0),ty-2+(b?b:0),4,4);}
- cx.globalAlpha=v?0.95:0.7;cx.fillStyle='#ffe94a';cx.beginPath();cx.arc(kx,ky,13,0,Math.PI*2);cx.fill();cx.strokeStyle='#000';cx.stroke();cx.restore();}
+function drawJoy(){if(!joyOn())return;const v=joyVec(),X=v?JOY.ox:JOY.x,Y=v?JOY.oy:JOY.y,kx=X+(v?v.x*v.m*JOY.r:0),ky=Y+(v?v.y*v.m*JOY.r:0);
+ cx.save();cx.globalAlpha=v?0.75:0.4;cx.fillStyle='rgba(0,0,30,.55)';cx.beginPath();cx.arc(X,Y,JOY.r+6,0,Math.PI*2);cx.fill();
+ cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.arc(X,Y,JOY.r+6,0,Math.PI*2);cx.stroke();
+ cx.fillStyle='#fff';for(const[a,b]of[[0,-1],[0,1],[-1,0],[1,0]]){const tx=X+a*(JOY.r+1),ty=Y+b*(JOY.r+1);cx.fillRect(tx-2+(a?a:0),ty-2+(b?b:0),4,4);}
+ cx.globalAlpha=v?0.95:0.65;cx.fillStyle='#ffe94a';cx.beginPath();cx.arc(kx,ky,15,0,Math.PI*2);cx.fill();cx.strokeStyle='#000';cx.stroke();cx.restore();}
 /* Your defender breaking on a thrown ball after you tapped DIVE: sprint to where it's coming down
    and launch so you arrive with it - a jump if you're already under it, a full-out dive if not. */
 function ballDive(f,dt){const b=M.ball;if(!b||!b.F||b.done||f.eng||f.stun>0||f.down>0){f.diveQ=false;return false;}
@@ -4773,7 +4781,7 @@ function hud(){
   if(M.def&&M.phase==='pre'){
    for(const[c,l]of COVERS)b.push(`<button class="bt ${M.dcall===c?'y':''}" data-a="dCall" data-c="${c}">${l}</button>`);
    if(M.to>0&&M.runoff>0&&M.clock>0)b.push(`<button class="bt" data-a="gTO">TIMEOUT</button>`);
-   hint=M.plays<12?(IS_MOBILE?'TAP A DEFENDER · JOYSTICK OR DRAG TO LINE HIM UP':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
+   hint=M.plays<12?(IS_MOBILE?'THUMB DOWN ON THE LEFT = JOYSTICK · TAP A DEFENDER TO PICK HIM':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
   }else if(M.def&&M.phase==='live'){
    if(M.play!=='intret'){if(ballAir())b.push(`<button class="bt g" data-a="gCatch">CATCH</button>`,`<button class="bt r" data-a="gSwat">SWAT</button>`);else b.push(`<button class="bt r" data-a="gDDive">DIVE</button>`);b.push(`<button class="bt" data-a="gSwitch">SWITCH</button>`);}
    hint=M.play==='intret'?(IS_MOBILE?'RUN IT BACK! HOLD &amp; DRAG TO STEER · TAP TO DIVE':'RUN IT BACK! HOLD &amp; DRAG TO STEER · SPACE TO DIVE'):(M.plays<8?(IS_MOBILE?(ballAir()?'BALL IS UP! CATCH = GO FOR THE PICK · SWAT = KNOCK IT DOWN':'DRAG TO MOVE · TAP TO DIVE AT THE RUNNER'):'DRAG OR ARROWS/WASD TO MOVE · SPACE DIVE · C CATCH · X SWAT · Q SWITCH'):'');
@@ -4898,6 +4906,7 @@ function applyRunSwipe(c,cmd){
 function ptrUp(e){
  if(!ptr.down||(e&&e.pointerId!==ptr.id))return;ptr.down=false;ptr.id=null;if(!M)return;
  const inp=M.input;M.input=null;
+ if(inp==='joy'){if(IS_MOBILE&&M.def&&ptr.moved<10&&performance.now()-ptr.t0<260){if(M.phase==='pre')defSelectAt(ptr.sx,ptr.sy);else if(M.phase==='live')ctlTap();}return;}   /* a tap in the stick area */
  if(inp==='dctl'){M.dragD=null;if(M.def&&M.phase==='live'&&!ptr.sel&&ptr.moved<14&&performance.now()-ptr.t0<320)ctlTap();return;}
  if(M.aim){const a=M.aim;M.aim=null;if(inp==='aim'&&(M.phase==='live'&&M.play==='pass'||netGuest()&&M.phase==='pre')&&!M.thrown&&!M.carrier){const ai=aimInfo(a);if(ai.pull>=PULL_MIN){if(ai.run)tuck();else throwBall(ai);}}return;}
  if(M.kick&&M.kick.sw){const s=M.kick.sw;M.kick.sw=null;kickRelease(s.cx-s.sx,s.cy-s.sy);return;}
