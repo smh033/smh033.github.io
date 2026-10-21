@@ -880,6 +880,40 @@ function aiTrade(){
   return true;}
  return false;
 }
+/* ---------- computer teams make offers for your players ----------
+   Now and then a team wants one of your players and offers a player (or two, or a player and a
+   pick) of about the same value. Offers last two weeks; accept or decline from the hub. */
+const offNow=()=>L.phase==='REG'?L.week:0;
+function aiOffersFor(t){return(L.aiOffers||[]).filter(o=>o.to===t&&o.y===L.year&&(o.exp>=offNow()||L.phase!=='REG'));}
+function aiOfferGen(){
+ if(!tradesOpen())return;const now=offNow();L.aiOffers=(L.aiOffers||[]).filter(o=>o.y===L.year&&o.exp>=now);
+ for(const h of humans()){if(Math.random()>0.45||aiOffersFor(h).length>=2)continue;
+  const mine=rosterOf(h).filter(p=>!(p.inj>0)&&trVal(p)>4).sort((a,b)=>trVal(b)-trVal(a)).slice(0,7);if(!mine.length)continue;
+  const want=pick(mine),v=trVal(want);
+  for(const t of shuffle(L.teams.map(x=>x.id).filter(x=>!isHuman(x)))){
+   const R0=rosterOf(t).filter(p=>!(p.inj>0)&&!(p.traded&&p.traded.y===L.year&&p.traded.w>=L.week-1));let best=null;
+   for(const a of shuffle(R0.slice())){const va=trVal(a);if(va>=v*0.98&&va<=v*1.3){best={give:[a.id],gpk:[0,0,0]};break;}}
+   if(!best)for(const a of R0){for(const b of R0){if(b.id<=a.id)continue;const sv=trVal(a)+trVal(b);if(sv>=v*1.02&&sv<=v*1.4){best={give:[a.id,b.id],gpk:[0,0,0]};break;}}if(best)break;}
+   if(!best){const ap=aiPk(t);for(const a of R0){const gap=v-trVal(a);if(gap<=0)continue;for(let r=0;r<3&&!best;r++)if(ap[r]>0&&PICK_V[r]>=gap*0.95&&PICK_V[r]<=gap*1.7)best={give:[a.id],gpk:[0,0,0].map((x,i)=>i===r?1:0)};if(best)break;}}
+   if(best){L.aiOffers.push({id:Date.now()*10+ri(0,9),t,to:h,want:[want.id],give:best.give,gpk:best.gpk,y:L.year,exp:now+2});break;}}}}
+/* is it still doable? '' = yes, otherwise why not */
+function aiOfferCheck(o){const G=o.want.map(P),R=o.give.map(P);
+ if(!tradesOpen())return'TRADES ARE CLOSED';
+ if(G.some(p=>!p||p.team!==o.to)||R.some(p=>!p||p.team!==o.t))return'THE PLAYERS HAVE MOVED ON';
+ const ap=aiPk(o.t);if(o.gpk.some((n,i)=>n>ap[i]))return'THAT PICK IS GONE';
+ const n=mainN(o.to)-G.filter(p=>!isBk(p)).length+R.length;if(n>rmax()+bkFreeN(o.to)+G.filter(isBk).length)return'YOUR ROSTER WOULD BE TOO BIG';
+ const cap=capUsed(o.to)-G.reduce((s,p)=>s+p.sal,0)+R.reduce((s,p)=>s+p.sal,0);if(cap>L.cap+0.01)return'YOU WOULD BE OVER THE SALARY CAP';
+ return'';}
+function aiOfferDo(id){const o=(L.aiOffers||[]).find(x=>x.id===id);if(!o||o.to!==L.user)return'GONE';const why=aiOfferCheck(o);if(why)return why;
+ const t=o.t,G=o.want.map(P),R=o.give.map(P);
+ for(const p of G){p.team=t;p.bench=false;p.bk=false;p.mor=clamp(p.mor-5,0,100);p.traded={y:L.year,w:L.week};}
+ for(const p of R){p.team=L.user;p.bk=false;p.bench=false;p.mor=clamp(p.mor+5,0,100);p.yrs=Math.max(1,p.yrs);p.traded={y:L.year,w:L.week};}
+ {const ap=aiPk(t);o.gpk.forEach((n,i)=>{L.picks[i]+=n;ap[i]-=n;});}
+ const rr=rosterOf(t);if(rr.length>rmax()){const st=starterSet(t);rr.filter(x=>!st.has(x.id)).sort((a,b)=>ovr(a)-ovr(b)).slice(0,rr.length-rmax()).forEach(x=>{x.team=-1;x.yrs=1;});}
+ fillAIRoster(t);bkAuto(L.user,true);
+ const pk=o.gpk.map((n,i)=>n?'A ROUND '+(i+1)+' PICK':'').filter(Boolean);
+ news('TRADE: '+abbr(L.user)+' send '+G.map(p=>p.pos+' '+fullname(p)).join(', ')+' to '+abbr(t)+' for '+[...R.map(p=>p.pos+' '+fullname(p)),...pk].join(', ')+'.');
+ L.aiOffers=L.aiOffers.filter(x=>x.id!==id);return'';}
 function advanceWeek(){
  simWeekOthers();
  if(L.phase==='REG'){
@@ -887,6 +921,7 @@ function advanceWeek(){
   const big=L.sched[wk-1].filter(g=>g!==ug).sort((x,y)=>Math.abs(x.hs-x.as)-Math.abs(y.hs-y.as))[0];
   if(big)news('WK'+wk+': '+abbr(big.h)+' '+big.hs+', '+abbr(big.a)+' '+big.as);
   weeklyUpkeep(!L.seats&&!ug);if(wk<=TRADE_DEADLINE){const n=Math.random()<0.55?1:Math.random()<0.5?2:0;for(let i=0;i<n;i++)aiTrade();}
+  try{L.week++;aiOfferGen();}finally{L.week--;}
   L.week++;
   if(L.week>18)startPlayoffs();
  }else if(L.phase==='PO'){weeklyUpkeep(false);advancePO();}
@@ -1278,10 +1313,10 @@ function defaultUnis(g){const H=uniformsFor(g.h),A=uniformsFor(g.a);let ua=1;
 function lookFor(p,t,away,alt){
  if(typeof away==='number'){const U=uniformsFor(t),u=U[((away%U.length)+U.length)%U.length];
   const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,mask:u.mask||null,skin:SKIN[p?p.skin:2],teamId:t};
-  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;}
+  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,'team'+t].join('');if(p&&p.spr){lk.spr=p.spr;lk.key+='|'+p.spr+(SKINS.img[p.spr]?1:0);}loadFieldLogo(t);return lk;}
  let c=teamCol(t);if(alt)c={c1:c.c2,c2:c.c1};const pl=lum(c.c2);
  const lk={helm:c.c1,stripe:c.c2,jersey:away?'#f0f0f0':c.c1,trim:away?c.c1:c.c2,pants:away?'#d9d9d9':(pl>70&&pl<215?c.c2:'#e2e2e2'),socks:c.c1,skin:SKIN[p?p.skin:2],teamId:t};
- lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');loadFieldLogo(t);return lk;
+ lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');if(p&&p.spr){lk.spr=p.spr;lk.key+='|'+p.spr+(SKINS.img[p.spr]?1:0);}loadFieldLogo(t);return lk;
 }
 const LOGO_MINI={};
 function logoMini(t,px,tint){const img=NFL_FIELD_LOGOS[t];if(!img||!img.complete||!img.naturalWidth)return null;const k=t+'|'+px+'|'+(tint||'');if(LOGO_MINI[k])return LOGO_MINI[k];
@@ -1290,6 +1325,26 @@ function logoMini(t,px,tint){const img=NFL_FIELD_LOGOS[t];if(!img||!img.complete
  while(w/2>=px){const cc=document.createElement('canvas');cc.width=Math.ceil(w/2);cc.height=Math.ceil(h/2);const g=cc.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,cc.width,cc.height);src=cc;w=cc.width;h=cc.height;}
  const out=document.createElement('canvas');out.width=px;out.height=px;const g=out.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.drawImage(src,0,0,out.width,out.height);
  return LOGO_MINI[k]=out;}
+/* ---------- player skins (skins/ folder: skins.json + one 12x16-per-frame PNG sheet each; see skins/README.md) ---------- */
+const SKINS={list:[],img:{},tint:new Map(),fw:12,fh:16,ok:false};
+function loadSkins(){fetch('skins/skins.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.skins))return;
+ if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}SKINS.list=j.skins.filter(x=>x&&x.id&&x.file);SKINS.ok=true;
+ for(const k of SKINS.list){const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};im.src='skins/'+k.file;}}).catch(()=>{});}
+const skinName=id=>{const k=SKINS.list.find(x=>x.id===id);return k?k.name:'NONE';};
+/* the sheet with the key colors swapped for this team's uniform: #FF00FF jersey, #00FFFF trim, #FFFF00 helmet */
+function skinSheet(id,lk){const im=SKINS.img[id];if(!im)return null;const key=id+'|'+lk.jersey+lk.trim+lk.helm;let c=SKINS.tint.get(key);if(c)return c;
+ c=document.createElement('canvas');c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);
+ try{const d=g.getImageData(0,0,c.width,c.height),a=d.data,hx=h=>{h=String(h||'#888').replace('#','');if(h.length===3)h=h.split('').map(x=>x+x).join('');const n=parseInt(h,16);return[(n>>16)&255,(n>>8)&255,n&255];};
+  const J=hx(lk.jersey),Tr=hx(lk.trim),He=hx(lk.helm);
+  for(let i=0;i<a.length;i+=4){if(a[i+3]<8)continue;const r=a[i],gg=a[i+1],b=a[i+2];let t=null;
+   if(r>245&&gg<10&&b>245)t=J;else if(r<10&&gg>245&&b>245)t=Tr;else if(r>245&&gg>245&&b<10)t=He;if(t){a[i]=t[0];a[i+1]=t[1];a[i+2]=t[2];}}
+  g.putImageData(d,0,0);}catch(e){}
+ if(SKINS.tint.size>300)SKINS.tint.clear();SKINS.tint.set(key,c);return c;}
+/* frame order on the sheet: 0 stand, 1-4 run, 5 dive, 6 carry, 7 throw, 8 reach */
+function drawSkin(c,lk,o,fr,u){const sh=skinSheet(lk.spr,lk);if(!sh)return false;const fw=SKINS.fw,fh=SKINS.fh,n=Math.max(1,Math.floor(sh.width/fw));
+ let i=o.dive?5:o.throw?7:(o.reach||o.oneh)?8:o.ball?6:o.hurdle?2:fr>=0?1+fr:0;if(i>=n)i=i>=1&&i<=4&&n>1?1+((i-1)%Math.min(4,n-1)):0;
+ const bob=(!o.dive&&(fr===1||fr===3))?-u:0;c.imageSmoothingEnabled=false;
+ c.drawImage(sh,i*fw,0,fw,fh,-6*u+(o.pose?(o.pose.dx||0)*u:0),-16*u+bob+(o.pose?(o.pose.dy||0)*u:0),fw*u,fh*u);return true;}
 function drawMan(c,x,y,lk,o){
  o=o||{};const u=o.u||2;
  c.save();c.translate(Math.round(x),Math.round(y));
@@ -1297,6 +1352,7 @@ function drawMan(c,x,y,lk,o){
  if(o.down){c.translate(0,-5*u);c.rotate((o.face<0?-1:1)*Math.PI/2);}
  if(o.face<0)c.scale(-1,1);
  const fr=o.hurdle||o.pose?-1:o.fr!=null?o.fr:(o.run?Math.floor((o.t||0)*9)%4:-1),bob=(fr===1||fr===3)?-u:0;
+ if(lk.spr&&SKINS.img[lk.spr]&&drawSkin(c,lk,o,fr,u)){c.restore();return;}
  c.translate(-6*u,-16*u+bob);if(o.pose)c.translate((o.pose.dx||0)*u,(o.pose.dy||0)*u);
  const r=(col,X,Y,W,H)=>{c.fillStyle=col;c.fillRect(X*u,Y*u,W*u,H*u);};
  const sk=lk.skin,skD=shade(sk,-30),H=lk.helm,J=lk.jersey,TR=lk.trim,PN=lk.pants,PNd=shade(PN,-40),SO=lk.socks,SOd=shade(SO,-35),SH='#141418';
@@ -1771,7 +1827,7 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
   <div class="col" style="flex:1;min-width:0;gap:12px">
    ${box('FANS '+Math.round(L.fan)+'%',`<div class="bar"><i style="width:${L.fan}%"></i></div>`,'padding:10px 8px 7px')}
    <div class="row stretch" style="gap:8px">${box('MORALE',`${mor}% ${face(mor)}`,'flex:1;min-width:0','c')}${box('OFFENSE',stars(R.offS,'o'),'flex:1;min-width:0','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1;min-width:0','c')}</div>
-   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${L.news.slice(0,4).map(n=>`<div class="nwi">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0')}
+   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${aiOffersFor(L.user).length?`<div class="nwi yl blink" style="cursor:pointer" data-a="aiOff">TRADE OFFER FROM ${esc(T(aiOffersFor(L.user)[0].t).name.toUpperCase())}! TAP TO SEE</div>`:''}${L.news.slice(0,aiOffersFor(L.user).length?3:4).map(n=>`<div class="nwi">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0')}
   </div>
  </div>
  <div class="row" style="gap:7px">
@@ -1782,6 +1838,16 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
   <button class="bt y grow" data-a="hubGo">CONTINUE &gt;</button>
  </div></div>`;
 };
+ACT.aiOff=d=>{const list=aiOffersFor(L.user);if(!list.length){UI.modal=null;return render();}const i=clamp(+(d&&d.i)||0,0,list.length-1),o=list[i],why=aiOfferCheck(o);
+ const G=o.want.map(P).filter(Boolean),R=o.give.map(P).filter(Boolean),pk=o.gpk.map((n,k)=>n?`<div class="s7 yl">+ ROUND ${k+1} DRAFT PICK</div>`:'').join('');
+ modal(`<div class="mp" style="width:560px;gap:8px">${ttl('TRADE OFFER',true)}<div class="s10" style="text-align:center">${esc(T(o.t).name.toUpperCase())} WANT TO TRADE</div>
+ <div class="row stretch" style="gap:10px"><div class="box col grow" style="align-items:center;gap:5px;padding:12px 6px 6px"><span class="lbl">YOU GET</span><div class="row ctr" style="gap:5px;flex-wrap:wrap">${R.map(p=>pcard(p,o.t,{sm:true})).join('')}</div>${pk}</div>
+ <div class="box col grow" style="align-items:center;gap:5px;padding:12px 6px 6px"><span class="lbl">YOU GIVE</span><div class="row ctr" style="gap:5px;flex-wrap:wrap">${G.map(p=>pcard(p,L.user,{sm:true})).join('')}</div></div></div>
+ ${why?`<div class="s7 rdt" style="text-align:center">${esc(why)}</div>`:`<div class="s7 dim" style="text-align:center">OFFER ENDS AFTER WEEK ${o.exp}</div>`}
+ <div class="row ctr" style="gap:8px">${list.length>1?`<button class="bt" data-a="aiOff" data-i="${(i+1)%list.length}">NEXT (${i+1}/${list.length})</button>`:''}<button class="bt r" data-a="aiOffNo" data-id="${o.id}">DECLINE</button><button class="bt y" data-a="aiOffYes" data-id="${o.id}" ${why?'disabled':''}>ACCEPT</button></div></div>`);};
+ACT.aiOffNo=d=>{const id=+d.id,f=()=>{L.aiOffers=(L.aiOffers||[]).filter(x=>x.id!==id);};UI.modal=null;if(L.online)return olTx(f).then(()=>render());f();save();render();};
+ACT.aiOffYes=d=>{const id=+d.id;UI.modal=null;let why='';const f=()=>{why=aiOfferDo(id);};
+ const done=()=>{if(why){toast(why);}else{sfx('coin');toast('TRADE DONE!');}render();};if(L.online)return olTx(f).then(done);f();save();done();};
 ACT.hubGo=()=>{
  if(L.online)return olHubGo();
  if(L.phase==='OFF')return go('off');
@@ -1954,7 +2020,7 @@ SCR.player=()=>{
   <div class="box col" style="flex:1;gap:7px;padding:12px 10px 0"><span class="lbl">${POSNAME[p.pos]}</span>
    <div class="row stretch" style="gap:6px"><div class="col" style="gap:7px;flex:1">
     ${ln('AGE',p.age)}${ln('CONTRACT','$'+Math.round(p.sal)+'M ('+p.yrs+'Y)')}${ln('MORALE',MORW(p.mor)+' '+face(p.mor))}${ln('CONDITION',CNDW(p))}${ln('VALUE',VALW(p))}${p.rings?`<div class="row yl s7" style="gap:4px;align-items:center;flex-wrap:wrap">${ringIcons(p,12)}<span>${p.rings>4?'':p.rings+' '}SUPER BOWL${p.rings>1?'S':''} (${(p.ringYrs||[]).slice(-4).join(', ')})</span></div>`:''}${p.awards&&p.awards.length?`<div class="row yl s7" style="gap:6px;flex-wrap:wrap">${p.awards.slice(-4).map(a=>'★ '+a).join(' ')}</div>`:''}${p.bench?'<span class="yl">BENCHED</span>':''}${p.bk?'<span class="yl">BACKUP '+p.pos+'</span>':''}
-   </div><div class="col" style="align-items:center;gap:4px"><img class="ava" data-a="pLook" title="EDIT LOOK" src="${portrait(p,t,2)}" width="48" height="48" style="cursor:pointer;border:2px solid #fff;background:${sideOf(p.pos)==='D'?'#e88686':sideOf(p.pos)==='K'?'#d6a067':'#8cc8f5'}"><span>#${p.num}</span><span class="s7 dim" data-a="pLook" style="cursor:pointer">EDIT LOOK</span></div></div>
+   </div><div class="col" style="align-items:center;gap:4px"><img class="ava" data-a="pLook" title="EDIT LOOK" src="${portrait(p,t,2)}" width="48" height="48" style="cursor:pointer;border:2px solid #fff;background:${sideOf(p.pos)==='D'?'#e88686':sideOf(p.pos)==='K'?'#d6a067':'#8cc8f5'}"><span>#${p.num}</span><span class="s7 dim" data-a="pLook" style="cursor:pointer">EDIT LOOK</span>${mine?`<span class="s7 yl" data-a="pSkin" style="cursor:pointer;text-align:center;max-width:100px;line-height:1.5">SKIN: ${esc(p.spr?skinName(p.spr):'NONE')}</span>`:''}</div></div>
    <div class="row ctr" style="gap:26px;margin-top:4px"><div class="col" style="align-items:center;gap:4px"><span>RATING</span>${stars(starsOf(p),'lg')}</div><div class="col" style="align-items:center;gap:4px"><span>POTENTIAL</span>${stars(potStars(p),'lg')}</div></div>
    <div class="sp"></div>
    <div class="box" style="margin:0 -10px;border-width:2px 0 0 0;padding:10px 8px 8px"><span class="lbl">XP LEVEL ${p.lvl}</span><div class="bar" style="height:14px"><i style="width:${clamp(p.xp/need*100,0,100)}%"></i></div>${mine&&p.sp>0?`<div class="yl blink s7" style="text-align:center;margin-top:4px">${p.sp} SKILL POINT${p.sp>1?'S':''}: TAP + TO UPGRADE</div>`:mine&&isMaxed(p)?'<div class="s7 dim" style="text-align:center;margin-top:4px">MAXED OUT · REACHED HIS POTENTIAL</div>':''}</div>
@@ -1977,6 +2043,14 @@ ACT.pBk=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;const t=L.user;
  if(p.bk){if(mainN(t)<rmax()){p.bk=false;}else{const w=mainOf(t).filter(x=>x.pos===p.pos).sort((a,b)=>ovr(a)-ovr(b))[0];if(!w)return toast('STARS FULL: MAKE A '+p.pos+' A BACKUP OR RELEASE SOMEONE');p.bk=false;w.bk=true;w.bench=false;toast(pname(w).toUpperCase()+' MOVES TO BACKUP '+p.pos);}}
  else{const b=bkOf(t).find(x=>x.pos===p.pos);p.bk=true;p.bench=false;if(b){b.bk=false;toast(pname(b).toUpperCase()+' MOVES UP TO THE STARS');}}
  sfx('tick');save();render();};
+/* skin picker: every skin from skins/skins.json, drawn in this player's team colors */
+ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)loadSkins();
+ const prev=id=>{const lk=lookFor(Object.assign({},p,{spr:id||null}),L.user);const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();};
+ const cell=(id,nm)=>`<button class="bt ${(p.spr||null)===(id||null)?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 4px;min-width:0" data-a="pSkin2" data-v="${esc(id||'')}"><img src="${prev(id)}" width="36" height="51" style="image-rendering:pixelated"><span class="s7" style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span></button>`;
+ modal(`<div class="mp" style="width:520px;align-items:center;gap:8px">${ttl('SKIN · '+esc(pname(p).toUpperCase()),true)}
+ <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.map(k=>cell(k.id,k.name)).join('')}</div>
+ ${SKINS.ok?'':'<div class="s7 dim">LOADING SKINS...</div>'}<button class="bt" data-a="close">DONE</button></div>`);};
+ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;p.spr=d.v||null;if(!p.spr)delete p.spr;try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
 ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+myWk();const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
 ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`;
@@ -5456,6 +5530,7 @@ ACT.netReload=()=>{location.href=location.pathname+'?v='+Date.now();};   /* a fr
 ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
 
 netInit();
+loadSkins();
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){
