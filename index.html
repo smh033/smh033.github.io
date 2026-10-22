@@ -1520,7 +1520,68 @@ function eggPlay4(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
   requestAnimationFrame(frame);};
  requestAnimationFrame(frame);}
 /* shows a code can play before its skin unlocks: "codeShow": "america" in skins.json */
-const CODE_SHOWS={america:k=>showAmerica(k),winter:k=>showWinter(k),ninja:k=>showNinja(k)};
+const CODE_SHOWS={america:k=>showAmerica(k),winter:k=>showWinter(k),ninja:k=>showNinja(k),blocks:k=>showBlocks(k)};
+function showBlocks(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
+ const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
+ const g=cv.getContext('2d'),T0=performance.now(),D=6600,B=32;   /* one block = 32 px */
+ const TITLE=String(K.eggTitle||K.name||K.id).toUpperCase(),SUB=String(K.eggSub||'BLOCK BY BLOCK').toUpperCase(),TSZ=Math.max(14,Math.min(34,Math.floor(560/Math.max(1,TITLE.length))));
+ const lk={helm:'#222',stripe:'#222',jersey:'#222',trim:'#222',pants:'#222',socks:'#222',skin:'#c96',key:'blocks',spr:K.id};
+ let fig=null;try{const c2=document.createElement('canvas');c2.width=180;c2.height=170;drawMan(c2.getContext('2d'),90,166,lk,{u:8,shadow:false,face:1});fig=c2;}catch(e){}
+ // block textures, made once: 8x8 noise tiles scaled up
+ const tex=(base,vary,top)=>{const c=document.createElement('canvas');c.width=8;c.height=8;const x=c.getContext('2d');
+  for(let i=0;i<8;i++)for(let j=0;j<8;j++){const v=vary[(Math.random()*vary.length)|0];x.fillStyle=(top&&j<top.rows)?top.cols[(Math.random()*top.cols.length)|0]:v||base;x.fillRect(i,j,1,1);}
+  if(top)for(let i=0;i<8;i++)if(Math.random()<0.5){x.fillStyle=top.cols[0];x.fillRect(i,top.rows,1,1);}return c;};
+ const DIRT=['#7a5230','#6b4728','#8a5d36','#5e3e22'],STONE=['#7d7d7d','#6e6e6e','#8a8a8a','#646464'],GRN=['#5fa83a','#4f9530','#6cbb44'];
+ const T={grass:tex('#7a5230',DIRT,{rows:2,cols:GRN}),dirt:tex('#7a5230',DIRT),stone:tex('#7d7d7d',STONE),wood:tex('#9c7a45',['#9c7a45','#8a6a3a','#a8854d']),leaf:tex('#3d8a2a',['#3d8a2a','#2f7322','#4c9a35','#2a6a1d'])};
+ // sound: soft square-wave arpeggio + block clicks and digs
+ const ac=sndOn()?audio():null;
+ if(ac&&!NOISE){const n=ac.sampleRate*2;NOISE=ac.createBuffer(1,n,ac.sampleRate);const d=NOISE.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;}
+ const note=(t,f,d,v)=>{if(!ac)return;const o=ac.createOscillator(),gg=ac.createGain(),fl=ac.createBiquadFilter();o.type='triangle';o.frequency.value=f;fl.type='lowpass';fl.frequency.value=1800;gg.gain.setValueAtTime(0,t);gg.gain.linearRampToValueAtTime(v||0.08,t+0.02);gg.gain.exponentialRampToValueAtTime(0.001,t+d);o.connect(fl).connect(gg).connect(ac.destination);o.start(t);o.stop(t+d+0.05);};
+ const click=(lo)=>{if(!ac)return;const t=ac.currentTime,s2=ac.createBufferSource();s2.buffer=NOISE;const fl=ac.createBiquadFilter();fl.type='bandpass';fl.frequency.value=lo?500:1400;fl.Q.value=1.4;const gg=ac.createGain();gg.gain.setValueAtTime(lo?0.35:0.22,t);gg.gain.exponentialRampToValueAtTime(0.001,t+(lo?0.12:0.06));s2.connect(fl).connect(gg).connect(ac.destination);s2.start(t,Math.random());s2.stop(t+0.15);};
+ if(ac){const t0=ac.currentTime+0.1,ch=[[261.6,329.6,392,493.9],[220,261.6,329.6,392],[174.6,220,261.6,329.6],[196,246.9,293.7,392]];
+  ch.forEach((c,i)=>{c.forEach((f,j)=>note(t0+i*1.2+j*0.3,f,1.4,0.06));note(t0+i*1.2,c[0]/2,1.2,0.07);});
+  [523.3,659.3,784,1046.5].forEach((f,i)=>note(t0+4.9+i*0.08,f,1.0,0.06));}
+ // the world: blocks drop in to build hills and a tree, then one gets mined
+ const cols=Math.ceil(640/B),ground=[];for(let c=0;c<cols;c++)ground.push(7+((Math.sin(c*0.7)*1.2+Math.sin(c*0.31)*0.9)|0));
+ const blocks=[];let order=0;
+ for(let c=0;c<cols;c++){const top=ground[c];for(let r=11;r>=top;r--)blocks.push({c,r,k:r===top?'grass':r>top+1?'stone':'dirt',at:0.15+((c+(11-r)*1.3)*0.035)+(order++%3)*0.01});}
+ const tc=3,tr=ground[tc]-1;for(let i=0;i<4;i++)blocks.push({c:tc,r:tr-i,k:'wood',at:1.6+i*0.12});
+ for(const[dc,dr]of[[-2,-4],[-1,-4],[0,-4],[1,-4],[2,-4],[-2,-5],[-1,-5],[0,-5],[1,-5],[2,-5],[-1,-6],[0,-6],[1,-6],[0,-7]])blocks.push({c:tc+dc,r:tr+dr,k:'leaf',at:2.1+Math.random()*0.4});
+ blocks.sort((a,b)=>a.at-b.at);let placed=0;
+ const mineC=10,mineR=ground[mineC],parts=[];let mined=false;
+ const clouds=[];for(let i=0;i<4;i++)clouds.push({x:Math.random()*640,y:20+i*22,w:3+(Math.random()*4|0),v:8+Math.random()*10});
+ let last=T0;
+ const frame=now=>{const t=(now-T0)/1000,dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(t>=D/1000){cv.remove();EGG.on=false;eggReward(K.id,String(K.name||K.id).toUpperCase(),'#5fa83a','#ffffff');return;}
+  g.imageSmoothingEnabled=false;
+  // sky + square sun + blocky clouds
+  const sky=g.createLinearGradient(0,0,0,360);sky.addColorStop(0,'#78a7ff');sky.addColorStop(1,'#bcd6ff');g.fillStyle=sky;g.fillRect(0,0,640,360);
+  g.fillStyle='#fff7c2';g.fillRect(520,34,44,44);g.fillStyle='#fffbe0';g.fillRect(528,42,28,28);
+  for(const c of clouds){c.x+=c.v*dt;if(c.x>680)c.x=-c.w*16;g.fillStyle='rgba(255,255,255,.92)';g.fillRect(c.x|0,c.y,c.w*16,12);g.fillRect((c.x+8)|0,c.y-8,(c.w-1)*16,8);}
+  // blocks dropping into place
+  for(const b of blocks){if(t<b.at)break;if(b===blocks[placed]&&t>=b.at+0.12){placed++;if(placed%3===0)click(false);}
+   if(b.c===mineC&&b.r===mineR&&mined)continue;
+   const k=Math.min(1,(t-b.at)/0.12),y=b.r*B-(1-k)*40;g.globalAlpha=k;g.drawImage(T[b.k],b.c*B,y,B,B);
+   g.fillStyle='rgba(0,0,0,.18)';g.fillRect(b.c*B,y+B-2,B,2);g.fillRect(b.c*B+B-2,y,2,B);g.globalAlpha=1;}
+  // mining: crack stages, then it pops into crumbs and a little dropped block
+  if(t>3.2&&!mined){const k=Math.min(1,(t-3.2)/1.0),x=mineC*B,y=mineR*B;g.strokeStyle='rgba(20,20,20,.85)';g.lineWidth=2;
+   const n=Math.floor(k*6);for(let i=0;i<n;i++){g.beginPath();g.moveTo(x+B/2,y+B/2);g.lineTo(x+[2,30,6,28,16,4][i],y+[4,8,28,26,2,16][i]);g.stroke();}
+   if(Math.floor(t*8)!==Math.floor((t-dt)*8))click(true);
+   if(k>=1){mined=true;for(let i=0;i<22;i++)parts.push({x:x+B/2,y:y+B/2,vx:(Math.random()-0.5)*160,vy:-60-Math.random()*120,l:0.9,c:DIRT[i%4]});parts.push({x:x+B/2,y:y+B/2,vx:0,vy:-80,l:9,c:'drop'});}}
+  for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.l-=dt;if(p.l<=0){parts.splice(i,1);continue;}p.vy+=300*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;
+   if(p.c==='drop'){const fy=mineR*B+B-10;if(p.y>fy){p.y=fy;p.vy=0;}const bob=Math.sin(t*4)*3;g.drawImage(T.grass,p.x-7,p.y-14+bob,14,14);}
+   else{g.fillStyle=p.c;g.fillRect(p.x|0,p.y|0,4,4);}}
+  // the player spawns on top of the hill
+  const sx=8*B+B/2,sy=ground[8]*B;
+  if(fig&&t>2.7){const k=Math.min(1,(t-2.7)/0.3);if(k<1){g.fillStyle=`rgba(255,255,255,${1-k})`;for(let i=0;i<8;i++)g.fillRect(sx-30+Math.random()*60,sy-120+Math.random()*120,6,6);}
+   g.globalAlpha=k;g.drawImage(fig,sx-90,sy-166);g.globalAlpha=1;}
+  // title in blocky letters + a "new item" style banner
+  const txt=(s3,x,y,sz,col,sh)=>{g.font=sz+'px "Press Start 2P",monospace';g.textAlign='center';g.textBaseline='middle';g.fillStyle=sh||'#3a3a3a';const o=Math.max(1,Math.round(sz/8));g.fillText(s3,x+o,y+o);g.fillStyle=col;g.fillText(s3,x,y);};
+  if(t>1.2){const k=Math.min(1,(t-1.2)/0.4);g.globalAlpha=k;txt(TITLE,320,40,TSZ,'#ffffff','#2b2b2b');txt(SUB,320,40+TSZ/2+16,9,'#ffe96b','#3b3200');g.globalAlpha=1;}
+  if(t>4.6){const k=Math.min(1,(t-4.6)/0.3),bx=640-250*k,by=96;g.fillStyle='#212121';g.fillRect(bx,by,240,50);g.fillStyle='#555';g.fillRect(bx+3,by+3,234,44);g.fillStyle='#212121';g.fillRect(bx+6,by+6,228,38);
+   g.drawImage(T.grass,bx+12,by+11,28,28);g.font='8px "Press Start 2P",monospace';g.textAlign='left';g.textBaseline='middle';g.fillStyle='#ffe96b';g.fillText('SECRET UNLOCKED!',bx+48,by+18);g.fillStyle='#fff';g.fillText(TITLE.slice(0,18),bx+48,by+33);}
+  requestAnimationFrame(frame);};
+ requestAnimationFrame(frame);}
 function showNinja(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return;}
  const cv=document.createElement('canvas');cv.width=640;cv.height=360;cv.style.cssText='position:absolute;left:0;top:0;width:640px;height:360px;z-index:999;image-rendering:pixelated';st.appendChild(cv);
  const g=cv.getContext('2d'),T0=performance.now(),D=6200,RED='#e0202a';
