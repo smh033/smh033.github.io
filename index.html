@@ -192,6 +192,7 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .shc.big{width:150px;flex:0 0 150px}.shc .shimg{display:flex;align-items:flex-end;justify-content:center;flex:1}
 .shc .shnm{background:rgba(10,20,50,.72);padding:4px 3px 3px;text-align:center;display:flex;flex-direction:column;gap:3px}
 .ccn{display:inline-block;image-rendering:pixelated;vertical-align:middle;flex:none}.cct{line-height:1;display:inline-block;padding-top:1px}.ccr{display:inline-flex;align-items:center;gap:5px}
+.shq{flex:1;background:none;border:0;color:#8fa6d0;font:inherit;font-size:7px;padding:5px 2px;cursor:pointer}.shq.on{background:#ffe600;color:#1a1400}
 .shc .shpr{background:#0c1430;padding:3px;line-height:1;display:flex;align-items:center;justify-content:center;gap:4px;font-size:9px}
 .shc:hover{filter:brightness(1.12)}
 .shnote{background:rgba(10,20,50,.6);padding:5px 8px 4px;font-size:7px;text-align:center}
@@ -1889,10 +1890,11 @@ const bpTier=b=>Math.min(BPASS.tiers,Math.floor(b.xp/BPASS.xp));
 function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)return;const b=bpGet();ex=ex||{};
  const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
  const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?1/3:1;
- const tok=SHOP_ON?Math.round(Math.min(90,25+(win?20:0)+4*td+(ex.online?10:0))*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round((100+(win?50:0)+15*td)*k),t0=bpTier(b);
+ const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
+ const tok=SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round((100+(win?50:0)+15*td)*k),t0=bpTier(b);
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
  setTimeout(()=>toast('+'+tok+' CANDY CORN · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
- if(SHOP_ON&&!simmed)try{dailyAfterGame({my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd});}catch(e){console.warn('daily',e);}}
+ if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}}
 function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
 /* mouse: drag the row sideways (touch scrolls natively) */
@@ -1938,11 +1940,17 @@ const RARITY={uncommon:['#3f9a2e','#7ad04f','UNCOMMON'],rare:['#1d6fd0','#4fb4ff
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 function seedRand(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0)/4294967296;};}
 function shopPool(cat){return SKINS.list.filter(k=>k.shop&&+k.shop.price>0&&!k.styleOf&&((k.shop.cat||'')===(cat||'')));}
-function shopToday(){const pool=shopPool().slice().sort((a,b)=>a.id<b.id?-1:1),r=seedRand('shop|'+dayKey());
+/* the shop (and weekly quests) turn over at 12 PM Eastern for everyone */
+function etParts(t){const o={};try{for(const x of new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t)))o[x.type]=x.value;}catch(e){const d=new Date(t-4*3600e3);return{year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate(),hour:d.getUTCHours(),minute:d.getUTCMinutes(),second:d.getUTCSeconds()};}
+ return{year:+o.year,month:+o.month,day:+o.day,hour:+o.hour%24,minute:+o.minute,second:+o.second};}
+const shopDay=(t=Date.now())=>{const e=etParts(t-12*3600e3);return e.year+'-'+String(e.month).padStart(2,'0')+'-'+String(e.day).padStart(2,'0');};
+const shopWeek=(t=Date.now())=>{const e=etParts(t-12*3600e3),d=new Date(Date.UTC(e.year,e.month-1,e.day));d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return'W'+d.toISOString().slice(0,10);};   /* weeks start Monday 12 PM ET */
+const shopSecsLeft=()=>{const e=etParts(Date.now()),s=e.hour*3600+e.minute*60+e.second;return((12*3600-s)%86400+86400)%86400||86400;};
+function shopToday(){const pool=shopPool().slice().sort((a,b)=>a.id<b.id?-1:1),r=seedRand('shop|'+shopDay());
  for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
  const pick=pool.slice(0,4),rk=k=>['uncommon','rare','epic','legendary','icon'].indexOf((k.shop.rarity)||'rare');
  pick.sort((a,b)=>rk(a)-rk(b)||(+a.shop.price)-(+b.shop.price));return pick;}   /* cheapest two stack on the left, the best ones get the big cards */
-function shopLeft(){const n=new Date(),m=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1),t=Math.max(0,Math.floor((m-n)/1000));
+function shopLeft(){const t=shopSecsLeft();
  return String(Math.floor(t/3600)).padStart(2,'0')+':'+String(Math.floor(t%3600/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
 /* daily challenges, login streak, first win of the day: kept on this device */
 const CHALL=[
@@ -1954,6 +1962,19 @@ const CHALL=[
 function dailyGet(){let d=null;try{d=JSON.parse(localStorage.getItem('rf_daily')||'null');}catch(e){}if(!d)d={};const today=dayKey();
  if(d.day!==today){d.day=today;d.ch={};d.fw=false;const r=seedRand('ch|'+today),pool=CHALL.slice();d.ids=[];while(d.ids.length<3&&pool.length)d.ids.push(pool.splice(Math.floor(r()*pool.length),1)[0].id);}
  d.login=d.login||{day:'',streak:0};return d;}
+/* weekly quests: 5 a week (same for everyone), progress adds up over the week's games */
+const WEEKQ=[
+ {id:'win5',txt:'WIN 5 GAMES',tok:150,need:5,add:g=>g.win?1:0},{id:'play10',txt:'PLAY 10 GAMES',tok:150,need:10,add:()=>1},
+ {id:'td20',txt:'SCORE 20 TOUCHDOWNS',tok:150,need:20,add:g=>g.td||0},{id:'pyd1k',txt:'THROW FOR 1,000 YARDS',tok:125,need:1000,add:g=>g.pyd||0},
+ {id:'ryd500',txt:'RUN FOR 500 YARDS',tok:125,need:500,add:g=>g.ryd||0},{id:'ol3',txt:'PLAY 3 ONLINE GAMES',tok:150,need:3,add:g=>g.online?1:0},
+ {id:'pts250',txt:'SCORE 250 POINTS',tok:125,need:250,add:g=>g.my||0},{id:'def3',txt:'HOLD 3 TEAMS TO 14 OR LESS',tok:125,need:3,add:g=>g.op<=14?1:0},
+ {id:'blow3',txt:'WIN 3 GAMES BY 14+',tok:150,need:3,add:g=>g.my-g.op>=14?1:0}];
+function weeklyGet(){let w=null;try{w=JSON.parse(localStorage.getItem('rf_weekly')||'null');}catch(e){}if(!w)w={};const wk=shopWeek();
+ if(w.wk!==wk){w.wk=wk;w.q={};const r=seedRand('wq|'+wk),pool=WEEKQ.slice();w.ids=[];while(w.ids.length<5&&pool.length)w.ids.push(pool.splice(Math.floor(r()*pool.length),1)[0].id);}return w;}
+function weeklyAfterGame(g){const w=weeklyGet(),msgs=[];
+ for(const id of w.ids){const c=WEEKQ.find(x=>x.id===id),st=w.q[id]||(w.q[id]={n:0,done:false});if(!c||st.done)continue;st.n+=Math.max(0,Math.round(c.add(g)||0));if(st.n>=c.need){st.n=c.need;st.done=true;bpTokAdd(c.tok);msgs.push('WEEKLY QUEST DONE: '+c.txt+' +'+c.tok);}}
+ try{localStorage.setItem('rf_weekly',JSON.stringify(w));}catch(e){}msgs.forEach((m,i)=>setTimeout(()=>toast(m),9000+i*2400));}
+function weekLeft(){const now=Date.now();let t=shopSecsLeft();const cur=shopWeek(now);while(shopWeek(now+t*1000+60e3)===cur&&t<8*86400)t+=86400;const d=Math.floor(t/86400),h=Math.floor(t%86400/3600);return d?d+'D '+h+'H':h+'H '+Math.floor(t%3600/60)+'M';}
 function dailyPut(d){try{localStorage.setItem('rf_daily',JSON.stringify(d));}catch(e){}}
 function dailyLogin(){if(!SHOP_ON)return;const d=dailyGet(),today=dayKey();if(d.login.day===today)return;
  const y=new Date();y.setDate(y.getDate()-1);d.login.streak=d.login.day===dayKey(y)?Math.min(7,d.login.streak+1):1;d.login.day=today;
@@ -1980,8 +2001,12 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
   <div class="col" style="width:178px;gap:6px">
    <div class="shbox"><div class="shhd">${BPASS.name}</div><div class="row" style="gap:8px;align-items:center;padding:6px"><span class="s7">TIER</span><span class="s16">${tier}</span></div>
     <div style="margin:0 6px 6px;height:8px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${tier>=BPASS.tiers?100:Math.round(into/BPASS.xp*100)}%;background:#ffe600"></div></div></div>
-   <div class="shbox" style="flex:1;min-height:0"><div class="shhd">DAILY CHALLENGES</div><div class="col" style="gap:6px;padding:6px">${ch}
-    <div class="s7 dim" style="line-height:1.6">FIRST WIN OF THE DAY: ${d.fw?'<span class="grt">DONE</span>':'<span class="yl">+30</span>'}<br>LOGIN STREAK: ${d.login.streak||0} DAY${d.login.streak===1?'':'S'}</div></div></div>
+   <div class="shbox" style="flex:1;min-height:0;display:flex;flex-direction:column"><div class="shhd row" style="gap:4px;padding:0"><button class="shq${UI.shopQ?'':' on'}" data-a="shopQ" data-v="">DAILY</button><button class="shq${UI.shopQ?' on':''}" data-a="shopQ" data-v="1">WEEKLY</button></div>
+    ${UI.shopQ?(()=>{const w=weeklyGet();return`<div class="col scroll" style="gap:6px;padding:6px;flex:1;min-height:0">${w.ids.map(id=>{const c=WEEKQ.find(x=>x.id===id),st=w.q[id]||{n:0,done:false};if(!c)return'';const pc=Math.min(100,Math.round(st.n/c.need*100));
+      return`<div class="col" style="gap:3px;${st.done?'opacity:.55':''}"><div class="row" style="gap:6px;align-items:center"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}</span><span class="s7 yl" style="white-space:nowrap">+${c.tok}</span></div><div class="row" style="gap:5px;align-items:center"><div style="flex:1;height:5px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${pc}%;background:${st.done?'#7dff8a':'#ffe600'}"></div></div><span class="s7 dim">${Math.min(st.n,c.need).toLocaleString()}/${c.need.toLocaleString()}</span></div></div>`;}).join('')}
+     <div class="s7 dim">NEW QUESTS IN ${weekLeft()}</div></div>`;})()
+    :`<div class="col" style="gap:6px;padding:6px">${ch}
+    <div class="s7 dim" style="line-height:1.6">FIRST WIN OF THE DAY: ${d.fw?'<span class="grt">DONE</span>':'<span class="yl">+30</span>'}<br>LOGIN STREAK: ${d.login.streak||0} DAY${d.login.streak===1?'':'S'}</div></div>`}</div>
    ${TEST_SITE?'<button class="bt r" data-a="shopTest">TEST: +500 CANDY CORN</button>':''}
   </div>
   <div class="col" style="flex:1;gap:6px;min-width:0">
@@ -1992,6 +2017,7 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
   </div></div></div>`;};
 ACT.shop=()=>{if(!SKINS.ok)loadSkins();go('shop');};
 ACT.shopCat=d=>{UI.shopCat=d.v||'';render();};
+ACT.shopQ=d=>{UI.shopQ=d.v?1:0;render();};
 ACT.shopBuy=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price,R=RARITY[k.shop.rarity]||RARITY.rare;
  modal(`<div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('BUY SKIN',true)}<div class="s10">${esc(String(k.name).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}</div>
   <div class="row" style="gap:6px;align-items:center;justify-content:center">${CUR(3)}<span class="s16 yl">${p.toLocaleString()}</span></div>
