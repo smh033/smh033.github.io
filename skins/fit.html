@@ -54,6 +54,7 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
       <div><label>Background</label><select id="bgm">
         <option value="auto" selected>Auto-detect</option>
         <option value="alpha">Already transparent</option>
+        <option value="keep">Already transparent · white character (keep all white)</option>
         <option value="flood">Remove from edges only (keeps dark clothes)</option>
         <option value="all">Remove that color everywhere</option>
       </select></div>
@@ -337,6 +338,7 @@ function bgMask(p,W,H){
   const m=new Uint8Array(W*H);let mode=$('bgm').value;const tol=+$('tol').value;
   const cornerA=[0,W-1,(H-1)*W,H*W-1].map(i=>p[i*4+3]);
   if(mode==='auto')mode=cornerA.every(a=>a<20)?'alpha':'flood';
+  if(mode==='keep'||(mode==='alpha'&&tol===0)){for(let i=0;i<W*H;i++)m[i]=p[i*4+3]>=60?1:0;return m}   /* white characters: no halo peeling */
   if(mode==='alpha'){
     for(let i=0;i<W*H;i++)m[i]=p[i*4+3]>=60?1:0;
     // peel the white/see-through halo AI images leave around the character (stops at the dark outline)
