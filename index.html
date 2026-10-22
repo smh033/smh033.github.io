@@ -1949,7 +1949,7 @@ function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen
  let src='';if(SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W;cc.height=H;drawMan(cc.getContext('2d'),W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();}
  return`<div class="shc${big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
   <div class="shimg">${src?`<img src="${src}" width="${W}" height="${H}" style="image-rendering:pixelated">`:'<span class="s16">?</span>'}</div>
-  <div class="shnm"><div class="${big?'s10':'s7'}">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
+  <div class="shnm"><div style="${(()=>{const nm=String(k.name||k.id),max=big?10:7,w=big?140:100,sz=Math.max(5,Math.min(max,Math.floor(w/(nm.length*0.95))));return'font-size:'+sz+'px;line-height:'+(max+2)+'px;';})()}white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
   <div class="shpr">${own?'<span class="grt">OWNED</span>':`${hwPumpkin(2)} ${(+k.shop.price).toLocaleString()}`}</div></div>`;}
 function shopRegister(){
 SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday(),cat=UI.shopCat||'',hw=shopPool('halloween');if(cat&&!hw.length)UI.shopCat='';
