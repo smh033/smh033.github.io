@@ -1331,10 +1331,10 @@ const SKINS={list:[],img:{},tint:new Map(),fw:12,fh:16,ok:false};
 function skinFileTries(f){const m=String(f).match(/^(.*?)(\.[a-z0-9]+)?$/i),b=m[1],e=m[2]||'.png',out=[];
  for(const bb of [b,b.toLowerCase(),b.toUpperCase(),b.replace(/_/g,'-'),b.replace(/-/g,'_'),b.toLowerCase().replace(/_/g,'-'),b.toUpperCase().replace(/-/g,'_')])for(const ee of [e,e.toLowerCase(),e.toUpperCase()]){const x=bb+ee;if(!out.includes(x))out.push(x);}
  return out;}
-function loadSkins(){fetch('skins/skins.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.skins))return;
+function loadSkins(){fetch('skins/skins.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(tx=>{let j=null;try{j=tx?JSON.parse(tx):null;}catch(e){SKINS.err='skins.json has a mistake: '+e.message;return;}let hv=0;for(let i=0;i<(tx||'').length;i++)hv=(hv*31+tx.charCodeAt(i))|0;SKINS.ver=(hv>>>0).toString(36);if(!j||!Array.isArray(j.skins))return;
  if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}SKINS.list=j.skins.filter(x=>x&&x.id&&x.file);SKINS.ok=true;skinResetCheck(+j.reset||0);
  for(const k of SKINS.list){const tries=skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
-  im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n];return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: skins/'+k.file);};im.src='skins/'+tries[0];}}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
+  im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: skins/'+k.file);};im.src='skins/'+tries[0]+'?v='+SKINS.ver;}}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
 const SKU_KEY='rf_skins_unlocked',SKM_KEY='rf_skin_map';
 /* "reset": N in skins.json: every device that hasn't seen reset N yet loses its unlocked and equipped skins once */
 function skinWearOK(p){if(!SKINS.ok||!L||p.team!==L.user)return true;return skinOpen(p.spr);}
@@ -7308,6 +7308,15 @@ ACT.colDynContinue=()=>{colMgmtOldContinue();if(CD){colMgmtEnsure();colDynSave()
 
 go('title');
 requestAnimationFrame(loop);
+/* phones keep an old copy of the page for a while: on open, check the live page and reload once if it changed */
+(function freshCheck(){if(location.protocol==='file:'||/netmock|nofresh/.test(location.search))return;
+ const big=a=>a.reduce((m,x)=>x.length>m.length?x:m,'');
+ let mine='';try{mine=big([...document.scripts].filter(x=>!x.src).map(x=>x.text));}catch(e){}if(mine.length<1000)return;
+ fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{if(!t||t.length<1000)return;
+  const live=big([...t.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]));if(!live||live===mine)return;   /* same game */
+  let n=0;try{n=+sessionStorage.getItem('rf_fresh')||0;}catch(e){}if(n>=2)return;try{sessionStorage.setItem('rf_fresh',String(n+1));}catch(e){}
+  if(UI.scr==='title'&&!UI.modal&&!M)location.replace(location.pathname+'?v='+Date.now()+location.hash);}).catch(()=>{});})();
+
 olmBoot();
 if(UI.scr==='title'&&!UI.modal)netsBoot();
 setTimeout(olgBoot,50);
