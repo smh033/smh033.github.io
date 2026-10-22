@@ -1313,10 +1313,10 @@ function defaultUnis(g){const H=uniformsFor(g.h),A=uniformsFor(g.a);let ua=1;
 function lookFor(p,t,away,alt){
  if(typeof away==='number'){const U=uniformsFor(t),u=U[((away%U.length)+U.length)%U.length];
   const lk={helm:u.helm,stripe:u.stripe,jersey:u.jersey,trim:u.trim,pants:u.pants,socks:u.socks,mask:u.mask||null,skin:SKIN[p?p.skin:2],teamId:t};
-  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,'team'+t].join('');if(p&&p.spr){lk.spr=p.spr;lk.key+='|'+p.spr+(SKINS.img[p.spr]?1:0);}loadFieldLogo(t);return lk;}
+  lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,'team'+t].join('');if(p&&p.spr&&skinWearOK(p)){lk.spr=p.spr;lk.key+='|'+p.spr+(SKINS.img[p.spr]?1:0);}loadFieldLogo(t);return lk;}
  let c=teamCol(t);if(alt)c={c1:c.c2,c2:c.c1};const pl=lum(c.c2);
  const lk={helm:c.c1,stripe:c.c2,jersey:away?'#f0f0f0':c.c1,trim:away?c.c1:c.c2,pants:away?'#d9d9d9':(pl>70&&pl<215?c.c2:'#e2e2e2'),socks:c.c1,skin:SKIN[p?p.skin:2],teamId:t};
- lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');if(p&&p.spr){lk.spr=p.spr;lk.key+='|'+p.spr+(SKINS.img[p.spr]?1:0);}loadFieldLogo(t);return lk;
+ lk.key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.skin,'team'+t].join('');if(p&&p.spr&&skinWearOK(p)){lk.spr=p.spr;lk.key+='|'+p.spr+(SKINS.img[p.spr]?1:0);}loadFieldLogo(t);return lk;
 }
 const LOGO_MINI={};
 function logoMini(t,px,tint){const img=NFL_FIELD_LOGOS[t];if(!img||!img.complete||!img.naturalWidth)return null;const k=t+'|'+px+'|'+(tint||'');if(LOGO_MINI[k])return LOGO_MINI[k];
@@ -1332,10 +1332,16 @@ function skinFileTries(f){const m=String(f).match(/^(.*?)(\.[a-z0-9]+)?$/i),b=m[
  for(const bb of [b,b.toLowerCase(),b.toUpperCase(),b.replace(/_/g,'-'),b.replace(/-/g,'_'),b.toLowerCase().replace(/_/g,'-'),b.toUpperCase().replace(/-/g,'_')])for(const ee of [e,e.toLowerCase(),e.toUpperCase()]){const x=bb+ee;if(!out.includes(x))out.push(x);}
  return out;}
 function loadSkins(){fetch('skins/skins.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.skins))return;
- if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}SKINS.list=j.skins.filter(x=>x&&x.id&&x.file);SKINS.ok=true;
+ if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}SKINS.list=j.skins.filter(x=>x&&x.id&&x.file);SKINS.ok=true;skinResetCheck(+j.reset||0);
  for(const k of SKINS.list){const tries=skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
   im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n];return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: skins/'+k.file);};im.src='skins/'+tries[0];}}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
 const SKU_KEY='rf_skins_unlocked',SKM_KEY='rf_skin_map';
+/* "reset": N in skins.json: every device that hasn't seen reset N yet loses its unlocked and equipped skins once */
+function skinWearOK(p){if(!SKINS.ok||!L||p.team!==L.user)return true;return skinOpen(p.spr);}
+function skinResetCheck(n){if(!n)return;let seen=0;try{seen=+localStorage.getItem('rf_skin_reset')||0;}catch(e){}if(seen>=n)return;
+ try{localStorage.removeItem(SKU_KEY);localStorage.removeItem(SKM_KEY);localStorage.setItem('rf_skin_reset',String(n));}catch(e){}
+ try{if(L&&L.players&&!L.net&&!L.exh){let ch=false;for(const p of L.players)if(p.team===L.user&&p.spr){delete p.spr;ch=true;}if(ch&&typeof save==='function'&&!L.online)save();}}catch(e){}
+ try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}}
 const skinsUnlocked=()=>{try{return JSON.parse(localStorage.getItem(SKU_KEY)||'[]')||[];}catch(e){return[];}};
 const skinOpen=id=>{const k=SKINS.list.find(x=>x.id===id);return !!k&&(!k.secret||skinsUnlocked().includes(id));};
 function unlockSkin(id){const a=skinsUnlocked();if(!a.includes(id)){a.push(id);try{localStorage.setItem(SKU_KEY,JSON.stringify(a));}catch(e){}}}

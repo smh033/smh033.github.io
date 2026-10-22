@@ -47,6 +47,12 @@ skin works for every team:
 
 Any other color stays exactly as drawn.
 
+## Taking everyone's skins away
+
+`"reset": 1` at the top of `skins.json` is a reset number. Raise it by one (2, 3, ...) and every device that
+opens the game afterwards loses its unlocked skins and the skins its players wear, once. Players have to unlock
+them again with the easter eggs and codes.
+
 ## Adding a skin
 
 1. Put the PNG in this folder, e.g. `skins/ninja.png`. Use lowercase letters, numbers
