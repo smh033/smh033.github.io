@@ -1,5 +1,5 @@
 {
-  "reset": 1,
+  "reset": 2,
   "frame": [12, 16],
   "frames": ["stand", "run1", "run2", "run3", "run4", "dive", "carry", "throw", "reach"],
   "skins": [
