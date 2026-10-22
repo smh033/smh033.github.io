@@ -5245,7 +5245,7 @@ function hud(){
  setH('gpb',M.pb&&M.phase==='pre'&&!M.ov&&!M.paused?pbHTML():'');
  setH('gban',M.banT>0&&M.ban?`<div>${esc(M.ban.t)}${M.ban.sub?`<small>${esc(M.ban.sub)}</small>`:''}</div>`:'');
  setH('gov',M.ov?`<div class="gov">${M.ov.html()}</div>`:'');
- setH('gpz',M.paused?`<div class="gov" style="z-index:40"><div class="mp" style="width:300px;align-items:center;text-align:center">${ttl('PAUSED',true)}<button class="bt y big" data-a="gResume">RESUME</button><button class="bt" data-a="gSnd">SOUND: ${L.settings.sound?'ON':'OFF'}</button>${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${L.net?(NET.role==='host'&&!M.olg?'<button class="bt" data-a="netBreak">TAKE A BREAK</button><button class="bt r" data-a="netEnd">END GAME</button>':''):M.prac?'<button class="bt r" data-a="gSim">END PRACTICE</button>':'<button class="bt r" data-a="gSim">SIM REST OF GAME</button>'}</div></div>`:'');
+ setH('gpz',M.paused?`<div class="gov" style="z-index:40"><div class="mp" style="width:300px;align-items:center;text-align:center">${ttl('PAUSED',true)}<button class="bt y big" data-a="gResume">RESUME</button><button class="bt" data-a="gSnd">SOUND: ${L.settings.sound?'ON':'OFF'}</button>${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${L.net?(NET.role==='host'?'<button class="bt" data-a="netBreak">TAKE A BREAK</button><button class="bt r" data-a="netEnd">END GAME</button>':''):M.prac?'<button class="bt r" data-a="gSim">END PRACTICE</button>':'<button class="bt r" data-a="gSim">SIM REST OF GAME</button>'}</div></div>`:'');
 }
 
 /* ---------- actions ---------- */
@@ -5392,7 +5392,7 @@ const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:''
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
  buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100,NET_VER=8;   /* bump whenever the messages change: both players must run the same version */
+const NET_DELAY=100,NET_VER=9;   /* bump whenever the messages change: both players must run the same version */
 /* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
 const netDelay=()=>clamp(NET.jit*2,25,140);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
@@ -5423,7 +5423,7 @@ function netWire(c){
   else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER,sk:skinMap()});}}
   sfx('first');if(UI.scr==='online'||UI.scr==='olroom')render();});
  c.on('data',m=>{try{
-  if(isCand()){if(m&&m.t==='rejoin'&&m.tok&&m.tok===NET.gtok){const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
+  if(isCand()){if(m&&(m.t==='rejoin'||m.t==='pick')&&m.tok&&m.tok===NET.gtok){if(m.t==='pick'&&NET.startMsg)setTimeout(()=>{netSend(NET.startMsg);NET.lN=-1;NET.rN=2;NET.lov=undefined;},50);const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
   if(c!==NET.conn)return;NET.lastRx=performance.now();if(NET.role==='host'&&NET.wait&&NET.stage==='game')netResync();
   NET.role==='host'?netHostMsg(m):netGuestMsg(m);}catch(e){console.error('net msg',e);}});
  c.on('close',()=>{if(c===NET.conn)netDrop();});
@@ -5535,9 +5535,9 @@ ACT.netHost=async(d,code1)=>{NET.err='';let lib=true;try{await loadPeerLib();}ca
    if(e.type==='unavailable-id'&&NET.stage==='game'&&NET.resumed){p.destroy();const c0=NET.code;setTimeout(()=>{if(NET.stage==='game'&&NET.code===c0&&NET.role==='host')start();},5000);return;}   /* resumed game: same code, wait for the old link to close */
    if(e.type==='unavailable-id'&&NET.stage==='hosting'&&!NET.hrel){p.destroy();NET.code=netCode();NET.rsocks&&NET.rsocks.forEach(s=>s.close());NET.rsocks=[];netHostRelay();start();return;}});};
  start();netHostRelay();};
-ACT.netJoin=async(d,code1)=>{const code=code1||String(($('#netCode')||{}).value||'').trim().toUpperCase().replace(/[^A-Z]/g,'');if(code.length!==4){NET.err='TYPE THE 4-LETTER CODE';return render();}
+ACT.netJoin=async(d,code1,tok1)=>{const code=code1||String(($('#netCode')||{}).value||'').trim().toUpperCase().replace(/[^A-Z]/g,'');if(code.length!==4){NET.err='TYPE THE 4-LETTER CODE';return render();}
  NET.err='';let lib=true;try{await loadPeerLib();}catch(e){lib=false;}
- NET.role='guest';NET.code=code;NET.tok=Math.random().toString(36).slice(2,10);NET.stage='joining';NET.status='CONNECTING...';NET.mode='p2p';NET.relReach=false;NET.p2pReach=false;NET.lob={h:{team:13,uni:0},g:{team:30,uni:1},qlen:180,home:'h',rm:'CUSTOM'};render();
+ NET.role='guest';NET.code=code;NET.tok=tok1||Math.random().toString(36).slice(2,10);NET.stage='joining';NET.status='CONNECTING...';NET.mode='p2p';NET.relReach=false;NET.p2pReach=false;NET.lob={h:{team:13,uni:0},g:{team:30,uni:1},qlen:180,home:'h',rm:'CUSTOM'};render();
  if(NET_MOCK){const m=mockConn(code,'guest');NET.mock=m;NET.conn=m.c;netWire(m.c);m.hello();return;}
  if(!lib||NET_FORCE_RELAY){NET.mode='relay';return netGuestRelay(0);}
  netGuestPeer();const tok=NET.tok;NET.p2pT=setTimeout(()=>{if(NET.tok===tok)netToRelay();},7000);};
@@ -5661,6 +5661,7 @@ function netHostMsg(m){
  if(m.t==='brk'&&NET.stage==='game'){netDrop();return;}   /* friend is taking a break: wait for them, the game is saved */
  if(m.t==='bye'){netLost(NET.stage==='game'?'YOUR FRIEND LEFT THE GAME':'YOUR FRIEND LEFT');return;}
  if(m.t==='needR'){NET.rN=Math.max(NET.rN||0,2);NET.lov=undefined;return;}
+ if(m.t==='rejoin'&&OLG&&NET.stage!=='game'&&m.tok){NET.gtok=m.tok;olNetGo();return;}
  if(m.t==='hb'){NET.rtt=m.rtt||0;netSend({t:'hbr',ts:m.ts});return;}
  if(m.t==='pick'){if(!NET.lob)return;if(m.sk&&typeof m.sk==='object')NET.gsk=m.sk;NET.oldV=m.v!==NET_VER?(m.v||1):0;if(NET.oldV){NET.err=m.v>NET_VER?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':'YOUR FRIEND HAS AN OLD VERSION OF THE GAME. THEY NEED TO CLOSE THE TAB AND OPEN THE GAME AGAIN.';}else if(/VERSION/.test(NET.err))NET.err='';if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(OLG){if(NET.oldV&&UI.scr==='olroom')render();olNetGo();return;}if(UI.scr==='online'||UI.scr==='olroom')render();return;}
  if(!netHost())return;
@@ -5735,7 +5736,7 @@ function netGuestMsg(m){
   const e={tm:now,s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
 }
 function netGuestStart(m){
- if(m.olg&&OLG){OLG.L=L;OLG.live=true;}
+ if(m.olg&&OLG){if(!OLG.live)OLG.L=L;OLG.live=true;olgPut({room:OLG.code,league:OL&&OL.code,role:'guest',tok:NET.tok,team:m.guest});}
  L=m.L;L.user=m.guest;L.custom=null;L.net=false;L.exh=true;indexPlayers();cfbSync(null);
  if(m.olg){const S=L.seats&&L.seats[m.guest];if(S){L.custom=S.custom||null;L.oc=S.oc;L.dc=S.dc;L.style=S.style;}}
  Object.assign(NET,{stage:'game',snap:null,R:null,Rused:null,buf:[],pup:[],ovH:null,joyLast:null,menu:false,wasPre:false,rc:null,lastRx:performance.now()});
@@ -5850,7 +5851,7 @@ function netInit(){
  netEvWrap('boom',()=>['boom']);
  netEvWrap('crowd',(d,v)=>['cr',d,v]);
 }
-ACT.netLeave=()=>{netSend({t:'bye'});netLost('YOU LEFT THE GAME');};
+ACT.netLeave=()=>{if(OLG)olgClear(OLG.code);netSend({t:'bye'});netLost('YOU LEFT THE GAME');};
 function netGuestHud(){
  const s=NET.snap,rc=NET.rc;
  if(rc||(s&&s.wt&&!NET.menu)){setH('gpz',`<div class="gov" style="z-index:40"><div class="mp" style="width:320px;align-items:center;text-align:center">${ttl(rc?'RECONNECTING':'WAITING',true)}<div class="s7 yl blink" style="line-height:2">${rc?'LOST THE CONNECTION TO THE HOST<br>TRYING TO GET BACK IN...':'THE HOST\'S CONNECTION DROPPED<br>WAITING FOR IT TO COME BACK...'}</div><div class="s7" style="line-height:1.8">THE SCORE IS SAVED. TAKE A BREAK AND<br>TAP RESUME ON THE TITLE SCREEN LATER.</div><div class="row" style="gap:8px"><button class="bt" data-a="netBreak">TAKE A BREAK</button><button class="bt r" data-a="netLeave">END GAME</button></div></div></div>`);return;}
@@ -5859,7 +5860,7 @@ function netGuestHud(){
 function netHostHud(){if(!netHost())return;if(NET.wait&&performance.now()-NET.waitT>1200)setH('gpz',`<div class="gov" style="z-index:40"><div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('FRIEND DISCONNECTED',true)}<div class="s7 yl blink" style="line-height:2">WAITING FOR ${esc(T(M.op).name.toUpperCase())} TO RECONNECT...<br>GAME CODE ${esc(NET.code)}</div><div class="s7" style="line-height:1.8">THE SCORE IS SAVED. TAKE A BREAK AND<br>TAP RESUME ON THE TITLE SCREEN LATER.</div><div class="row" style="gap:8px"><button class="bt" data-a="netBreak">TAKE A BREAK</button><button class="bt r" data-a="netEnd">END GAME</button></div></div></div>`);}
 function netPingDraw(){if(!(netHost()||netGuest()))return;const r=Math.round(NET.rtt||0),col=r<120?'#7dff8a':r<250?'#ffe94a':'#ff8a8a';const t=(netRelayOn()?(NET.conn&&NET.conn.sock&&/^wss?:\/\/[^/]*workers\.dev|\/r\/[A-Z]{4}$/.test(NET.conn.sock.url)?'RELAY CF':'RELAY'):'DIRECT')+(r?' '+r+'MS':'');rect(2,2,t.length*6+8,11,'rgba(0,0,0,.6)');ctext(t,6,4,col,'left',6);}
 ACT.netReload=()=>{location.href=location.pathname+'?v='+Date.now();};   /* a fresh address skips the old cached copy */
-ACT.netEnd=()=>{netSend({t:'bye'});netLost('GAME ENDED');};
+ACT.netEnd=()=>{if(OLG)olgClear(OLG.code);netSend({t:'bye'});netLost('GAME ENDED');};
 
 /* ---------- a head-to-head game survives a reload, a closed tab or the phone killing the app ----------
    Host: the score, clock, down and distance, timeouts and stats are kept before every snap, kickoff and halftime.
@@ -5911,7 +5912,9 @@ function dirPref(){try{const v=localStorage.getItem('rf_dir');if(v==='R'||v==='L
 function dirPrefSet(v){try{localStorage.setItem('rf_dir',v);}catch(e){}}
 ACT.netDir=d=>{dirPrefSet(d.v);render();};
 /* stop for now, keep the saved game; RESUME on the title screen picks it back up */
-ACT.netBreak=()=>{netSend({t:'brk'});const c=netsGet();try{NET.conn&&NET.conn.close();}catch(e){}
+ACT.netBreak=()=>{if(OLG){netSend({t:'brk'});try{NET.conn&&NET.conn.close();}catch(e){}if(OLG.live){if(OLG.host){L.net=false;Object.assign(L.settings,OLG.sv||{});}else if(OLG.L)L=OLG.L;}
+  M=null;netReset();olRoomClose();if(L){indexPlayers();applyCustomTeam();}toast('GAME SAVED · TAP PLAY WHEN YOU\'RE BOTH BACK');olResume();return;}
+ netSend({t:'brk'});const c=netsGet();try{NET.conn&&NET.conn.close();}catch(e){}
  const keep=c;netReset();if(keep)netsPut(keep);
  M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('title');toast('GAME SAVED · TAP RESUME ONLINE GAME WHEN YOU\'RE BACK');};
 ACT.netsAsk=()=>netsBoot();
@@ -6453,7 +6456,7 @@ function olPlay(sim){olTx(null).then(()=>{const g=userGame();if(!g){toast('THAT 
 function olGameCode(g){const s=L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:olGWk(g))+'|'+g.h+'|'+g.a;let h=2166136261;
  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}let c='';for(let i=0;i<4;i++){c+=String.fromCharCode(65+((h>>>0)%26));h=Math.imul(h^(h>>>13),2654435761);}return c;}
 function olRoomOpen(g,u){netReset();NET.err='';OLG={h:g.h,a:g.a,code:olGameCode(g),host:g.h===L.user,live:false,L:null,sv:null,u:u||null};go('olroom');
- if(OLG.host)ACT.netHost(null,OLG.code);else ACT.netJoin(null,OLG.code);}
+ if(OLG.host)ACT.netHost(null,OLG.code);else{const sv=olgGet(OLG.code,'guest');ACT.netJoin(null,OLG.code,sv&&sv.tok);}}
 function olRoomClose(){OLG=null;}
 ACT.olRoomCancel=()=>{netSend({t:'bye'});netReset();olRoomClose();olResume();};
 SCR.olroom=()=>{if(!OLG||!olLive())return SCR.hub();const op=OLG.h===L.user?OLG.a:OLG.h,S=seatOf(op)||{},on=(OL.on||[]).includes(op),who=esc(S.coach||abbr(op));
@@ -6462,9 +6465,10 @@ SCR.olroom=()=>{if(!OLG||!olLive())return SCR.hub();const op=OLG.h===L.user?OLG.
  return`<div class="screen" style="align-items:center;justify-content:center;gap:10px">${ttl(lab+' · LIVE')}
  <div class="row ctr" style="gap:18px;align-items:center"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,OLG.h!==L.user)}<span>${esc(abbr(L.user))}</span><span class="s7 yl">YOU</span></div><span class="s16">${OLG.h===L.user?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,OLG.h===L.user)}<span>${esc(abbr(op))}</span><span class="s7">${who}</span></div></div>
  <div class="s7 ${on?'grt':'rdt'}">● ${who} ${on?'IS ON THE SITE':'IS NOT ON THE SITE RIGHT NOW'}</div>
+ ${(()=>{const sv=olgGet(OLG.code,OLG.host?'host':'guest');if(!sv)return'';const m=sv.m;return`<div class="s7 yl">GAME IN PROGRESS${m?' · '+esc(abbr(L.user))+' '+m.sc[0]+' - '+m.sc[1]+' '+esc(abbr(op))+' · Q'+Math.min(4,m.qtr):''} · PICKS UP WHERE YOU LEFT OFF</div>`;})()}
  <div class="yl blink">${esc(NET.status&&!NET.connOpen&&/RECONNECT|BACKUP/.test(NET.status)?NET.status:st)}</div>
  ${NET.err?`<div class="rdt s7" style="max-width:520px;text-align:center;line-height:1.8">${esc(NET.err)}</div>${/OLD VERSION/.test(NET.err)?'<button class="bt y" data-a="netReload">RELOAD</button>':''}`:''}
- <div class="s7 dim" style="max-width:520px;text-align:center;line-height:1.8">BOTH COACHES NEED THIS SCREEN OPEN. ${esc(abbr(OLG.h))} (HOME) RUNS THE GAME. KEEP THE GAME IN FRONT, DON'T SWITCH APPS. NO SIMMING: THIS ONE IS PLAYED.</div>
+ <div class="s7 dim" style="max-width:520px;text-align:center;line-height:1.8">BOTH COACHES NEED THIS SCREEN OPEN. ${esc(abbr(OLG.h))} (HOME) RUNS THE GAME. NO SIMMING: THIS ONE IS PLAYED. IF SOMEONE DROPS OUT OR YOU TAKE A BREAK, THE SCORE IS SAVED: TAP PLAY AGAIN TO PICK IT UP.</div>
  <button class="bt" data-a="olRoomCancel">BACK</button></div>`;};
 /* host: both are in, start (from netHostMsg once the friend's version checks out) */
 function olNetGo(){if(!OLG||!OLG.host||NET.role!=='host'||!NET.connOpen||NET.stage==='game'||NET.oldV)return;
@@ -6472,18 +6476,19 @@ function olNetGo(){if(!OLG||!OLG.host||NET.role!=='host'||!NET.connOpen||NET.sta
  const u=OLG.u||defaultUnis(g);OLG.sv={play:L.settings.play,replay:L.settings.replay};OLG.live=true;   /* the home coach's pregame uniform pick */
  L.net=true;L.settings.play='both';L.settings.replay=false;
  Object.assign(NET,{lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],sendAcc:0,wait:false,cands:[],lastRx:performance.now()});
- startMatch(g,u);M.olg=true;M.oto=2;M.ocp=2;NET.stage='game';
+ startMatch(g,u);M.olg=true;M.oto=2;M.ocp=2;NET.stage='game';const sv=olgGet(OLG.code,'host');if(sv&&sv.m)olgApply(sv);
  const pl=L.players.filter(p=>p.team===g.h||p.team===g.a),Lc=Object.assign({},L,{players:pl});delete Lc.pmap;
  Lc.seats=Object.assign({},L.seats,{[L.user]:Object.assign({},L.seats[L.user],{custom:L.custom,style:L.style,oc:L.oc,dc:L.dc})});
- netSend({t:'start',olg:1,L:Lc,g:{h:g.h,a:g.a,hs:null,as:null,conf:g.conf},gu:u.uO,hu:u.uU,guest:M.op,night:M.night,wx:M.wx,wind:M.wind});}
+ const sm={t:'start',olg:1,L:Lc,g:{h:g.h,a:g.a,hs:null,as:null,conf:g.conf},gu:u.uO,hu:u.uU,guest:M.op,night:M.night,wx:M.wx,wind:M.wind};NET.startMsg=sm;netSend(sm);
+ if(!(sv&&sv.m))olgSave('start');}
 /* host: final whistle. Each coach records the game on their own team (stats, XP, coins). */
-function olHostEnd(){const g=M.g,op=M.op,ps={},gps={};
+function olHostEnd(){olgClear(OLG&&OLG.code);const g=M.g,op=M.op,ps={},gps={};
  for(const id in M.ps){const p=P(+id);if(p&&p.team===op)gps[id]=M.ps[id];else ps[id]=M.ps[id];}
  const R={sc:[M.sc[0],M.sc[1]],ps,op,team:M.ts};
  netSend({t:'end',olg:{h:g.h,a:g.a,sc:[M.sc[1],M.sc[0]],ps:gps,op:L.user},last:''});
  NET.on=false;NET.stage='ended';setTimeout(netReset,1500);
  M=null;L.net=false;Object.assign(L.settings,OLG.sv||{});olRoomClose();postGame(g,R);}
-function olGuestEnd(m){const o=m.olg;M=null;L=OLG&&OLG.L||L;netReset();olRoomClose();indexPlayers();applyCustomTeam();
+function olGuestEnd(m){olgClear(OLG&&OLG.code);const o=m.olg;M=null;L=OLG&&OLG.L||L;netReset();olRoomClose();indexPlayers();applyCustomTeam();
  const g=curGames().find(x=>x.h===o.h&&x.a===o.a&&x.hs==null);
  if(!g){toast('GAME OVER');return olResume();}
  postGame(g,{sc:o.sc,ps:o.ps||{},op:o.op});}
@@ -6492,7 +6497,31 @@ function olNetLost(msg){
  if(OLG&&!OLG.live&&UI.scr==='olroom'){const g={h:OLG.h,a:OLG.a},u=OLG.u;netReset();NET.err='';setTimeout(()=>{if(UI.scr==='olroom'&&OLG&&!OLG.live)olRoomOpen(g,u);},2500);render();return;}
  if(OLG&&OLG.live){if(OLG.host){L.net=false;Object.assign(L.settings,OLG.sv||{});}else if(OLG.L)L=OLG.L;}
  M=null;netReset();olRoomClose();if(L){indexPlayers();applyCustomTeam();}
- toast((msg||'CONNECTION LOST')+' · GAME NOT COUNTED, PLAY IT AGAIN');olResume();}
+ toast(olgAny()?(msg||'CONNECTION LOST')+' · GAME SAVED, TAP PLAY TO PICK IT UP':(msg||'CONNECTION LOST')+' · GAME NOT COUNTED, PLAY IT AGAIN');olResume();}
+/* ---------- coach vs coach games survive a reload, a closed tab or a long break ----------
+   The home coach keeps the score, clock, drive and stats before every snap and kickoff (per game, up to 7 days);
+   the away coach keeps its rejoin pass. Opening the game again (PLAY) picks it back up where it stopped. */
+const OLG_KEY='rf_olg';
+function olgAll(){try{const a=JSON.parse(localStorage.getItem(OLG_KEY)||'{}');const now=Date.now();for(const k in a)if(!a[k]||now-a[k].at>7*864e5)delete a[k];return a;}catch(e){return{};}}
+function olgPut(c){const a=olgAll();c.at=Date.now();a[c.room+'|'+c.role]=Object.assign(a[c.room+'|'+c.role]||{},c);try{localStorage.setItem(OLG_KEY,JSON.stringify(a));}catch(e){}}
+function olgGet(room,role){return olgAll()[room+'|'+role]||null;}
+function olgClear(room){if(!room)return;const a=olgAll();delete a[room+'|host'];delete a[room+'|guest'];try{localStorage.setItem(OLG_KEY,JSON.stringify(a));}catch(e){}}
+function olgAny(){return !!(OLG&&(olgGet(OLG.code,'host')||olgGet(OLG.code,'guest')));}
+function olgSave(act,who){if(!OLG)return;if(act==='final')return;
+ olgPut({room:OLG.code,league:OL&&OL.code,role:'host',team:L.user,act,who:who||null,
+  m:act==='start'?null:{sc:M.sc,qtr:M.qtr,clock:M.clock,to:M.to,cp:M.cp,oto:M.oto,ocp:M.ocp,ps:M.ps,ts:M.ts,plays:M.plays,carries:M.carries,night:M.night,wx:M.wx,wind:M.wind,rival:M.rival,
+   firstRecv:M.firstRecv,udir:M.udir,dcall:M.dcall,went4:!!M.went4,conv:!!M.conv,ballOn:M.ballOn,ballY:M.ballY,down:M.down,fdX:M.fdX,uU:M.uU,uO:M.uO}});}
+function olgApply(c){const m=c.m;
+ Object.assign(M,{sc:m.sc,qtr:m.qtr,clock:m.clock,to:m.to,cp:m.cp,oto:m.oto,ocp:m.ocp,ps:m.ps||{},ts:m.ts||M.ts,plays:m.plays||0,carries:m.carries||0,night:m.night,wx:m.wx,wind:m.wind,rival:m.rival,
+  firstRecv:m.firstRecv,udir:m.udir,dcall:m.dcall,went4:m.went4,conv:m.conv,ballOn:m.ballOn,ballY:m.ballY,down:m.down,fdX:m.fdX,runoff:0});
+ M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
+ M.ov=null;M.O=[];M.D=[];M.def=c.act==='def';syncDir();
+ if(c.act==='def')defPre();else if(c.act==='ko')kickoffTo(c.who);else if(c.act==='half')halftime();else toPre();
+ banner('GAME RESUMED',abbr(L.user)+' '+M.sc[0]+' - '+M.sc[1]+' '+abbr(M.op),'#ffe94a',2.2);}
+/* page just loaded with a coach vs coach game unfinished: reopen that league */
+function olgBoot(){if(OL||UI.scr!=='title'||UI.modal)return;const a=olgAll(),c=Object.values(a).sort((x,y)=>y.at-x.at)[0];if(!c||!c.league)return;
+ const x=olMine().find(y=>y.code===c.league);if(!x)return;
+ ACT.olOpen({c:c.league}).then(()=>{if(OL&&OL.code===c.league)toast('YOUR LIVE GAME IS SAVED · TAP PLAY TO PICK IT UP');}).catch(()=>{});}
 /* ---------- trades between coaches: an offer waits until the other coach says yes or no ---------- */
 function olPk(t){const S=L.seats&&isHuman(t)&&seatOf(t);return S?(S.picks||[1,1,1]):aiPk(t);}
 function olOffers(){return(L&&L.trades)||[];}
@@ -6545,14 +6574,14 @@ function olJobTx(t){UI.modal=null;
    Before every snap, kickoff, halftime and the final whistle of a game against the AI, the
    score, clock, down and distance, timeouts and player stats are kept in this browser. Reload
    the page and you're put back in that game at that moment (refreshing can't wipe a bad score:
-   PLAY and SIM GAME pick the same game back up). Coach vs coach games aren't kept: the live
-   link has to start over. */
+   PLAY and SIM GAME pick the same game back up). Coach vs coach games are kept separately (rf_olg). */
 const OLM_KEY='rf_olm';
 function olGameKey(g){return L.online.code+'|'+L.season+'|'+L.phase+'|'+(L.phase==='PO'?L.po.cur:olGWk(g))+'|'+g.h+'|'+g.a;}
 function olmGet(){try{return JSON.parse(localStorage.getItem(OLM_KEY)||'null');}catch(e){return null;}}
 function olmClear(){try{localStorage.removeItem(OLM_KEY);}catch(e){}}
 function olmSave(act,who){
  if(M&&L&&L.net&&!OLG&&NET.role==='host'&&NET.stage==='game'&&NET.startMsg)return netsHostSave(act,who);
+ if(M&&M.olg&&OLG&&OLG.host&&NET.role==='host')return olgSave(act,who);
  if(!M||M.prac||!L||!L.online||L.exh||M.olg||M.netGuest||!OL||OL.code!==L.online.code)return;
  const c={code:OL.code,team:L.user,gk:olGameKey(M.g),at:Date.now(),act,who:who||null,
   m:{sc:M.sc,qtr:M.qtr,clock:M.clock,to:M.to,cp:M.cp,oto:M.oto,ocp:M.ocp,ps:M.ps,ts:M.ts,plays:M.plays,carries:M.carries,night:M.night,wx:M.wx,wind:M.wind,rival:M.rival,
@@ -7144,6 +7173,7 @@ go('title');
 requestAnimationFrame(loop);
 olmBoot();
 if(UI.scr==='title'&&!UI.modal)netsBoot();
+setTimeout(olgBoot,50);
 </script>
 <div id="rot"><div>ROTATE YOUR DEVICE<br><br><span style="color:#b7c8ff;font-size:9px">RETRO FOOTBALL PLAYS IN LANDSCAPE</span></div></div>
 <style>#rot{display:none}@media (orientation:portrait) and (max-width:900px){#rot{display:flex;position:fixed;inset:0;z-index:999;background:#2f63e6;color:#fff;align-items:center;justify-content:center;text-align:center;font-size:14px;line-height:1.6;padding:20px}}</style>
