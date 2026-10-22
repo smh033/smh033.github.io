@@ -132,7 +132,7 @@ function savePng(){
 function init(){
   const drop=$('drop'),file=$('file');
   drop.onclick=()=>file.click();
-  file.onchange=()=>file.files[0]&&load(file.files[0]);
+  file.onchange=()=>{if(file.files[0])load(file.files[0]);file.value='';};   /* cleared so picking another (or the same) image always loads it */
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};
   drop.ondragleave=()=>drop.classList.remove('on');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
@@ -143,7 +143,8 @@ function init(){
 }
 function load(f){
   const base=f.name.replace(/\.[^.]*$/,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'my-skin';
-  if($('sid').value==='my-skin'){$('sid').value=base;$('sname').value=base.replace(/-/g,' ').toUpperCase()}
+  /* every new image gets its own name (phone photos are long random ids: rename them in the boxes) */
+  $('sid').value=base;$('sname').value=base.replace(/-/g,' ').toUpperCase();
   const im=new Image();
   im.onload=()=>{IMG=im;$('opts').style.display='';$('srcp').style.display='';run()};
   im.onerror=()=>msg('Could not open that image.',1);
