@@ -171,7 +171,7 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .pdr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;white-space:normal;line-height:1.5;width:100%}
 .fobar>.bt:not(.ico){flex:1 1 auto;min-width:0;font-size:7px;padding:7px 5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bpbtn{display:inline-flex;align-items:center;gap:6px;border-color:#f07818!important;color:#ffd7a8}
-.bpwrap{display:flex;gap:4px;overflow-x:auto;width:100%;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+.bpwrap{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;width:100%;padding:4px 2px 8px;-webkit-overflow-scrolling:touch;touch-action:pan-x!important;cursor:grab}
 .bpcol{flex:0 0 66px;display:flex;flex-direction:column;gap:4px;align-items:stretch}
 .bpcol .tn{text-align:center;font-size:7px;padding:2px 0;background:#2a1640;border:1px solid #5a3a80}
 .bpcol .tn.on{background:#f07818;color:#1a0e00;border-color:#ffb060}
@@ -1858,10 +1858,16 @@ function bpAfterGame(my,op,tds,g,simmed){if(my==null||op==null)return;const b=bp
  setTimeout(()=>toast('+'+tok+' PUMPKIN TOKENS · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);}
 function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
+/* mouse: drag the row sideways (touch scrolls natively) */
+function bpDrag(e,w){if(e.pointerType!=='mouse')return;const x0=e.clientX,s0=w.scrollLeft;let moved=false;
+ const mv=ev=>{const dx=ev.clientX-x0;if(Math.abs(dx)>4)moved=true;w.scrollLeft=s0-dx*(w.scrollWidth/w.getBoundingClientRect().width>0?w.offsetWidth/w.getBoundingClientRect().width:1);};
+ const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);if(moved){const stop=ev=>{ev.stopPropagation();ev.preventDefault();window.removeEventListener('click',stop,true);};window.addEventListener('click',stop,true);setTimeout(()=>window.removeEventListener('click',stop,true),50);}};
+ window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);}
 function bpSkinPrev(id){const K=SKINS.list.find(x=>x.id===id);if(!K||!SKINS.img[id])return'';const lk={spr:id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'bp'+id};
  const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();}
 function bpRegister(){
 SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>=BPASS.tiers;
+ setTimeout(()=>{const w=document.getElementById('bpw');if(!w)return;if(UI.bpX==null){const col=w.children[Math.max(0,tier-2)];UI.bpX=col?col.offsetLeft-w.offsetLeft:0;}w.scrollLeft=UI.bpX;},0);   /* opens at your tier, keeps its place after a claim */
  const cell=(t,tr)=>{const r=BPASS.rewards.find(x=>x.t===t&&x.tr===tr),prem=tr==='p';if(!r)return`<div class="bpc${prem?' prem':''}"></div>`;
   const got=!!b.cl[tr+t],can=bpCanClaim(b,r),lock=tier<t||(prem&&!b.prem);
   let inner='';if(r.skin){const K=SKINS.list.find(x=>x.id===r.skin),src=bpSkinPrev(r.skin);inner=(src?`<img src="${src}" width="36" height="51" style="image-rendering:pixelated">`:'<span class="s16">?</span>')+`<span>${esc(String(K?K.name:r.skin).toUpperCase().slice(0,10))}</span>`;}
@@ -1878,9 +1884,9 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
   ${b.prem?'<span class="s7 grt">PREMIUM PASS ACTIVE</span>':`<button class="bt y" data-a="bpBuy">BUY PREMIUM · ${BPASS.cost} ${hwPumpkin(2)}</button><span class="s7 dim">${bpTok()>=BPASS.cost?'YOU CAN AFFORD IT':'NEED '+(BPASS.cost-bpTok())+' MORE'}</span>`}
   <div class="sp"></div>${claimable?`<button class="bt" data-a="bpClaimAll">CLAIM ALL (${claimable})</button>`:''}</div>
  <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
-  <div class="bpwrap scroll">${cols}</div></div>
+  <div class="bpwrap scroll" id="bpw" onscroll="UI.bpX=this.scrollLeft" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)">${cols}</div></div>
  <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN PUMPKIN TOKENS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
-ACT.bp=()=>{if(!SKINS.ok)loadSkins();go('bpass');};
+ACT.bp=()=>{if(!SKINS.ok)loadSkins();UI.bpX=null;go('bpass');};
 ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' PUMPKIN TOKENS');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
 ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH PUMPKIN TOKENS');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
