@@ -74,6 +74,10 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
         <option value="true">Recolor #FF00FF / #00FFFF / #FFFF00 per team</option>
       </select></div>
     </div>
+    <div class="row">
+      <div><label>Fix run cycle (when the 4 run frames are the same pose)</label><select id="rfix"><option value="">Off</option><option value="1">On: legs alternate</option></select></div>
+      <div><label>Hip line for the fix: <span id="hipv">60</span>% down</label><input type="range" id="hip" min="45" max="80" value="60"></div>
+    </div>
   </div>
 
   <div id="msg"></div>
@@ -123,6 +127,9 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     <div class="row">
       <div><label>Shop price (Pumpkin Tokens)</label><input type="text" id="aPrice" inputmode="numeric" placeholder="e.g. 400"></div>
       <div><label>Rarity (card color)</label><select id="aRarity"><option value="uncommon">Uncommon (green)</option><option value="rare" selected>Rare (blue)</option><option value="epic">Epic (purple)</option><option value="legendary">Legendary (orange)</option><option value="icon">Icon Series (teal: celebrities)</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>Celebration</label><select id="aCeleb"><option value="">Normal (random dances)</option><option value="skeleton">Skeleton dance (exclusive)</option></select></div>
     </div>
     <div class="row">
       <div><label>Shop section</label><select id="aCat"><option value="">Daily rotation</option><option value="halloween">Halloween</option></select></div>
@@ -200,24 +207,25 @@ async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp'
   for(const k of list){const row=document.createElement('div');row.className='sk';
    const nm=document.createElement('b');nm.textContent=String(k.name||k.id).toUpperCase();row.appendChild(nm);
    const t=document.createElement('span');t.className='tag';t.textContent=unlockOf(k)+(k.trail?' · '+k.trail:'')+' · '+k.src;row.appendChild(t);
+   const im2=document.createElement('button');im2.className='sec';im2.textContent='IMAGE';im2.onclick=()=>loadSkin(k);row.appendChild(im2);
    const e=document.createElement('button');e.className='sec';e.textContent='EDIT';e.onclick=()=>openSettings(k,null);row.appendChild(e);
    const x=document.createElement('button');x.className='sec';x.textContent='REMOVE';x.onclick=()=>skRemove(k);row.appendChild(x);L.appendChild(row);}
  }catch(e){L.textContent='CAN\'T REACH THE GAME SERVER: '+e.message;}}
 function openSettings(k,png){EDIT={id:k.id,png};$('setp').style.display='';$('setTitle').textContent=png?'ADD TO THE GAME':'EDIT '+String(k.name||k.id).toUpperCase();
  $('aName').value=String(k.name||k.id).toUpperCase();$('aUnlock').value=k.code?'code':k.egg?'egg'+k.egg:'open';$('aCode').value=k.code||'';$('aShow').value=k.codeShow||'';
- $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aShop').value=k.shop&&k.shop.price?'1':'';$('aCat').value=(k.shop&&k.shop.cat)||'';$('aStyle').value=k.styleOf||'';$('aPrice').value=k.shop&&k.shop.price||'';$('aRarity').value=(k.shop&&k.shop.rarity)||'rare';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
+ $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aShop').value=k.shop&&k.shop.price?'1':'';$('aCeleb').value=k.celeb||'';$('aCat').value=(k.shop&&k.shop.cat)||'';$('aStyle').value=k.styleOf||'';$('aPrice').value=k.shop&&k.shop.price||'';$('aRarity').value=(k.shop&&k.shop.rarity)||'rare';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
 async function skSave(){if(!EDIT)return;const m=$('aMsg'),u=$('aUnlock').value,code=$('aCode').value.trim();
  if(u==='code'&&!code){m.textContent='TYPE A CODE';return}
  const e={id:EDIT.id,name:($('aName').value.trim()||EDIT.id).toUpperCase(),secret:u!=='open'};
  /* null (not missing) so a change made here also clears what skins.json says */
  if(u==='code'){e.code=code;e.codeShow=$('aShow').value||null}else{e.code=null;e.codeShow=null}
- e.egg=u.startsWith('egg')?+u.slice(3):null;e.eggTitle=$('aTitle').value.trim()||null;e.eggSub=$('aSub').value.trim()||null;e.trail=$('aTrail').value||null;
+ e.celeb=$('aCeleb').value||null;e.egg=u.startsWith('egg')?+u.slice(3):null;e.eggTitle=$('aTitle').value.trim()||null;e.eggSub=$('aSub').value.trim()||null;e.trail=$('aTrail').value||null;
  if($('aShop').value){const pr=Math.round(+$('aPrice').value);if(!(pr>0)){m.textContent='TYPE A SHOP PRICE';return}e.shop={price:pr,rarity:$('aRarity').value};if($('aCat').value)e.shop.cat=$('aCat').value;e.secret=true;}else e.shop=null;
  const so=$('aStyle').value.trim().toLowerCase();e.styleOf=so&&so!==e.id?so:null;if(e.styleOf){e.shop=null;e.code=null;e.egg=null;e.secret=true;}
  if(EDIT.png){Object.assign(e,EDIT.png);}
  m.textContent='SAVING...';
  try{await skChange(d=>{const i=d.skins.findIndex(x=>x.id===e.id);const clean=JSON.parse(JSON.stringify(e));
-   if(i>=0){const keep=d.skins[i];for(const k of ['code','codeShow','egg','eggTitle','eggSub','trail','shop','styleOf'])delete keep[k];d.skins[i]=Object.assign(keep,clean);delete d.skins[i].hidden;}else d.skins.push(clean);
+   if(i>=0){const keep=d.skins[i];for(const k of ['code','codeShow','egg','eggTitle','eggSub','trail','shop','styleOf','celeb'])delete keep[k];d.skins[i]=Object.assign(keep,clean);delete d.skins[i].hidden;}else d.skins.push(clean);
    for(const x of d.skins)if(x.id!==e.id&&e.egg&&x.egg===e.egg)x.egg=null;});   // one skin per easter egg
   m.textContent='DONE · IT\'S IN THE GAME (RELOAD THE GAME TO SEE IT)';skList();}
  catch(err){m.textContent=String(err.message||err)}}
@@ -235,17 +243,34 @@ function init(){
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('on')};
   drop.ondragleave=()=>drop.classList.remove('on');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
-  ['fsz','bgm','tol','nfr','cut','tint','sid','sname'].forEach(id=>$(id).addEventListener('input',run));
+  ['fsz','bgm','tol','nfr','cut','tint','sid','sname','rfix','hip'].forEach(id=>$(id).addEventListener('input',run));
+  $('hip').addEventListener('input',()=>$('hipv').textContent=$('hip').value);
   $('toAdd').onclick=()=>{const out=$('out'),[fw,fh]=$('fsz').value.split('x').map(Number),id=($('sid').value||'my-skin').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
    const png={png:out.toDataURL('image/png'),frame:[fw,fh],scale:+(12/fw).toFixed(4),tint:$('tint').value!=='false'?undefined:false};if(fw===12&&fh===16){delete png.frame;delete png.scale}
-   openSettings({id,name:$('sname').value},png);};
+   openSettings(LOADED&&LOADED.id===id?Object.assign({},LOADED,{name:$('sname').value}):{id,name:$('sname').value},png);};
   $('aGo').onclick=skSave;$('aCancel').onclick=()=>{EDIT=null;$('setp').style.display='none'};
   $('skReload').onclick=skList;$('skReset').onclick=skReset;skList();
   $('tol').addEventListener('input',()=>$('tolv').textContent=$('tol').value);
   $('dl').onclick=savePng;
   $('copy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($('json').textContent);$('copy').textContent='COPIED';setTimeout(()=>$('copy').textContent='COPY LINE',1200)};
 }
-function load(f){
+/* frames 1-4 become: legs apart, passing, other leg forward, passing (built from run frame 1) */
+function runFix(cv,FW,FH,hip){const g=cv.getContext('2d'),A=g.getImageData(FW,0,FW,FH),sy=Math.round(FH*hip),px=(d,x,y)=>(y*FW+x)*4;
+ let sx=0,cn=0;for(let y=sy;y<Math.min(FH,sy+3);y++)for(let x=0;x<FW;x++)if(A.data[px(A,x,y)+3]){sx+=x;cn++;}if(!cn)return;const cx=sx/cn;
+ let a=FW,b=0;for(let y=FH-6;y<FH;y++)for(let x=0;x<FW;x++)if(A.data[px(A,x,y)+3]){a=Math.min(a,x);b=Math.max(b,x);}a-=3;b+=3;
+ const blank=()=>new ImageData(FW,FH),copy=(src,dst,x,y,X,Y)=>{const i=px(0,x,y),j=px(0,X,Y);for(let k=0;k<4;k++)dst.data[j+k]=src.data[i+k];};
+ const flip=src=>{const out=blank();for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){const i=px(0,x,y);if(!src.data[i+3])continue;const leg=y>=sy&&(x>=a&&x<=b||y-sy>8);
+   if(!leg){copy(src,out,x,y,x,y);continue;}const nx=Math.round(2*cx-x);if(nx>=0&&nx<FW)copy(src,out,x,y,nx,y);}return out;};
+ const pass=src=>{const out=blank();for(let y=0;y<FH;y++)for(let x=0;x<FW;x++){if(y<sy){if(src.data[px(0,x,y)+3])copy(src,out,x,y,x,y);continue;}
+   const k=1-0.42*((y-sy)/Math.max(1,FH-1-sy)),s2=Math.round(cx+(x-cx)/k);if(s2>=0&&s2<FW&&src.data[px(0,s2,y)+3])copy(src,out,s2,y,x,y);}return out;};
+ const B=flip(A),F=[A,pass(A),B,pass(B)];F.forEach((im,i)=>{g.clearRect((1+i)*FW,0,FW,FH);g.putImageData(im,(1+i)*FW,0);});}
+/* load a skin that's already in the game back into the fitter (to fix it and save it over itself) */
+let LOADED=null;
+async function loadSkin(k){try{const src=k.png||('../skins/'+k.file+'?t='+Date.now());const im=new Image();im.crossOrigin='anonymous';
+ im.onload=()=>{IMG=im;LOADED=k;$('sid').value=k.id;$('sname').value=String(k.name||k.id).toUpperCase();if(k.frame)$('fsz').value=k.frame[0]+'x'+k.frame[1];$('bgm').value='alpha';$('cut').value='even';
+  $('opts').style.display='';$('srcp').style.display='';run();$('outp').scrollIntoView({behavior:'smooth'});msg('LOADED '+String(k.name||k.id).toUpperCase()+': FIX IT, THEN "ADD THIS SKIN TO THE GAME" SAVES IT OVER THE OLD ONE');};
+ im.onerror=()=>msg('Could not load that skin image.',1);im.src=src;}catch(e){msg(String(e.message||e),1)}}
+function load(f){LOADED=null;
   const base=f.name.replace(/\.[^.]*$/,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'my-skin';
   /* every new image gets its own name (phone photos are long random ids: rename them in the boxes) */
   $('sid').value=base;$('sname').value=base.replace(/-/g,' ').toUpperCase();
@@ -287,6 +312,7 @@ function run(){
     }
   });
   o.putImageData(od,0,0);
+  if($('rfix').value&&n>=5)runFix(out,fw,fh,+$('hip').value/100);
   const big=$('big'),z=Math.max(2,Math.floor(Math.min(860,innerWidth-48)/out.width));
   big.width=out.width*z;big.height=fh*z;
   const bx=big.getContext('2d');bx.imageSmoothingEnabled=false;bx.clearRect(0,0,big.width,big.height);
