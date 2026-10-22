@@ -2781,7 +2781,7 @@ ACT.hire=d=>{const list=L.staff[d.s],c=list.find(x=>x.id===+d.id);if(!c||L.cc<c.
 /* =====================================================================
    SETTINGS / EDIT TEAM
    ===================================================================== */
-function settingsHTML(){const s=L.settings;if(s.play==null)s.play='both';const ch=(k,v,l)=>`<span class="chip ${s[k]===v?'on':''}" data-a="set" data-k="${k}" data-v="${v}">${l}</span>`;
+function settingsHTML(){const s=L.settings;if(s.play==null)s.play='both';if(s.autoSw==null)s.autoSw=true;const ch=(k,v,l)=>`<span class="chip ${s[k]===v?'on':''}" data-a="set" data-k="${k}" data-v="${v}">${l}</span>`;
  return`<div class="mp cmp" style="width:620px">${ttl('SETTINGS',true)}
  <div class="row"><span style="width:130px">SOUND</span>${ch('sound',true,'ON')}${ch('sound',false,'OFF')}</div>
  <div class="row"><span style="width:130px">REPLAYS</span>${ch('replay',true,'ON')}${ch('replay',false,'OFF')}</div>
@@ -2789,6 +2789,7 @@ function settingsHTML(){const s=L.settings;if(s.play==null)s.play='both';const c
  <div class="row"><span style="width:130px">ARCADE MODE</span><button class="bt" data-a="arcade">${arc()?'ON':'OFF'} · EDIT</button></div>`}
  <div class="row"><span style="width:130px">PLAY</span>${ch('play','both','BOTH')}${ch('play','off','OFFENSE ONLY')}${ch('play','def','DEFENSE ONLY')}</div>
  ${L.online?'':`<div class="row"><span style="width:130px">DIFFICULTY</span>${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',3,'DYNAMIC')}${ch('diff',4,'EXTREME')}</div>`}
+ <div class="row"><span style="width:130px">AUTO SWITCH</span>${ch('autoSw',true,'ON')}${ch('autoSw',false,'OFF')}<span class="s7 dim">JUMP TO THE DEFENDER NEAREST A THROW</span></div>
  <div class="row"><span style="width:130px">DIRECTION</span>${ch('dir','R','LEFT TO RIGHT')}${ch('dir','L','RIGHT TO LEFT')}${ch('dir','S','SWITCH HALVES')}</div>
  <div class="row"><span style="width:130px">ROSTER SIZE</span><span>${s.rmax} PLAYERS</span></div>
  <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:4px"><button class="bt" data-a="editTeam">EDIT TEAM</button>${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${L.online?'<button class="bt" data-a="olExit">LEAGUE MENU</button>':'<button class="bt" data-a="saveq">SAVE &amp; QUIT</button><button class="bt r" data-a="wipe">DELETE SAVE</button>'}<div class="sp"></div><button class="bt y" data-a="close">DONE</button></div></div>`;}
@@ -4244,7 +4245,7 @@ function throwBall(ai){
  const d=Math.hypot(tx-ai.x0,ty-ai.y0),T=Math.max(0.12,d/ai.v);
  const F=makeFlight(ai.x0,ai.y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,T,ai.bullet?PASS.G:PASS.G_LOB);
  M.ball={F,t:0,T:F.T,Tg:F.Tg,x0:F.x0,y0:F.y0,x1:tx,y1:ty,bullet:ai.bullet};
- if(M.def&&!netHost())autoCtlBall(tx,ty);
+ if(M.def&&!netHost()&&L.settings.autoSw!==false)autoCtlBall(tx,ty);   /* setting: AUTO SWITCH ON THROWS */
  window.__pass.last={plan:ai.F,actual:F,err:ai.err};
  M.thrown=true;M.aim=null;M.input=null;q.throwT=0.3;sfx('kick');
  // Who the throw was probably meant for: only used so that receiver keeps
@@ -6267,7 +6268,7 @@ function collegeMakePlayer(r,team){
    and are the same for everyone, and coach vs coach games always play at neutral difficulty.
    ===================================================================== */
 const OL_SEAT_KEYS=['wk','coach','custom','cc','fan','fac','oc','dc','hist','dyn','off','lastPost','lastOffer','jobs','jobWhy','titles','champShow','career','picks','cap','capBuys','style','awardsShow'];
-const OL_SET_KEYS=['sound','replay','play','dir','ball'];   /* everything else in settings is the host's and shared */
+const OL_SET_KEYS=['sound','replay','play','dir','ball','autoSw'];   /* everything else in settings is the host's and shared */
 const OL_STEPS=['sum','prog','con','dwait','draft','jobs','new','swait'];
 const OL_DW=OL_STEPS.indexOf('dwait'),OL_SW=OL_STEPS.indexOf('swait');
 const OL_MAX=8,OL_POLL=5000;
