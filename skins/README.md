@@ -6,7 +6,7 @@ A skin replaces a player's whole on-field sprite. In the game, open a player
 Everything for skins lives in this folder:
 
 - `skins.json`: the list of skins the game offers
-- one PNG sprite sheet per skin, e.g. `placeholder.png` (the temporary robot)
+- one PNG sprite sheet per skin, e.g. `talia.png`
 
 ## Sprite sheet format
 
@@ -58,7 +58,6 @@ Any other color stays exactly as drawn.
      "frame": [12, 16],
      "frames": ["stand", "run1", "run2", "run3", "run4", "dive", "carry", "throw", "reach"],
      "skins": [
-       { "id": "placeholder", "name": "ROBOT (TEMP)", "file": "placeholder.png" },
        { "id": "ninja", "name": "NINJA", "file": "ninja.png" }
      ]
    }
@@ -96,9 +95,6 @@ You can add any of these to a skin's line in `skins.json`:
 
 Example: `{ "id": "hero", "name": "HERO", "file": "hero.png", "frame": [24, 32], "scale": 0.5 }`
 
-To **replace the temporary robot**, either draw over `placeholder.png` (same file
-name, so players already wearing it update automatically) or add a new skin and
-remove the placeholder entry.
 
 ## Prompt you can give another AI
 
