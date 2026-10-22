@@ -179,6 +179,7 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .bpc.prem{background:#2a1530;border-color:#6b3a1a}
 .bpc.can{border-color:#ffd23f;box-shadow:0 0 8px #f07818;cursor:pointer;animation:bpg 1s infinite alternate}
 .bpc.got{opacity:.55}.bpc.lock{opacity:.4}
+.bpc .bpnm{line-height:1.2;max-width:62px;overflow-wrap:normal;word-break:keep-all}
 .bpc .ck{position:absolute;right:2px;top:1px;color:#7dff8a;font-size:9px}
 .bpc .lk{position:absolute;right:2px;top:1px;font-size:8px}
 @keyframes bpg{from{box-shadow:0 0 4px #f07818}to{box-shadow:0 0 12px #ffd23f}}
@@ -1889,7 +1890,7 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
  setTimeout(()=>{const w=document.getElementById('bpw');if(!w)return;if(UI.bpX==null){const col=w.children[Math.max(0,tier-2)];UI.bpX=col?col.offsetLeft-w.offsetLeft:0;}w.scrollLeft=UI.bpX;},0);   /* opens at your tier, keeps its place after a claim */
  const cell=(t,tr)=>{const r=BPASS.rewards.find(x=>x.t===t&&x.tr===tr),prem=tr==='p';if(!r)return`<div class="bpc${prem?' prem':''}"></div>`;
   const got=!!b.cl[tr+t],can=bpCanClaim(b,r),lock=tier<t||(prem&&!b.prem);
-  let inner='';if(r.skin){const K=SKINS.list.find(x=>x.id===r.skin),src=bpSkinPrev(r.skin);inner=(src?`<img src="${src}" width="36" height="51" style="image-rendering:pixelated">`:'<span class="s16">?</span>')+`<span>${esc(String(K?K.name:r.skin).toUpperCase().slice(0,10))}</span>`;}
+  let inner='';if(r.skin){const K=SKINS.list.find(x=>x.id===r.skin),src=bpSkinPrev(r.skin);inner=(src?`<img src="${src}" width="36" height="51" style="image-rendering:pixelated">`:'<span class="s16">?</span>')+(nm=>`<span class="bpnm" style="font-size:${nm.length<=8?7:Math.max(4,Math.min(6,Math.floor(58/Math.max(...nm.split(' ').map(w=>w.length)))))}px">${esc(nm)}</span>`)(String(K?K.name:r.skin).toUpperCase());}
   else inner=`${CUR(2)}<span class="yl">${r.tok}</span>`;
   return`<div class="bpc${prem?' prem':''}${can?' can':''}${got?' got':''}${lock&&!got?' lock':''}" ${can?`data-a="bpClaim" data-k="${tr}${t}"`:''}>${inner}${got?'<span class="ck">✓</span>':prem&&!b.prem?'<span class="lk">🔒</span>':''}</div>`;};
  let cols='';for(let t=1;t<=BPASS.tiers;t++)cols+=`<div class="bpcol"><div class="tn${t<=tier?' on':''}">TIER ${t}</div>${cell(t,'f')}${cell(t,'p')}</div>`;
