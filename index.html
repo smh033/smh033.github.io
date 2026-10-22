@@ -170,6 +170,18 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .pracsb b{color:#ffd23a;font-weight:normal}.pracsb .bt{padding:4px 7px 3px;font-size:7px}
 .pdr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;white-space:normal;line-height:1.5;width:100%}
 .fobar>.bt:not(.ico){flex:1 1 auto;min-width:0;font-size:7px;padding:7px 5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bpbtn{display:inline-flex;align-items:center;gap:6px;border-color:#f07818!important;color:#ffd7a8}
+.bpwrap{display:flex;gap:4px;overflow-x:auto;width:100%;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+.bpcol{flex:0 0 66px;display:flex;flex-direction:column;gap:4px;align-items:stretch}
+.bpcol .tn{text-align:center;font-size:7px;padding:2px 0;background:#2a1640;border:1px solid #5a3a80}
+.bpcol .tn.on{background:#f07818;color:#1a0e00;border-color:#ffb060}
+.bpc{position:relative;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:#1c1030;border:2px solid #3a2458;font-size:7px;text-align:center;cursor:default}
+.bpc.prem{background:#2a1530;border-color:#6b3a1a}
+.bpc.can{border-color:#ffd23f;box-shadow:0 0 8px #f07818;cursor:pointer;animation:bpg 1s infinite alternate}
+.bpc.got{opacity:.55}.bpc.lock{opacity:.4}
+.bpc .ck{position:absolute;right:2px;top:1px;color:#7dff8a;font-size:9px}
+.bpc .lk{position:absolute;right:2px;top:1px;font-size:8px}
+@keyframes bpg{from{box-shadow:0 0 4px #f07818}to{box-shadow:0 0 12px #ffd23f}}
 </style>
 </head>
 <body>
@@ -1823,6 +1835,56 @@ function showAmerica(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;re
    if(t>2.2&&t<4.6&&Math.floor(t*2.5)%2===0)txt('U-S-A! U-S-A!',320,310,10,'#ffd23f');}
   requestAnimationFrame(frame);};
  let last=T0;requestAnimationFrame(frame);}
+/* ---------- BATTLE BPASS: Pumpkin Tokens are earned by playing, the premium track is bought with them ----------
+   Each played game: +tokens and +pass XP (more for a win and touchdowns; a simmed game pays a third).
+   Rewards: free and premium track per tier; skins unlock when you claim them. Kept on this device. */
+const BPASS={id:'haunted-2026',name:'HAUNTED SEASON',tiers:30,xp:150,cost:500,
+ rewards:[
+  {t:1,tr:'p',skin:'nikki'},{t:2,tr:'f',tok:20},{t:3,tr:'p',tok:40},{t:4,tr:'f',tok:20},{t:5,tr:'p',tok:40},{t:6,tr:'f',tok:25},
+  {t:8,tr:'f',skin:'slenderman'},{t:9,tr:'p',tok:50},{t:10,tr:'f',tok:30},{t:12,tr:'p',skin:'freddy'},{t:13,tr:'f',tok:30},{t:15,tr:'p',tok:60},
+  {t:16,tr:'f',tok:30},{t:18,tr:'f',skin:'jason'},{t:19,tr:'p',tok:60},{t:21,tr:'f',tok:35},{t:22,tr:'p',skin:'ghostface'},{t:24,tr:'f',tok:35},
+  {t:25,tr:'p',tok:75},{t:27,tr:'f',tok:40},{t:28,tr:'p',tok:75},{t:30,tr:'p',skin:'headlesshorseman'}]};
+const BP_KEY='rf_bp',TOK_KEY='rf_pumpkins';
+function bpTok(){try{return +localStorage.getItem(TOK_KEY)||0;}catch(e){return 0;}}
+function bpTokAdd(n){try{localStorage.setItem(TOK_KEY,String(Math.max(0,bpTok()+n)));}catch(e){}}
+function bpGet(){let b=null;try{b=JSON.parse(localStorage.getItem(BP_KEY)||'null');}catch(e){}if(!b||b.id!==BPASS.id)b={id:BPASS.id,xp:0,prem:false,cl:{},last:''};return b;}
+function bpPut(b){try{localStorage.setItem(BP_KEY,JSON.stringify(b));}catch(e){}}
+const bpTier=b=>Math.min(BPASS.tiers,Math.floor(b.xp/BPASS.xp));
+function bpAfterGame(my,op,tds,g,simmed){if(my==null||op==null)return;const b=bpGet();
+ const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
+ const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?1/3:1;
+ const tok=Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round((100+(win?50:0)+15*td)*k),t0=bpTier(b);
+ b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
+ setTimeout(()=>toast('+'+tok+' PUMPKIN TOKENS · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);}
+function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
+function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
+function bpSkinPrev(id){const K=SKINS.list.find(x=>x.id===id);if(!K||!SKINS.img[id])return'';const lk={spr:id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'bp'+id};
+ const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();}
+function bpRegister(){
+SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>=BPASS.tiers;
+ const cell=(t,tr)=>{const r=BPASS.rewards.find(x=>x.t===t&&x.tr===tr),prem=tr==='p';if(!r)return`<div class="bpc${prem?' prem':''}"></div>`;
+  const got=!!b.cl[tr+t],can=bpCanClaim(b,r),lock=tier<t||(prem&&!b.prem);
+  let inner='';if(r.skin){const K=SKINS.list.find(x=>x.id===r.skin),src=bpSkinPrev(r.skin);inner=(src?`<img src="${src}" width="36" height="51" style="image-rendering:pixelated">`:'<span class="s16">?</span>')+`<span>${esc(String(K?K.name:r.skin).toUpperCase().slice(0,10))}</span>`;}
+  else inner=`${hwPumpkin(2)}<span class="yl">${r.tok}</span>`;
+  return`<div class="bpc${prem?' prem':''}${can?' can':''}${got?' got':''}${lock&&!got?' lock':''}" ${can?`data-a="bpClaim" data-k="${tr}${t}"`:''}>${inner}${got?'<span class="ck">✓</span>':prem&&!b.prem?'<span class="lk">🔒</span>':''}</div>`;};
+ let cols='';for(let t=1;t<=BPASS.tiers;t++)cols+=`<div class="bpcol"><div class="tn${t<=tier?' on':''}">TIER ${t}</div>${cell(t,'f')}${cell(t,'p')}</div>`;
+ const claimable=BPASS.rewards.filter(r=>bpCanClaim(b,r)).length;
+ return`<div class="screen" style="gap:8px">
+ <div class="row" style="width:100%;align-items:center"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button><div class="grow">${ttl(BPASS.name)}</div><div class="row" style="gap:4px;align-items:center">${hwPumpkin(2)}<span class="yl s10">${bpTok()}</span></div></div>
+ <div class="row" style="width:100%;gap:10px;align-items:center"><span class="s10" style="white-space:nowrap">TIER ${tier}/${BPASS.tiers}</span>
+  <div style="flex:1;height:12px;background:#1c1030;border:2px solid #5a3a80"><div style="height:100%;width:${full?100:Math.round(into/BPASS.xp*100)}%;background:linear-gradient(90deg,#f07818,#ffd23f)"></div></div>
+  <span class="s7 dim" style="white-space:nowrap">${full?'MAXED':into+'/'+BPASS.xp+' XP'}</span></div>
+ <div class="row" style="width:100%;gap:8px;align-items:center">
+  ${b.prem?'<span class="s7 grt">PREMIUM PASS ACTIVE</span>':`<button class="bt y" data-a="bpBuy">BUY PREMIUM · ${BPASS.cost} ${hwPumpkin(2)}</button><span class="s7 dim">${bpTok()>=BPASS.cost?'YOU CAN AFFORD IT':'NEED '+(BPASS.cost-bpTok())+' MORE'}</span>`}
+  <div class="sp"></div>${claimable?`<button class="bt" data-a="bpClaimAll">CLAIM ALL (${claimable})</button>`:''}</div>
+ <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
+  <div class="bpwrap scroll">${cols}</div></div>
+ <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN PUMPKIN TOKENS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
+ACT.bp=()=>{if(!SKINS.ok)loadSkins();go('bpass');};
+ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' PUMPKIN TOKENS');}render();};
+ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
+ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH PUMPKIN TOKENS');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
+}
 /* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL), "egg": 2 (tap RETRO) or "egg": 3 (tap the row of players) or "egg": 4 (tap an empty spot) */
 function eggRewardN(n){const k=SKINS.list.find(x=>+x.egg===n);if(!k){toast('NO SKIN IS SET FOR THIS EASTER EGG YET');return;}
  eggReward(k.id,String(k.name||k.id).toUpperCase(),n===4?'#e8eefc':n===3?'#d1001f':n===2?'#ff2b8a':'#ff2bd6',n===4?'#8fb0e8':n===3?'#ffcc33':n===2?'#ff5cc8':'#00e5ff');}
@@ -2075,7 +2137,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   ${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}
+   <div class="row" style="gap:8px"><button class="bt bpbtn" data-a="bp">${hwPumpkin(2)} BATTLE PASS <span class="yl">${bpTok()}</span></button>${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}</div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -2567,7 +2629,7 @@ ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)l
  const prev=id=>{const lk=lookFor(Object.assign({},p,{spr:id||null}),L.user);const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();};
  const cell=(id,nm)=>`<button class="bt ${(p.spr||null)===(id||null)?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 4px;min-width:0" data-a="pSkin2" data-v="${esc(id||'')}"><img src="${prev(id)}" width="36" height="51" style="image-rendering:pixelated"><span class="s7" style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span></button>`;
  modal(`<div class="mp" style="width:520px;align-items:center;gap:8px">${ttl('SKIN · '+esc(pname(p).toUpperCase()),true)}
- <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.map(k=>skinOpen(k.id)?cell(k.id,k.name):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">SECRET</span></div>`).join('')}</div>
+ <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.map(k=>skinOpen(k.id)?cell(k.id,k.name):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">${(()=>{const r=BPASS.rewards.find(x=>x.skin===k.id);return r?'PASS T'+r.t:'SECRET';})()}</span></div>`).join('')}</div>
  ${SKINS.err?'<div class="s7 rdt">SKINS/SKINS.JSON HAS A MISTAKE (CHECK COMMAS AND QUOTES)</div>':SKINS.ok?'':'<div class="s7 dim">LOADING SKINS...</div>'}${SKINS.bad&&Object.keys(SKINS.bad).length?`<div class="s7 rdt" style="text-align:center">IMAGE FILE NOT FOUND: ${Object.keys(SKINS.bad).map(id=>esc((SKINS.list.find(x=>x.id===id)||{}).file||id)).join(', ')}</div>`:''}<button class="bt" data-a="close">DONE</button></div>`);};
 ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(d.v&&!skinOpen(d.v))return;p.spr=d.v||null;if(!p.spr)delete p.spr;skinMapSet(p);try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
@@ -3638,6 +3700,7 @@ function overtime(){
 }
 function gameOver(){
  if(M.prac)return pracEnd();
+ try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed);}catch(e){console.warn('pass',e);}
  olmSave('final');
  M.phase='ov';const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1];
  if(W)boom();else sfx('bad');
@@ -5494,7 +5557,7 @@ ACT.gKnee=()=>takeKnee();
 ACT.gPause=()=>{if(M)M.paused=true;};
 ACT.gResume=()=>{if(M)M.paused=false;};
 ACT.gSnd=()=>{L.settings.sound=!L.settings.sound;save();};
-ACT.gSim=()=>{if(M&&M.prac){M.paused=false;return pracEnd();}if(M){M.paused=false;simRest();}};
+ACT.gSim=()=>{if(M&&M.prac){M.paused=false;return pracEnd();}if(M){M.paused=false;M.simmed=true;simRest();}};
 
 /* ---------- input (mouse + touch, single active pointer) ---------- */
 function cpos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};}
@@ -5945,7 +6008,7 @@ function netGuestMsg(m){
  if(m.t==='hbr'){const r=performance.now()-m.ts;NET.rtt=NET.rtt?NET.rtt+(r-NET.rtt)*0.3:r;return;}
  if(m.t==='start'){netGuestStart(m);return;}
  if(m.t==='end'&&m.olg&&OLG){olGuestEnd(m);return;}
- if(m.t==='end'){netsClear();NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
+ if(m.t==='end'){try{if(M)bpAfterGame(M.sc[0],M.sc[1],null,M.g);}catch(e){}netsClear();NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
  if(m.t==='s'){const now=performance.now();if(m.R){const k=JSON.stringify(m.R);if(k!==NET.Rk||!NET.R){NET.Rk=k;NET.R=m.R;}}
   if(NET.lsT){const d=now-NET.lsT;if(d<1000){NET.iv+=(d-NET.iv)*0.1;NET.jit+=(Math.abs(d-NET.iv)-NET.jit)*0.1;}}NET.lsT=now;
   const e={tm:now,s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
@@ -6135,7 +6198,7 @@ ACT.netBreak=()=>{if(OLG){netSend({t:'brk'});try{NET.conn&&NET.conn.close();}cat
 ACT.netsAsk=()=>netsBoot();
 netInit();
 loadSkins();
-ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;ACT.egg4=eggTap4;
+bpRegister();ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;ACT.egg4=eggTap4;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){
@@ -6703,7 +6766,7 @@ function olHostEnd(){olgClear(OLG&&OLG.code);const g=M.g,op=M.op,ps={},gps={};
  netSend({t:'end',olg:{h:g.h,a:g.a,sc:[M.sc[1],M.sc[0]],ps:gps,op:L.user},last:''});
  NET.on=false;NET.stage='ended';setTimeout(netReset,1500);
  M=null;L.net=false;Object.assign(L.settings,OLG.sv||{});olRoomClose();postGame(g,R);}
-function olGuestEnd(m){olgClear(OLG&&OLG.code);const o=m.olg;M=null;L=OLG&&OLG.L||L;netReset();olRoomClose();indexPlayers();applyCustomTeam();
+function olGuestEnd(m){olgClear(OLG&&OLG.code);const o=m.olg;try{bpAfterGame(o.sc[0],o.sc[1],null,{h:o.h,a:o.a});}catch(e){}M=null;L=OLG&&OLG.L||L;netReset();olRoomClose();indexPlayers();applyCustomTeam();
  const g=curGames().find(x=>x.h===o.h&&x.a===o.a&&x.hs==null);
  if(!g){toast('GAME OVER');return olResume();}
  postGame(g,{sc:o.sc,ps:o.ps||{},op:o.op});}
