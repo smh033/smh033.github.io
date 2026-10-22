@@ -1002,9 +1002,12 @@ function userStatScale(t){
  let act=0;for(const p of ro)act+=(p.s.pyd||0)+(p.s.ryd||0);
  return act>0?clamp(exp/act,1,6):1;}
 function scaledStats(s,f){const o={};for(const k in s)o[k]=k==='gp'?s[k]:(s[k]||0)*f;return o;}
-function giveAwards(){
+/* same league + same season = same random stat lines on every device (online leagues used to differ per coach) */
+function seededRun(seedStr,fn){let h=2166136261;for(const c of String(seedStr))h=Math.imul(h^c.charCodeAt(0),16777619);let x=h>>>0||1;
+ const R=Math.random;Math.random=()=>{x^=x<<13;x>>>=0;x^=x>>>17;x^=x<<5;x>>>=0;return (x>>>0)/4294967296;};try{return fn();}finally{Math.random=R;}}
+function giveAwards(had){   /* had: on a redo, awards players already got (no second skill point / coins) */
  const UF={};for(const t of humans())UF[t]=userStatScale(t);const uf=UF[L.user]||1;void uf;
- for(const t of L.teams)if(!isHuman(t.id))seasonLineForAI(t.id);
+ seededRun((L.online&&L.online.code||'solo')+':'+L.year,()=>{for(const t of L.teams)if(!isHuman(t.id))seasonLineForAI(t.id);});
  const pool=L.players.filter(p=>p.team>=0&&p.s&&p.s.gp>0),winsOf=p=>L.teams[p.team].w;
  const S=p=>isHuman(p.team)?scaledStats(p.s,UF[p.team]||1):p.s;
  const offP=pool.filter(p=>['QB','RB','WR','TE'].includes(p.pos)),defP=pool.filter(p=>['DL','LB','DB'].includes(p.pos));
@@ -1016,10 +1019,16 @@ function giveAwards(){
  const list=[['MVP','MOST VALUABLE PLAYER',mvp],['OPOY','OFFENSIVE PLAYER OF THE YEAR',opoy],['DPOY','DEFENSIVE PLAYER OF THE YEAR',dpoy],['ROTY','ROOKIE OF THE YEAR',roty]].filter(x=>x[2]);
  const out={year:L.year,list:list.map(([a,full,p])=>({a,full,id:p.id,name:fullname(p),pos:p.pos,team:p.team,line:statLine(p)+(isHuman(p.team)&&UF[p.team]>1.15?' · ≈'+statLine({pos:p.pos,s:S(p)}).split(' · ')[0].replace(/\d+(\.\d+)?/,m=>Math.round(+m))+' FULL GAMES':'')}))};
  for(const [a,,p] of list){p.awards=(p.awards||[]);p.awards.push(a+' '+L.year);
+  if(had&&had.has(p.id+':'+a))continue;
   if(isHuman(p.team)){if(!isMaxed(p))p.sp=(p.sp||0)+1;p.mor=clamp(p.mor+20,0,100);olAs(p.team,()=>{L.cc+=5;L.fan=clamp(L.fan+3,0,100);});news((L.seats?abbr(p.team)+' ':'')+fullname(p)+' WINS '+a+'! (+1 SKILL POINT, +5 COINS)');}
   else news(abbr(p.team)+' '+p.pos+' '+fullname(p)+' named '+a+'.');}
- L.awards=L.awards||[];L.awards.unshift(out);olEach(()=>{L.awardsShow=true;});
+ L.awards=L.awards||[];L.awards.unshift(out);L.awFix=L.year;olEach(()=>{L.awardsShow=true;});
 }
+/* online leagues from before the fix: work the season's awards out again from the league's (shared) stats, once, for everyone */
+function awardsRedo(){const yr=L.year,had=new Set();
+ for(const p of L.players){if(!p.awards||!p.awards.length)continue;for(const a of p.awards)if(a.endsWith(' '+yr))had.add(p.id+':'+a.split(' ')[0]);p.awards=p.awards.filter(a=>!a.endsWith(' '+yr));}
+ L.awards=(L.awards||[]).filter(A=>A.year!==yr);giveAwards(had);news(yr+' SEASON AWARDS UPDATED: EVERY COACH NOW SEES THE SAME WINNERS.');}
+const awardsNeedRedo=()=>!!(L&&L.seats&&L.phase==='PO'&&L.awFix!==L.year&&L.awards&&L.awards.some(A=>A.year===L.year));
 function awardsHTML(A){
  const row=w=>{const p=P(w.id),mine=w.team===L.user;return`<div class="row" style="gap:8px;align-items:center;padding:3px 6px;${mine?'background:rgba(255,230,0,.18);border:2px solid #ffe600':'border:2px solid transparent'}">
   ${p?`<img class="ava" src="${portrait(p,w.team,2)}" width="36" height="36" style="border:2px solid #fff">`:''}
@@ -6613,6 +6622,7 @@ const olTx=fn=>olSync(fn);
 /* after a sync: if the league can move on, move it; refresh what's on screen */
 function olAfter(changed){
  if(!olLive())return;
+ if(awardsNeedRedo()&&performance.now()-(OL.awt||-1e9)>8000){OL.awt=performance.now();setTimeout(()=>olTx(()=>{if(awardsNeedRedo())awardsRedo();}).then(()=>{if(UI.scr==='hub'&&!UI.modal)render();}),0);return;}
  if(olGateReady()&&performance.now()-(OL.gt||-1e9)>3000){OL.gt=performance.now();setTimeout(()=>olTx(olGates),0);return;}
  olTradeNote();
  if(!changed)return;
