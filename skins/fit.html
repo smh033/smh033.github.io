@@ -109,7 +109,7 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     <div class="row">
       <div><label>Code (if unlocked by a code)</label><input type="text" id="aCode" placeholder="e.g. FORT"></div>
       <div><label>Show when the code is typed</label><select id="aShow">
-        <option value="">None</option><option value="america">America (flag, fireworks)</option><option value="winter">Winter (snow, aurora)</option>
+        <option value="">None</option><option value="rap">Rap (blood moon, bats, beat)</option><option value="america">America (flag, fireworks)</option><option value="winter">Winter (snow, aurora)</option>
         <option value="ninja">Ninja (shuriken, smoke)</option><option value="blocks">Blocks (block world)</option><option value="royale">Royale (skydive, storm)</option></select></div>
     </div>
     <div class="row">
@@ -188,9 +188,9 @@ async function skRepo(){try{const r=await fetch('skins.json?t='+Date.now(),{cach
 function unlockOf(k){return k.shop&&k.shop.price?'SHOP '+k.shop.price+' · '+String(k.shop.rarity||'rare').toUpperCase():k.code?'CODE '+String(k.code).toUpperCase()+(k.codeShow?' ('+k.codeShow+' show)':''):k.egg?'EASTER EGG '+k.egg:k.secret?'SECRET':'EVERYONE'}
 async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp').style.display='';
  try{const repo=await skRepo(),{d}=await skGet(),list=repo.map(x=>Object.assign({},x,{src:'github'}));
-  const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity:'legendary'},'tung-tung':{price:250,rarity:'uncommon'},'john':{price:600,rarity:'epic'},'ninja':{price:800,rarity:'legendary'},'steve':{price:600,rarity:'epic'},'richard':{price:400,rarity:'rare'}};   /* same as the game's: old code skins are in the shop */
+  const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity:'legendary'},'tung-tung':{price:250,rarity:'uncommon'},'john':{price:600,rarity:'epic'},'ninja':{price:800,rarity:'legendary'},'steve':{price:600,rarity:'epic'},'richard':{price:400,rarity:'rare'},'00-king':{price:700,rarity:'legendary'}};   /* same as the game's: old code skins are in the shop */
   for(const r of d.skins){const i=list.findIndex(x=>x.id===r.id);if(r.hidden){if(i>=0)list.splice(i,1);continue;}if(i>=0)Object.assign(list[i],r,{src:'github + changed here'});else list.push(Object.assign({},r,{src:'added here'}));}
-  for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id])k.shop=SHOP_DEFAULTS[k.id];if(k.code&&String(k.code).toLowerCase()!=='travvypatty'&&k.shop)k.code=null;}
+  for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id])k.shop=SHOP_DEFAULTS[k.id];if(k.code&&String(k.code).toLowerCase()!=='travvypatty'&&k.shop)k.code=null;if(k.shop)k.egg=null;}
   L.innerHTML='';if(!list.length)L.textContent='NO SKINS YET';
   for(const k of list){const row=document.createElement('div');row.className='sk';
    const nm=document.createElement('b');nm.textContent=String(k.name||k.id).toUpperCase();row.appendChild(nm);
