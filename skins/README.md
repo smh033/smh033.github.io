@@ -89,7 +89,8 @@ You can add any of these to a skin's line in `skins.json`:
 - `"trail": "sandevistan"`: running leaves a trail of neon afterimages behind the player (cyan, pink, yellow,
   green, purple); faster running stretches it out.
 - `"codeShow": "america"`: plays a show before a code's skin unlocks (`america`: waving flag, fireworks and a brass
-  fanfare; `winter`: snowfall, aurora, frost and sleigh bells). `eggTitle` / `eggSub` set its text.
+  fanfare; `winter`: snowfall, aurora, frost and sleigh bells;
+  `ninja`: moonlit rooftops, shuriken, a smoke bomb reveal, katana slashes and taiko drums). `eggTitle` / `eggSub` set its text.
 - `"code": "Cross"`: players unlock this skin by typing the code on the title screen's CODES button
   (capitals don't matter). Use it together with `"secret": true`. Anyone who opens skins.json on GitHub can read it.
 
