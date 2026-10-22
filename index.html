@@ -1378,7 +1378,7 @@ function loadSkins(){const rem=skinsRemote();
   if(R&&Array.isArray(R.skins))for(const r of R.skins){if(!r||!r.id)continue;const i=list.findIndex(x=>x.id===r.id);
    if(r.hidden){if(i>=0)list.splice(i,1);continue;}
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
-  if(SHOP_ON)for(const k of list){if(k.code&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
+  for(const k of list){if(k.code&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* old codes are off everywhere now (the shop sells those skins from release) */if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
   for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
@@ -1473,7 +1473,7 @@ function eggPlay2(){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;return
 function eggReward2(){eggRewardN(2);}
 /* third easter egg: tap the row of little players on the title screen 7 times quickly -> a blood-moon rap show, 00 KING unlocks */
 const EGG3={n:0,t:0};
-function eggTap3(){if(SHOP_ON&&SKINS.ok&&!SKINS.list.some(x=>+x.egg===3))return;   /* no skin on this easter egg any more */
+function eggTap3(){if(SKINS.ok&&!SKINS.list.some(x=>+x.egg===3))return;   /* no skin on this easter egg any more */
 const now=performance.now();EGG3.n=now-EGG3.t<900?EGG3.n+1:1;EGG3.t=now;if(EGG3.n>=3&&EGG3.n<7)sfx('tick');if(EGG3.n>=7&&!EGG.on){EGG3.n=0;eggPlay3();}}
 /* a tiny trap beat: 808 kick, clap, rolling hats and a dark bell */
 function eggBeat3(dur){if(!sndOn())return null;const ac=audio();if(!ac)return null;
