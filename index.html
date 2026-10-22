@@ -185,7 +185,7 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .shbox{background:#13244a;border:2px solid #2d4f8a}.shhd{background:#2d4f8a;padding:5px 6px 4px;font-size:8px}
 .shbar{display:flex;align-items:center;gap:8px;background:#2d4f8a;padding:6px 8px 5px}
 .shc{display:flex;flex-direction:column;width:110px;background:radial-gradient(circle at 50% 35%,var(--c2),var(--c1) 70%);border:2px solid var(--c2);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,30,.5)}
-.shc.big{width:150px}.shc .shimg{display:flex;align-items:flex-end;justify-content:center;flex:1}
+.shc.big{width:150px;flex:0 0 150px}.shc .shimg{display:flex;align-items:flex-end;justify-content:center;flex:1}
 .shc .shnm{background:rgba(10,20,50,.72);padding:4px 3px 3px;text-align:center;display:flex;flex-direction:column;gap:3px}
 .shc .shpr{background:#0c1430;padding:4px 3px 3px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:9px}
 .shc:hover{filter:brightness(1.12)}
@@ -1385,7 +1385,9 @@ function skinResetCheck(n){if(!n)return;let seen=0;try{seen=+localStorage.getIte
  try{if(L&&L.players&&!L.net&&!L.exh){let ch=false;for(const p of L.players)if(p.team===L.user&&p.spr){delete p.spr;ch=true;}if(ch&&typeof save==='function'&&!L.online)save();}}catch(e){}
  try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}}
 const skinsUnlocked=()=>{try{return JSON.parse(localStorage.getItem(SKU_KEY)||'[]')||[];}catch(e){return[];}};
-const skinOpen=id=>{const k=SKINS.list.find(x=>x.id===id);return !!k&&(!k.secret||skinsUnlocked().includes(id));};
+const skinOpen=id=>{const k=SKINS.list.find(x=>x.id===id);if(k&&k.styleOf&&k.styleOf!==id)return skinOpen(k.styleOf);return !!k&&(!k.secret||skinsUnlocked().includes(id));};   /* "styleOf": an edit style comes with its main skin */
+const skinStyles=id=>SKINS.list.filter(x=>x.styleOf===id);
+const skinLabel=k=>{if(!k)return'';if(k.styleOf){const p=SKINS.list.find(x=>x.id===k.styleOf),n=skinStyles(k.styleOf).indexOf(k)+2;return String(p?p.name:k.styleOf).toUpperCase()+' · STYLE '+n;}return String(k.name||k.id).toUpperCase();};
 function unlockSkin(id){const a=skinsUnlocked();if(!a.includes(id)){a.push(id);try{localStorage.setItem(SKU_KEY,JSON.stringify(a));}catch(e){}}}
 const skinMap=()=>{try{return JSON.parse(localStorage.getItem(SKM_KEY)||'{}')||{};}catch(e){return{};}};
 function skinMapSet(p){const m=skinMap(),k=lookKey(p);if(!k)return;if(p.spr)m[k]=p.spr;else delete m[k];try{localStorage.setItem(SKM_KEY,JSON.stringify(m));}catch(e){}}
@@ -1916,7 +1918,7 @@ const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity
 const RARITY={uncommon:['#3f9a2e','#7ad04f','UNCOMMON'],rare:['#1d6fd0','#4fb4ff','RARE'],epic:['#7a2fc2','#c56bff','EPIC'],legendary:['#c8641a','#ffb347','LEGENDARY'],icon:['#0a7d86','#3ff0e6','ICON SERIES']};
 const dayKey=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 function seedRand(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0)/4294967296;};}
-function shopPool(){return SKINS.list.filter(k=>k.shop&&+k.shop.price>0);}
+function shopPool(cat){return SKINS.list.filter(k=>k.shop&&+k.shop.price>0&&!k.styleOf&&((k.shop.cat||'')===(cat||'')));}
 function shopToday(){const pool=shopPool().slice().sort((a,b)=>a.id<b.id?-1:1),r=seedRand('shop|'+dayKey());
  for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
  const pick=pool.slice(0,4),rk=k=>['uncommon','rare','epic','legendary','icon'].indexOf((k.shop.rarity)||'rare');
@@ -1947,10 +1949,10 @@ function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen
  let src='';if(SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W;cc.height=H;drawMan(cc.getContext('2d'),W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();}
  return`<div class="shc${big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
   <div class="shimg">${src?`<img src="${src}" width="${W}" height="${H}" style="image-rendering:pixelated">`:'<span class="s16">?</span>'}</div>
-  <div class="shnm"><div class="${big?'s10':'s7'}">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}</div></div>
+  <div class="shnm"><div class="${big?'s10':'s7'}">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
   <div class="shpr">${own?'<span class="grt">OWNED</span>':`${hwPumpkin(2)} ${(+k.shop.price).toLocaleString()}`}</div></div>`;}
 function shopRegister(){
-SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday();
+SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday(),cat=UI.shopCat||'',hw=shopPool('halloween');if(cat&&!hw.length)UI.shopCat='';
  clearInterval(window.__shopT);window.__shopT=setInterval(()=>{const e=document.getElementById('shopT');if(!e){clearInterval(window.__shopT);return;}e.textContent=shopLeft();if(shopLeft()==='00:00:00')setTimeout(render,1500);},1000);
  const ch=d.ids.map(id=>{const c=CHALL.find(x=>x.id===id),st=d.ch[id]||{n:0,done:false};if(!c)return'';return`<div class="row" style="gap:6px;align-items:center;${st.done?'opacity:.55':''}"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}${c.need?` (${Math.min(st.n,c.need)}/${c.need})`:''}</span><span class="s7 yl" style="white-space:nowrap">+${c.tok}</span></div>`;}).join('');
  const grid=items.length>=4?`<div class="col" style="gap:6px">${shopCard(items[0])}${shopCard(items[1])}</div>${shopCard(items[2],true)}${shopCard(items[3],true)}`:items.map(k=>shopCard(k,true)).join('');
@@ -1964,11 +1966,13 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
    ${TEST_SITE?'<button class="bt r" data-a="shopTest">TEST: +500 TOKENS</button>':''}
   </div>
   <div class="col" style="flex:1;gap:6px;min-width:0">
-   <div class="shbar"><span class="s10">ITEM SHOP</span><div class="sp"></div><span class="s7 dim">NEW ITEMS IN</span><span class="s10" id="shopT">${shopLeft()}</span></div>
-   <div class="row" style="gap:8px;align-items:stretch;justify-content:center">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>
+   <div class="shbar"><button class="bt ${!cat?'y':''}" data-a="shopCat" data-v="" style="padding:4px 8px 3px">DAILY</button>${hw.length?`<button class="bt ${cat==='halloween'?'y':''}" data-a="shopCat" data-v="halloween" style="padding:4px 8px 3px;display:inline-flex;gap:4px;align-items:center">${hwPumpkin(1)} HALLOWEEN</button>`:''}<div class="sp"></div>${cat?'<span class="s7 yl">LIMITED TIME</span>':`<span class="s7 dim">NEW ITEMS IN</span><span class="s10" id="shopT">${shopLeft()}</span>`}</div>
+   ${cat==='halloween'?`<div class="bpwrap scroll" id="shw" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)" style="gap:8px;justify-content:flex-start;align-items:flex-start">${hw.slice().sort((a,b)=>(+a.shop.price)-(+b.shop.price)).map(k=>shopCard(k,true)).join('')}</div>`
+   :`<div class="row" style="gap:8px;align-items:stretch;justify-content:center">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>`}
    <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY AND DON'T CHANGE HOW PLAYERS PLAY.</div>
   </div></div></div>`;};
 ACT.shop=()=>{if(!SKINS.ok)loadSkins();go('shop');};
+ACT.shopCat=d=>{UI.shopCat=d.v||'';render();};
 ACT.shopBuy=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price,R=RARITY[k.shop.rarity]||RARITY.rare;
  modal(`<div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('BUY SKIN',true)}<div class="s10">${esc(String(k.name).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}</div>
   <div class="row" style="gap:6px;align-items:center;justify-content:center">${hwPumpkin(3)}<span class="s16 yl">${p.toLocaleString()}</span></div>
@@ -2722,7 +2726,7 @@ ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)l
  const prev=id=>{const lk=lookFor(Object.assign({},p,{spr:id||null}),L.user);const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();};
  const cell=(id,nm)=>`<button class="bt ${(p.spr||null)===(id||null)?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 4px;min-width:0" data-a="pSkin2" data-v="${esc(id||'')}"><img src="${prev(id)}" width="36" height="51" style="image-rendering:pixelated"><span class="s7" style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span></button>`;
  modal(`<div class="mp" style="width:520px;align-items:center;gap:8px">${ttl('SKIN · '+esc(pname(p).toUpperCase()),true)}
- <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.map(k=>skinOpen(k.id)?cell(k.id,k.name):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">${(()=>{const r=BPASS.rewards.find(x=>x.skin===k.id);return r?'PASS T'+r.t:'SECRET';})()}</span></div>`).join('')}</div>
+ <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.filter(k=>!k.styleOf||skinOpen(k.id)).map(k=>skinOpen(k.id)?cell(k.id,skinLabel(k)):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">${(()=>{const r=BPASS.rewards.find(x=>x.skin===k.id);return r?'PASS T'+r.t:'SECRET';})()}</span></div>`).join('')}</div>
  ${SKINS.err?'<div class="s7 rdt">SKINS/SKINS.JSON HAS A MISTAKE (CHECK COMMAS AND QUOTES)</div>':SKINS.ok?'':'<div class="s7 dim">LOADING SKINS...</div>'}${SKINS.bad&&Object.keys(SKINS.bad).length?`<div class="s7 rdt" style="text-align:center">IMAGE FILE NOT FOUND: ${Object.keys(SKINS.bad).map(id=>esc((SKINS.list.find(x=>x.id===id)||{}).file||id)).join(', ')}</div>`:''}<button class="bt" data-a="close">DONE</button></div>`);};
 ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(d.v&&!skinOpen(d.v))return;p.spr=d.v||null;if(!p.spr)delete p.spr;skinMapSet(p);try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
@@ -5446,13 +5450,28 @@ function drawLogoLayer(sh,maxY){
 const TRAIL_TINT=new WeakMap(),SANDE=['#00f0ff','#ff2bd6','#ffe600','#7cff4d','#b05cff'];
 function trailTint(c,col){let m=TRAIL_TINT.get(c);if(!m){m=new Map();TRAIL_TINT.set(c,m);}let t=m.get(col);if(t)return t;
  t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);g.globalCompositeOperation='source-atop';g.globalAlpha=0.82;g.fillStyle=col;g.fillRect(0,0,t.width,t.height);m.set(col,t);return t;}
-function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='sandevistan'||!SKINS.img[K.id])return;
+function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail!=='sandevistan')return;
  const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
  const o=st.o,u=o.u||2,n=5,T=0.075,k=Math.min(1,(sp-2.5)/4);
  cx.save();
  for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy);
   const spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));cx.globalAlpha=k*0.7*(1-(i-1)/(n+1));
   cx.drawImage(trailTint(spr,SANDE[(i-1)%SANDE.length]),gx-18*u,gy-20*u);}
+ cx.restore();}
+/* "trail": "lightning": electric afterimages with bolts crackling between them */
+const BOLT=['#fff36b','#9be7ff','#ffffff'];
+function boltTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
+ const o=st.o,u=o.u||2,n=4,T=0.06,k=Math.min(1,(sp-2.5)/4),pts=[];
+ cx.save();
+ for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy);pts.push([gx,gy-8*u]);
+  const spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));cx.globalAlpha=k*0.65*(1-(i-1)/(n+1));cx.drawImage(trailTint(spr,i%2?'#4fc3ff':'#fff36b'),gx-18*u,gy-20*u);}
+ pts.push([sx,sy-st.jy-8*u]);
+ /* jagged bolts from the oldest afterimage to the player, redrawn every frame so they flicker: a wide blue glow under a bright core */
+ cx.globalCompositeOperation='lighter';
+ for(let b=0;b<2;b++){const path=[];for(let i=0;i<pts.length;i++){const[x,y]=pts[i],j=i===0||i===pts.length-1?0.3:1;path.push([x+(Math.random()-0.5)*14*j,y+(Math.random()-0.5)*18*j+(b?7:-5)]);}
+  for(const[w,col,al]of[[6,'#4fc3ff',0.35],[3,'#fff36b',0.9],[1,'#ffffff',1]]){cx.globalAlpha=k*al*(0.7+Math.random()*0.3);cx.strokeStyle=col;cx.lineWidth=w;cx.lineJoin='miter';cx.beginPath();path.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke();}
+  if(Math.random()<0.6){const[x,y]=path[1+((Math.random()*(path.length-2))|0)]||path[0];cx.globalAlpha=k*0.8;cx.strokeStyle='#fff36b';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-6-Math.random()*8,y+(Math.random()-0.5)*16);cx.lineTo(x-12-Math.random()*8,y+(Math.random()-0.5)*20);cx.stroke();}}   /* a little side fork */
+ if(Math.random()<0.5){const[x,y]=pts[(Math.random()*pts.length)|0];cx.globalAlpha=k;cx.fillStyle='#fff36b';for(let i=0;i<5;i++)cx.fillRect(x+(Math.random()-0.5)*18,y+(Math.random()-0.5)*18,2,2);}
  cx.restore();}
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
