@@ -2,17 +2,30 @@
    Each 4-letter game code gets its own little room. The host and the joiner both connect to
    wss://<this worker>/r/CODE; whatever one sends to a topic, the other receives.
    Online franchise leagues live at https://<this worker>/lg/CODE (6 letters): one stored league
-   file per code, saved with a version number so two coaches can't overwrite each other. */
+   file per code, saved with a version number so two coaches can't overwrite each other.
+   Skins added from the fitter page live at https://<this worker>/sk (same storage, key needed to change). */
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, PUT, OPTIONS',
-  'access-control-allow-headers': 'content-type, x-enc',
+  'access-control-allow-headers': 'content-type, x-enc, x-key',
   'access-control-expose-headers': 'x-v, x-enc, x-on',
   'access-control-max-age': '86400'
 };
+const SKIN_KEY_HASH = '708fb806a1bc6cb0bdb5b7b779712007d8b9143f2f9fd20e9b5d584010a4685d';   /* sha-256 of the fitter key */
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    /* skins added from the fitter page: anyone can read them, only the fitter key can change them */
+    if (url.pathname === '/sk') {
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+      if (req.method === 'PUT') {
+        const key = req.headers.get('x-key') || '';
+        const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+        const hex = [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hex !== SKIN_KEY_HASH) return new Response('wrong key', { status: 403, headers: CORS });
+      }
+      return env.LEAGUES.get(env.LEAGUES.idFromName('__skins__')).fetch(req);
+    }
     const lg = url.pathname.match(/^\/lg\/([A-Z]{6})$/);
     if (lg) {
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });

@@ -26,6 +26,8 @@ canvas{image-rendering:pixelated;max-width:100%;display:block}
 #msg{margin:8px 0;min-height:1.4em}#msg.bad{color:var(--bad)}#msg.ok{color:var(--ok)}
 pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10px;white-space:pre-wrap;word-break:break-all;font-size:12px}
 .small{color:var(--dim);font-size:12px}
+#skList .sk{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}#skList .sk b{min-width:150px}#skList button{padding:6px 9px;font-size:12px}
+.tag{font-size:11px;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -92,6 +94,41 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     <pre id="json"></pre>
     <button class="sec" id="copy">COPY LINE</button>
     <p class="small">Upload the PNG into the skins folder on GitHub with exactly this file name, then add the line (put a comma after the line before it).</p>
+    <button id="toAdd">ADD THIS SKIN TO THE GAME (NO GITHUB)</button>
+  </div>
+
+  <div class="panel" id="setp" style="display:none">
+    <h1 id="setTitle" style="font-size:16px">ADD TO THE GAME</h1>
+    <div class="row">
+      <div><label>Name in game</label><input type="text" id="aName"></div>
+      <div><label>Unlocked by</label><select id="aUnlock">
+        <option value="open">Everyone has it</option><option value="code">A code</option>
+        <option value="egg1">Easter egg: tap FOOTBALL 7x</option><option value="egg2">Easter egg: tap RETRO 7x</option>
+        <option value="egg3">Easter egg: tap the players 7x</option><option value="egg4">Easter egg: tap an empty spot 7x</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>Code (if unlocked by a code)</label><input type="text" id="aCode" placeholder="e.g. FORT"></div>
+      <div><label>Show when the code is typed</label><select id="aShow">
+        <option value="">None</option><option value="america">America (flag, fireworks)</option><option value="winter">Winter (snow, aurora)</option>
+        <option value="ninja">Ninja (shuriken, smoke)</option><option value="blocks">Blocks (block world)</option><option value="royale">Royale (skydive, storm)</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>Big title in the show (blank = the name)</label><input type="text" id="aTitle"></div>
+      <div><label>Line under the title</label><input type="text" id="aSub"></div>
+    </div>
+    <div class="row">
+      <div><label>Running effect</label><select id="aTrail"><option value="">None</option><option value="sandevistan">Sandevistan afterimages</option></select></div>
+      <div></div>
+    </div>
+    <p><button id="aGo">ADD TO GAME</button> <button class="sec" id="aCancel">CANCEL</button></p>
+    <div id="aMsg" class="small"></div>
+  </div>
+
+  <div class="panel" id="listp" style="display:none">
+    <h1 style="font-size:16px">SKINS IN THE GAME</h1>
+    <div id="skList" class="small">LOADING...</div>
+    <p><button class="sec" id="skReload">REFRESH</button> <button class="sec" id="skReset">RESET EVERYONE'S SKINS</button></p>
+    <div id="lMsg" class="small"></div>
   </div>
 </div>
 
@@ -103,7 +140,7 @@ async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncod
 async function gate(){
   let ok=false;try{ok=localStorage.getItem(LS)===KEY_HASH}catch(e){}
   const k=new URLSearchParams(location.search).get('key');
-  if(!ok&&k&&crypto.subtle&&await sha(k)===KEY_HASH){ok=true;try{localStorage.setItem(LS,KEY_HASH)}catch(e){}}
+  if(k&&crypto.subtle&&await sha(k)===KEY_HASH){ok=true;try{localStorage.setItem(LS,KEY_HASH);localStorage.setItem('rf_fit_key',k)}catch(e){}}
   if(k)history.replaceState(null,'',location.pathname);
   if(!ok)return;
   if(new URLSearchParams(location.search).has('lock')){try{localStorage.removeItem(LS)}catch(e){}return}
@@ -129,6 +166,54 @@ function savePng(){
     m.textContent='Downloaded '+OUTNAME+' ('+out.width+' × '+out.height+')';
   },'image/png');
 }
+// ---- publishing skins to the game through the relay (no GitHub needed) ----
+const SKB=(()=>{const q=(location.search.match(/[?&]lghost=([^&]+)/)||[])[1];return q?decodeURIComponent(q).replace(/\/$/,''):'https://retrofootball-relay.troypokyxle0524.workers.dev';})()+'/sk';
+const FKEY=()=>{try{return localStorage.getItem('rf_fit_key')||''}catch(e){return''}};
+let EDIT=null;   // {id, png?} the skin the settings panel is about
+async function skGet(){const r=await fetch(SKB+'?t='+Date.now(),{cache:'no-store'});const v=+r.headers.get('x-v')||0;
+ if(r.status===404)return{v:0,d:{skins:[]}};if(!r.ok)throw new Error('server '+r.status);
+ let t;const b=await r.arrayBuffer();if(r.headers.get('x-enc')==='gz')t=await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text();else t=new TextDecoder().decode(b);
+ const d=JSON.parse(t||'{}');if(!Array.isArray(d.skins))d.skins=[];return{v,d};}
+async function skChange(fn){if(!FKEY())throw new Error('OPEN THE UNLOCK LINK (WITH ?key=) ON THIS DEVICE ONCE MORE TO ALLOW ADDING');
+ for(let i=0;i<5;i++){const{v,d}=await skGet();fn(d);
+  const r=await fetch(SKB+'?v='+v,{method:'PUT',headers:{'content-type':'application/octet-stream','x-key':FKEY()},body:JSON.stringify(d)});
+  if(r.status===409)continue;if(r.status===403)throw new Error('WRONG KEY: OPEN THE UNLOCK LINK AGAIN');if(!r.ok)throw new Error('SERVER SAID '+r.status);return;}
+ throw new Error('BUSY, TRY AGAIN');}
+async function skRepo(){try{const r=await fetch('skins.json?t='+Date.now(),{cache:'no-store'});return r.ok?(await r.json()).skins||[]:[]}catch(e){return[]}}
+function unlockOf(k){return k.code?'CODE '+String(k.code).toUpperCase()+(k.codeShow?' ('+k.codeShow+' show)':''):k.egg?'EASTER EGG '+k.egg:k.secret?'SECRET':'EVERYONE'}
+async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp').style.display='';
+ try{const repo=await skRepo(),{d}=await skGet(),list=repo.map(x=>Object.assign({},x,{src:'github'}));
+  for(const r of d.skins){const i=list.findIndex(x=>x.id===r.id);if(r.hidden){if(i>=0)list.splice(i,1);continue;}if(i>=0)Object.assign(list[i],r,{src:'github + changed here'});else list.push(Object.assign({},r,{src:'added here'}));}
+  L.innerHTML='';if(!list.length)L.textContent='NO SKINS YET';
+  for(const k of list){const row=document.createElement('div');row.className='sk';
+   const nm=document.createElement('b');nm.textContent=String(k.name||k.id).toUpperCase();row.appendChild(nm);
+   const t=document.createElement('span');t.className='tag';t.textContent=unlockOf(k)+(k.trail?' · '+k.trail:'')+' · '+k.src;row.appendChild(t);
+   const e=document.createElement('button');e.className='sec';e.textContent='EDIT';e.onclick=()=>openSettings(k,null);row.appendChild(e);
+   const x=document.createElement('button');x.className='sec';x.textContent='REMOVE';x.onclick=()=>skRemove(k);row.appendChild(x);L.appendChild(row);}
+ }catch(e){L.textContent='CAN\'T REACH THE GAME SERVER: '+e.message;}}
+function openSettings(k,png){EDIT={id:k.id,png};$('setp').style.display='';$('setTitle').textContent=png?'ADD TO THE GAME':'EDIT '+String(k.name||k.id).toUpperCase();
+ $('aName').value=String(k.name||k.id).toUpperCase();$('aUnlock').value=k.code?'code':k.egg?'egg'+k.egg:'open';$('aCode').value=k.code||'';$('aShow').value=k.codeShow||'';
+ $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
+async function skSave(){if(!EDIT)return;const m=$('aMsg'),u=$('aUnlock').value,code=$('aCode').value.trim();
+ if(u==='code'&&!code){m.textContent='TYPE A CODE';return}
+ const e={id:EDIT.id,name:($('aName').value.trim()||EDIT.id).toUpperCase(),secret:u!=='open'};
+ /* null (not missing) so a change made here also clears what skins.json says */
+ if(u==='code'){e.code=code;e.codeShow=$('aShow').value||null}else{e.code=null;e.codeShow=null}
+ e.egg=u.startsWith('egg')?+u.slice(3):null;e.eggTitle=$('aTitle').value.trim()||null;e.eggSub=$('aSub').value.trim()||null;e.trail=$('aTrail').value||null;
+ if(EDIT.png){Object.assign(e,EDIT.png);}
+ m.textContent='SAVING...';
+ try{await skChange(d=>{const i=d.skins.findIndex(x=>x.id===e.id);const clean=JSON.parse(JSON.stringify(e));
+   if(i>=0){const keep=d.skins[i];for(const k of ['code','codeShow','egg','eggTitle','eggSub','trail'])delete keep[k];d.skins[i]=Object.assign(keep,clean);delete d.skins[i].hidden;}else d.skins.push(clean);
+   for(const x of d.skins)if(x.id!==e.id&&e.egg&&x.egg===e.egg)x.egg=null;});   // one skin per easter egg
+  m.textContent='DONE · IT\'S IN THE GAME (RELOAD THE GAME TO SEE IT)';skList();}
+ catch(err){m.textContent=String(err.message||err)}}
+async function skRemove(k){if(!confirmRemove(k))return;const m=$('lMsg');m.textContent='REMOVING...';
+ try{await skChange(d=>{const i=d.skins.findIndex(x=>x.id===k.id);if(k.src==='added here'){if(i>=0)d.skins.splice(i,1);}else{if(i>=0)d.skins[i]={id:k.id,hidden:true};else d.skins.push({id:k.id,hidden:true});}});m.textContent='REMOVED '+String(k.name||k.id).toUpperCase();skList();}
+ catch(err){m.textContent=String(err.message||err)}}
+let rmArm=null;function confirmRemove(k){if(rmArm===k.id){rmArm=null;return true}rmArm=k.id;$('lMsg').textContent='TAP REMOVE AGAIN TO REMOVE '+String(k.name||k.id).toUpperCase();setTimeout(()=>{if(rmArm===k.id)rmArm=null},4000);return false}
+let rsArm=false;async function skReset(){const m=$('lMsg');if(!rsArm){rsArm=true;m.textContent='TAP RESET AGAIN: EVERYONE LOSES THEIR UNLOCKED SKINS';setTimeout(()=>rsArm=false,4000);return}rsArm=false;
+ try{let repoReset=0;try{const r=await fetch('skins.json?t='+Date.now(),{cache:'no-store'});repoReset=+(await r.json()).reset||0}catch(e){}
+  await skChange(d=>{d.reset=Math.max(+d.reset||0,repoReset)+1});m.textContent='DONE · EVERYONE\'S SKINS RESET';}catch(err){m.textContent=String(err.message||err)}}
 function init(){
   const drop=$('drop'),file=$('file');
   drop.onclick=()=>file.click();
@@ -137,6 +222,11 @@ function init(){
   drop.ondragleave=()=>drop.classList.remove('on');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('on');e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])};
   ['fsz','bgm','tol','nfr','cut','tint','sid','sname'].forEach(id=>$(id).addEventListener('input',run));
+  $('toAdd').onclick=()=>{const out=$('out'),[fw,fh]=$('fsz').value.split('x').map(Number),id=($('sid').value||'my-skin').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
+   const png={png:out.toDataURL('image/png'),frame:[fw,fh],scale:+(12/fw).toFixed(4),tint:$('tint').value!=='false'?undefined:false};if(fw===12&&fh===16){delete png.frame;delete png.scale}
+   openSettings({id,name:$('sname').value},png);};
+  $('aGo').onclick=skSave;$('aCancel').onclick=()=>{EDIT=null;$('setp').style.display='none'};
+  $('skReload').onclick=skList;$('skReset').onclick=skReset;skList();
   $('tol').addEventListener('input',()=>$('tolv').textContent=$('tol').value);
   $('dl').onclick=savePng;
   $('copy').onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText($('json').textContent);$('copy').textContent='COPIED';setTimeout(()=>$('copy').textContent='COPY LINE',1200)};
