@@ -5812,7 +5812,7 @@ const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:''
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
  buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100,NET_VER=10;   /* bump whenever the messages change: both players must run the same version */
+const NET_DELAY=100,NET_VER=11;   /* bump whenever the messages change: both players must run the same version */
 /* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
 const netDelay=()=>clamp(NET.jit*2,25,140);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
@@ -7600,10 +7600,17 @@ requestAnimationFrame(loop);
 (function freshCheck(){if(TEST_SITE||location.protocol==='file:'||/netmock|nofresh/.test(location.search))return;
  const big=a=>a.reduce((m,x)=>x.length>m.length?x:m,'');
  let mine='';try{mine=big([...document.scripts].filter(x=>!x.src).map(x=>x.text));}catch(e){}if(mine.length<1000)return;
+ /* checks when the game opens, every 3 minutes on the title screen, and whenever the tab comes back (iPad switching apps) */
+ let busy=0,last=0;const idle=()=>UI.scr==='title'&&!UI.modal&&!M&&document.visibilityState!=='hidden';
+ const again=()=>{if(busy||Date.now()-last<60000||!idle())return;check();};
+ setInterval(again,180000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(again,1500);});
+ function check(){busy=1;last=Date.now();
  fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{if(!t||t.length<1000)return;
   const live=big([...t.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]));if(!live||live===mine)return;   /* same game */
-  let n=0;try{n=+sessionStorage.getItem('rf_fresh')||0;}catch(e){}if(n>=2)return;try{sessionStorage.setItem('rf_fresh',String(n+1));}catch(e){}
-  if(UI.scr==='title'&&!UI.modal&&!M)location.replace(location.pathname+'?v='+Date.now()+location.hash);}).catch(()=>{});})();
+  if(!idle())return;let h=0;for(let i=0;i<live.length;i+=7)h=(h*31+live.charCodeAt(i))|0;   /* tries each new version at most twice (a slow cache can serve the old page once) */
+  let st=[0,0];try{st=JSON.parse(sessionStorage.getItem('rf_fresh2')||'[0,0]');}catch(e){}if(st[0]===h&&st[1]>=2)return;try{sessionStorage.setItem('rf_fresh2',JSON.stringify([h,st[0]===h?st[1]+1:1]));}catch(e){}
+  location.replace(location.pathname+'?v='+Date.now()+location.hash);}).catch(()=>{}).finally(()=>{busy=0;});}
+ check();})();
 
 olmBoot();
 setTimeout(()=>{try{dailyLogin();}catch(e){}},800);
