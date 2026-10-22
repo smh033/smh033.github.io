@@ -182,15 +182,28 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .bpc .ck{position:absolute;right:2px;top:1px;color:#7dff8a;font-size:9px}
 .bpc .lk{position:absolute;right:2px;top:1px;font-size:8px}
 @keyframes bpg{from{box-shadow:0 0 4px #f07818}to{box-shadow:0 0 12px #ffd23f}}
+.shbox{background:#13244a;border:2px solid #2d4f8a}.shhd{background:#2d4f8a;padding:5px 6px 4px;font-size:8px}
+.shbar{display:flex;align-items:center;gap:8px;background:#2d4f8a;padding:6px 8px 5px}
+.shc{display:flex;flex-direction:column;width:110px;background:radial-gradient(circle at 50% 35%,var(--c2),var(--c1) 70%);border:2px solid var(--c2);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,30,.5)}
+.shc.big{width:150px}.shc .shimg{display:flex;align-items:flex-end;justify-content:center;flex:1}
+.shc .shnm{background:rgba(10,20,50,.72);padding:4px 3px 3px;text-align:center;display:flex;flex-direction:column;gap:3px}
+.shc .shpr{background:#0c1430;padding:4px 3px 3px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:9px}
+.shc:hover{filter:brightness(1.12)}
+.shnote{background:rgba(10,20,50,.6);padding:5px 8px 4px;font-size:7px;text-align:center}
 </style>
 </head>
 <body>
 <div id="root"><div id="stage"><canvas id="cv" width="640" height="360"></canvas><canvas id="lg" width="640" height="360"></canvas><div id="ui"></div></div></div>
 <script>
+if(/\/test\.html$/.test(location.pathname)&&!Storage.prototype.__tst){const S=Storage.prototype,g=S.getItem,st=S.setItem,r=S.removeItem,k=S.key;S.__tst=1;   /* test site: its own saves, tokens and skins */
+ S.getItem=function(x){return g.call(this,'test:'+x);};S.setItem=function(x,v){return st.call(this,'test:'+x,v);};S.removeItem=function(x){return r.call(this,'test:'+x);};
+ S.clear=function(){const a=[];for(let i=0;i<this.length;i++){const y=k.call(this,i);if(y&&y.startsWith('test:'))a.push(y);}a.forEach(y=>r.call(this,y));};}
 'use strict';
 /* HALLOWEEN look (menus only): on for all of October by the player's own date, off by itself on
    November 1. ?halloween=1 or ?halloween=0 forces it on/off for testing. To remove it for good,
    delete this line, hwPumpkin() and the HALLOWEEN CSS block. */
+/* test.html runs this same game with features that aren't live yet (SHOP_ON); flip SHOP_ON to true to ship them */
+const TEST_SITE=/\/test\.html$/.test(location.pathname)||/[?&]testsite/.test(location.search),SHOP_ON=TEST_SITE;
 const HALLOWEEN=(()=>{const q=(location.search.match(/[?&]halloween=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===9;})();if(HALLOWEEN)document.body.classList.add('hw');
 /* =====================================================================
    RETRO FOOTBALL — core: data, players, rosters, league, sim, offseason
@@ -1358,6 +1371,7 @@ function loadSkins(){const rem=skinsRemote();
   if(R&&Array.isArray(R.skins))for(const r of R.skins){if(!r||!r.id)continue;const i=list.findIndex(x=>x.id===r.id);
    if(r.hidden){if(i>=0)list.splice(i,1);continue;}
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
+  if(SHOP_ON)for(const k of list){if(k.code&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}if(k.shop===undefined&&SHOP_DEFAULTS[k.id])k.shop=Object.assign({},SHOP_DEFAULTS[k.id]);   /* null = taken out of the shop in the fitter */}
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
   for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
@@ -1850,12 +1864,13 @@ function bpTokAdd(n){try{localStorage.setItem(TOK_KEY,String(Math.max(0,bpTok()+
 function bpGet(){let b=null;try{b=JSON.parse(localStorage.getItem(BP_KEY)||'null');}catch(e){}if(!b||b.id!==BPASS.id)b={id:BPASS.id,xp:0,prem:false,cl:{},last:''};return b;}
 function bpPut(b){try{localStorage.setItem(BP_KEY,JSON.stringify(b));}catch(e){}}
 const bpTier=b=>Math.min(BPASS.tiers,Math.floor(b.xp/BPASS.xp));
-function bpAfterGame(my,op,tds,g,simmed){if(my==null||op==null)return;const b=bpGet();
+function bpAfterGame(my,op,tds,g,simmed,ex){if(my==null||op==null)return;const b=bpGet();ex=ex||{};
  const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
  const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?1/3:1;
- const tok=Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round((100+(win?50:0)+15*td)*k),t0=bpTier(b);
+ const tok=SHOP_ON?Math.round(Math.min(90,25+(win?20:0)+4*td+(ex.online?10:0))*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round((100+(win?50:0)+15*td)*k),t0=bpTier(b);
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
- setTimeout(()=>toast('+'+tok+' PUMPKIN TOKENS · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);}
+ setTimeout(()=>toast('+'+tok+' PUMPKIN TOKENS · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
+ if(SHOP_ON&&!simmed)try{dailyAfterGame({my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd});}catch(e){console.warn('daily',e);}}
 function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
 /* mouse: drag the row sideways (touch scrolls natively) */
@@ -1866,7 +1881,7 @@ function bpDrag(e,w){if(e.pointerType!=='mouse')return;const x0=e.clientX,s0=w.s
 function bpSkinPrev(id){const K=SKINS.list.find(x=>x.id===id);if(!K||!SKINS.img[id])return'';const lk={spr:id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'bp'+id};
  const cc=document.createElement('canvas');cc.width=36;cc.height=51;drawMan(cc.getContext('2d'),18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();}
 function bpRegister(){
-SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>=BPASS.tiers;
+SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>=BPASS.tiers;if(SHOP_ON)UI.bpTabs=1;
  setTimeout(()=>{const w=document.getElementById('bpw');if(!w)return;if(UI.bpX==null){const col=w.children[Math.max(0,tier-2)];UI.bpX=col?col.offsetLeft-w.offsetLeft:0;}w.scrollLeft=UI.bpX;},0);   /* opens at your tier, keeps its place after a claim */
  const cell=(t,tr)=>{const r=BPASS.rewards.find(x=>x.t===t&&x.tr===tr),prem=tr==='p';if(!r)return`<div class="bpc${prem?' prem':''}"></div>`;
   const got=!!b.cl[tr+t],can=bpCanClaim(b,r),lock=tier<t||(prem&&!b.prem);
@@ -1876,7 +1891,7 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
  let cols='';for(let t=1;t<=BPASS.tiers;t++)cols+=`<div class="bpcol"><div class="tn${t<=tier?' on':''}">TIER ${t}</div>${cell(t,'f')}${cell(t,'p')}</div>`;
  const claimable=BPASS.rewards.filter(r=>bpCanClaim(b,r)).length;
  return`<div class="screen" style="gap:8px">
- <div class="row" style="width:100%;align-items:center"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button><div class="grow">${ttl(BPASS.name)}</div><div class="row" style="gap:4px;align-items:center">${hwPumpkin(2)}<span class="yl s10">${bpTok()}</span></div></div>
+ ${SHOP_ON?shopTabs('bp'):`<div class="row" style="width:100%;align-items:center"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button><div class="grow">${ttl(BPASS.name)}</div><div class="row" style="gap:4px;align-items:center">${hwPumpkin(2)}<span class="yl s10">${bpTok()}</span></div></div>`}
  <div class="row" style="width:100%;gap:10px;align-items:center"><span class="s10" style="white-space:nowrap">TIER ${tier}/${BPASS.tiers}</span>
   <div style="flex:1;height:12px;background:#1c1030;border:2px solid #5a3a80"><div style="height:100%;width:${full?100:Math.round(into/BPASS.xp*100)}%;background:linear-gradient(90deg,#f07818,#ffd23f)"></div></div>
   <span class="s7 dim" style="white-space:nowrap">${full?'MAXED':into+'/'+BPASS.xp+' XP'}</span></div>
@@ -1890,6 +1905,76 @@ ACT.bp=()=>{if(!SKINS.ok)loadSkins();UI.bpX=null;go('bpass');};
 ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' PUMPKIN TOKENS');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
 ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH PUMPKIN TOKENS');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
+}
+/* ---------- ITEM SHOP + daily challenges + daily login (SHOP_ON) ----------
+   The shop shows 4 skins a day (same for everyone on the same date), picked from every skin that has "shop": {price, rarity}.
+   Skins that used to have codes are in the shop by default. Buying a skin with a show plays it. */
+const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity:'legendary'},'tung-tung':{price:250,rarity:'uncommon'},'john':{price:600,rarity:'epic'},
+ 'ninja':{price:800,rarity:'legendary'},'steve':{price:600,rarity:'epic'},'richard':{price:400,rarity:'rare'}};
+const RARITY={uncommon:['#3f9a2e','#7ad04f','UNCOMMON'],rare:['#1d6fd0','#4fb4ff','RARE'],epic:['#7a2fc2','#c56bff','EPIC'],legendary:['#c8641a','#ffb347','LEGENDARY']};
+const dayKey=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function seedRand(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0)/4294967296;};}
+function shopPool(){return SKINS.list.filter(k=>k.shop&&+k.shop.price>0);}
+function shopToday(){const pool=shopPool().slice().sort((a,b)=>a.id<b.id?-1:1),r=seedRand('shop|'+dayKey());
+ for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+ const pick=pool.slice(0,4),rk=k=>['uncommon','rare','epic','legendary'].indexOf((k.shop.rarity)||'rare');
+ pick.sort((a,b)=>rk(a)-rk(b)||(+a.shop.price)-(+b.shop.price));return pick;}   /* cheapest two stack on the left, the best ones get the big cards */
+function shopLeft(){const n=new Date(),m=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1),t=Math.max(0,Math.floor((m-n)/1000));
+ return String(Math.floor(t/3600)).padStart(2,'0')+':'+String(Math.floor(t%3600/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
+/* daily challenges, login streak, first win of the day: kept on this device */
+const CHALL=[
+ {id:'win',txt:'WIN A GAME',tok:40,ok:g=>g.win},{id:'play2',txt:'PLAY 2 GAMES',tok:30,need:2,ok:()=>true},
+ {id:'td3',txt:'SCORE 3 TOUCHDOWNS IN ONE GAME',tok:35,ok:g=>g.td>=3},{id:'online',txt:'PLAY AN ONLINE GAME',tok:45,ok:g=>g.online},
+ {id:'d14',txt:'HOLD A TEAM TO 14 POINTS OR LESS',tok:35,ok:g=>g.op<=14},{id:'pts30',txt:'SCORE 30+ POINTS IN A GAME',tok:40,ok:g=>g.my>=30},
+ {id:'pass150',txt:'THROW FOR 150+ YARDS IN A GAME',tok:35,ok:g=>(g.pyd||0)>=150},{id:'run75',txt:'RUN FOR 75+ YARDS IN A GAME',tok:35,ok:g=>(g.ryd||0)>=75},
+ {id:'play3',txt:'PLAY 3 GAMES',tok:45,need:3,ok:()=>true},{id:'blow',txt:'WIN BY 14 OR MORE',tok:45,ok:g=>g.my-g.op>=14}];
+function dailyGet(){let d=null;try{d=JSON.parse(localStorage.getItem('rf_daily')||'null');}catch(e){}if(!d)d={};const today=dayKey();
+ if(d.day!==today){d.day=today;d.ch={};d.fw=false;const r=seedRand('ch|'+today),pool=CHALL.slice();d.ids=[];while(d.ids.length<3&&pool.length)d.ids.push(pool.splice(Math.floor(r()*pool.length),1)[0].id);}
+ d.login=d.login||{day:'',streak:0};return d;}
+function dailyPut(d){try{localStorage.setItem('rf_daily',JSON.stringify(d));}catch(e){}}
+function dailyLogin(){if(!SHOP_ON)return;const d=dailyGet(),today=dayKey();if(d.login.day===today)return;
+ const y=new Date();y.setDate(y.getDate()-1);d.login.streak=d.login.day===dayKey(y)?Math.min(7,d.login.streak+1):1;d.login.day=today;
+ const tok=20+5*(d.login.streak-1);bpTokAdd(tok);dailyPut(d);setTimeout(()=>toast('DAILY LOGIN · DAY '+d.login.streak+' STREAK · +'+tok+' PUMPKIN TOKENS'),1200);}
+function dailyAfterGame(g){const d=dailyGet();let msgs=[];
+ if(g.win&&!d.fw){d.fw=true;bpTokAdd(30);msgs.push('FIRST WIN OF THE DAY +30');}
+ for(const id of d.ids){const c=CHALL.find(x=>x.id===id),st=d.ch[id]||(d.ch[id]={n:0,done:false});if(!c||st.done||!c.ok(g))continue;st.n++;if(st.n>=(c.need||1)){st.done=true;bpTokAdd(c.tok);msgs.push('CHALLENGE DONE: '+c.txt+' +'+c.tok);}}
+ dailyPut(d);msgs.forEach((m,i)=>setTimeout(()=>toast(m),3300+i*2400));}
+function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
+ return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${hwPumpkin(2)}<span class="yl s10">${bpTok()}</span></div></div>`;}
+function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=big?5:3,W=big?150:110,H=big?112:56;
+ let src='';if(SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W;cc.height=H;drawMan(cc.getContext('2d'),W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();}
+ return`<div class="shc${big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
+  <div class="shimg">${src?`<img src="${src}" width="${W}" height="${H}" style="image-rendering:pixelated">`:'<span class="s16">?</span>'}</div>
+  <div class="shnm"><div class="${big?'s10':'s7'}">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}</div></div>
+  <div class="shpr">${own?'<span class="grt">OWNED</span>':`${hwPumpkin(2)} ${(+k.shop.price).toLocaleString()}`}</div></div>`;}
+function shopRegister(){
+SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday();
+ clearInterval(window.__shopT);window.__shopT=setInterval(()=>{const e=document.getElementById('shopT');if(!e){clearInterval(window.__shopT);return;}e.textContent=shopLeft();if(shopLeft()==='00:00:00')setTimeout(render,1500);},1000);
+ const ch=d.ids.map(id=>{const c=CHALL.find(x=>x.id===id),st=d.ch[id]||{n:0,done:false};if(!c)return'';return`<div class="row" style="gap:6px;align-items:center;${st.done?'opacity:.55':''}"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}${c.need?` (${Math.min(st.n,c.need)}/${c.need})`:''}</span><span class="s7 yl" style="white-space:nowrap">+${c.tok}</span></div>`;}).join('');
+ const grid=items.length>=4?`<div class="col" style="gap:6px">${shopCard(items[0])}${shopCard(items[1])}</div>${shopCard(items[2],true)}${shopCard(items[3],true)}`:items.map(k=>shopCard(k,true)).join('');
+ return`<div class="screen" style="gap:6px">${shopTabs('shop')}
+ <div class="row" style="width:100%;gap:8px;align-items:stretch;flex:1;min-height:0">
+  <div class="col" style="width:178px;gap:6px">
+   <div class="shbox"><div class="shhd">${BPASS.name}</div><div class="row" style="gap:8px;align-items:center;padding:6px"><span class="s7">TIER</span><span class="s16">${tier}</span></div>
+    <div style="margin:0 6px 6px;height:8px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${tier>=BPASS.tiers?100:Math.round(into/BPASS.xp*100)}%;background:#ffe600"></div></div></div>
+   <div class="shbox" style="flex:1;min-height:0"><div class="shhd">DAILY CHALLENGES</div><div class="col" style="gap:6px;padding:6px">${ch}
+    <div class="s7 dim" style="line-height:1.6">FIRST WIN OF THE DAY: ${d.fw?'<span class="grt">DONE</span>':'<span class="yl">+30</span>'}<br>LOGIN STREAK: ${d.login.streak||0} DAY${d.login.streak===1?'':'S'}</div></div></div>
+   ${TEST_SITE?'<button class="bt r" data-a="shopTest">TEST: +500 TOKENS</button>':''}
+  </div>
+  <div class="col" style="flex:1;gap:6px;min-width:0">
+   <div class="shbar"><span class="s10">ITEM SHOP</span><div class="sp"></div><span class="s7 dim">NEW ITEMS IN</span><span class="s10" id="shopT">${shopLeft()}</span></div>
+   <div class="row" style="gap:8px;align-items:stretch;justify-content:center">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>
+   <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY AND DON'T CHANGE HOW PLAYERS PLAY.</div>
+  </div></div></div>`;};
+ACT.shop=()=>{if(!SKINS.ok)loadSkins();go('shop');};
+ACT.shopBuy=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price,R=RARITY[k.shop.rarity]||RARITY.rare;
+ modal(`<div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('BUY SKIN',true)}<div class="s10">${esc(String(k.name).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}</div>
+  <div class="row" style="gap:6px;align-items:center;justify-content:center">${hwPumpkin(3)}<span class="s16 yl">${p.toLocaleString()}</span></div>
+  <div class="s7 ${bpTok()>=p?'dim':'rdt'}">${bpTok()>=p?'YOU HAVE '+bpTok():'YOU NEED '+(p-bpTok())+' MORE PUMPKIN TOKENS'}</div>
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CANCEL</button>${bpTok()>=p?`<button class="bt y" data-a="shopBuy2" data-v="${esc(k.id)}">BUY</button>`:''}</div></div>`);};
+ACT.shopBuy2=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price;if(bpTok()<p)return;bpTokAdd(-p);closeModal();
+ const show=CODE_SHOWS[String(k.codeShow||'').toLowerCase()];if(show&&!EGG.on)show(k);else{const R=RARITY[k.shop.rarity]||RARITY.rare;eggReward(k.id,String(k.name||k.id).toUpperCase(),R[0],R[1]);}};
+ACT.shopTest=()=>{if(!TEST_SITE)return;bpTokAdd(500);render();};
 }
 /* which skin an easter egg unlocks is set in skins/skins.json: "egg": 1 (tap FOOTBALL), "egg": 2 (tap RETRO) or "egg": 3 (tap the row of players) or "egg": 4 (tap an empty spot) */
 function eggRewardN(n){const k=SKINS.list.find(x=>+x.egg===n);if(!k){toast('NO SKIN IS SET FOR THIS EASTER EGG YET');return;}
@@ -2143,7 +2228,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px"><button class="bt bpbtn" data-a="bp">${hwPumpkin(2)} BATTLE PASS <span class="yl">${bpTok()}</span></button>${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}</div>
+   <div class="row" style="gap:8px"><button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${hwPumpkin(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}</div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -3706,7 +3791,7 @@ function overtime(){
 }
 function gameOver(){
  if(M.prac)return pracEnd();
- try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed);}catch(e){console.warn('pass',e);}
+ try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd});}catch(e){console.warn('pass',e);}
  olmSave('final');
  M.phase='ov';const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1];
  if(W)boom();else sfx('bad');
@@ -6014,7 +6099,7 @@ function netGuestMsg(m){
  if(m.t==='hbr'){const r=performance.now()-m.ts;NET.rtt=NET.rtt?NET.rtt+(r-NET.rtt)*0.3:r;return;}
  if(m.t==='start'){netGuestStart(m);return;}
  if(m.t==='end'&&m.olg&&OLG){olGuestEnd(m);return;}
- if(m.t==='end'){try{if(M)bpAfterGame(M.sc[0],M.sc[1],null,M.g);}catch(e){}netsClear();NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
+ if(m.t==='end'){try{if(M)bpAfterGame(M.sc[0],M.sc[1],null,M.g,false,{online:true});}catch(e){}netsClear();NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
  if(m.t==='s'){const now=performance.now();if(m.R){const k=JSON.stringify(m.R);if(k!==NET.Rk||!NET.R){NET.Rk=k;NET.R=m.R;}}
   if(NET.lsT){const d=now-NET.lsT;if(d<1000){NET.iv+=(d-NET.iv)*0.1;NET.jit+=(Math.abs(d-NET.iv)-NET.jit)*0.1;}}NET.lsT=now;
   const e={tm:now,s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
@@ -6204,7 +6289,7 @@ ACT.netBreak=()=>{if(OLG){netSend({t:'brk'});try{NET.conn&&NET.conn.close();}cat
 ACT.netsAsk=()=>netsBoot();
 netInit();
 loadSkins();
-bpRegister();ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;ACT.egg4=eggTap4;
+bpRegister();shopRegister();ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;ACT.egg4=eggTap4;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
 function loop(now){
@@ -6772,7 +6857,7 @@ function olHostEnd(){olgClear(OLG&&OLG.code);const g=M.g,op=M.op,ps={},gps={};
  netSend({t:'end',olg:{h:g.h,a:g.a,sc:[M.sc[1],M.sc[0]],ps:gps,op:L.user},last:''});
  NET.on=false;NET.stage='ended';setTimeout(netReset,1500);
  M=null;L.net=false;Object.assign(L.settings,OLG.sv||{});olRoomClose();postGame(g,R);}
-function olGuestEnd(m){olgClear(OLG&&OLG.code);const o=m.olg;try{bpAfterGame(o.sc[0],o.sc[1],null,{h:o.h,a:o.a});}catch(e){}M=null;L=OLG&&OLG.L||L;netReset();olRoomClose();indexPlayers();applyCustomTeam();
+function olGuestEnd(m){olgClear(OLG&&OLG.code);const o=m.olg;try{bpAfterGame(o.sc[0],o.sc[1],null,{h:o.h,a:o.a},false,{online:true});}catch(e){}M=null;L=OLG&&OLG.L||L;netReset();olRoomClose();indexPlayers();applyCustomTeam();
  const g=curGames().find(x=>x.h===o.h&&x.a===o.a&&x.hs==null);
  if(!g){toast('GAME OVER');return olResume();}
  postGame(g,{sc:o.sc,ps:o.ps||{},op:o.op});}
@@ -7456,7 +7541,7 @@ ACT.colDynContinue=()=>{colMgmtOldContinue();if(CD){colMgmtEnsure();colDynSave()
 go('title');
 requestAnimationFrame(loop);
 /* phones keep an old copy of the page for a while: on open, check the live page and reload once if it changed */
-(function freshCheck(){if(location.protocol==='file:'||/netmock|nofresh/.test(location.search))return;
+(function freshCheck(){if(TEST_SITE||location.protocol==='file:'||/netmock|nofresh/.test(location.search))return;
  const big=a=>a.reduce((m,x)=>x.length>m.length?x:m,'');
  let mine='';try{mine=big([...document.scripts].filter(x=>!x.src).map(x=>x.text));}catch(e){}if(mine.length<1000)return;
  fetch(location.pathname+'?fresh='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(t=>{if(!t||t.length<1000)return;
@@ -7465,6 +7550,7 @@ requestAnimationFrame(loop);
   if(UI.scr==='title'&&!UI.modal&&!M)location.replace(location.pathname+'?v='+Date.now()+location.hash);}).catch(()=>{});})();
 
 olmBoot();
+setTimeout(()=>{try{dailyLogin();}catch(e){}},800);
 if(UI.scr==='title'&&!UI.modal)netsBoot();
 setTimeout(olgBoot,50);
 </script>

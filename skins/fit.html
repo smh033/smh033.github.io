@@ -118,8 +118,13 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     </div>
     <div class="row">
       <div><label>Running effect</label><select id="aTrail"><option value="">None</option><option value="sandevistan">Sandevistan afterimages</option></select></div>
-      <div></div>
+      <div><label>Item shop (rotates daily)</label><select id="aShop"><option value="">Not in the shop</option><option value="1">In the shop</option></select></div>
     </div>
+    <div class="row">
+      <div><label>Shop price (Pumpkin Tokens)</label><input type="text" id="aPrice" inputmode="numeric" placeholder="e.g. 400"></div>
+      <div><label>Rarity (card color)</label><select id="aRarity"><option value="uncommon">Uncommon (green)</option><option value="rare" selected>Rare (blue)</option><option value="epic">Epic (purple)</option><option value="legendary">Legendary (orange)</option></select></div>
+    </div>
+    <p class="small">A shop skin stays locked until someone buys it. If it has a show, the show plays when it's bought.</p>
     <p><button id="aGo">ADD TO GAME</button> <button class="sec" id="aCancel">CANCEL</button></p>
     <div id="aMsg" class="small"></div>
   </div>
@@ -180,10 +185,12 @@ async function skChange(fn){if(!FKEY())throw new Error('OPEN THE UNLOCK LINK (WI
   if(r.status===409)continue;if(r.status===403)throw new Error('WRONG KEY: OPEN THE UNLOCK LINK AGAIN');if(!r.ok)throw new Error('SERVER SAID '+r.status);return;}
  throw new Error('BUSY, TRY AGAIN');}
 async function skRepo(){try{const r=await fetch('skins.json?t='+Date.now(),{cache:'no-store'});return r.ok?(await r.json()).skins||[]:[]}catch(e){return[]}}
-function unlockOf(k){return k.code?'CODE '+String(k.code).toUpperCase()+(k.codeShow?' ('+k.codeShow+' show)':''):k.egg?'EASTER EGG '+k.egg:k.secret?'SECRET':'EVERYONE'}
+function unlockOf(k){return k.shop&&k.shop.price?'SHOP '+k.shop.price+' · '+String(k.shop.rarity||'rare').toUpperCase():k.code?'CODE '+String(k.code).toUpperCase()+(k.codeShow?' ('+k.codeShow+' show)':''):k.egg?'EASTER EGG '+k.egg:k.secret?'SECRET':'EVERYONE'}
 async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp').style.display='';
  try{const repo=await skRepo(),{d}=await skGet(),list=repo.map(x=>Object.assign({},x,{src:'github'}));
+  const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity:'legendary'},'tung-tung':{price:250,rarity:'uncommon'},'john':{price:600,rarity:'epic'},'ninja':{price:800,rarity:'legendary'},'steve':{price:600,rarity:'epic'},'richard':{price:400,rarity:'rare'}};   /* same as the game's: old code skins are in the shop */
   for(const r of d.skins){const i=list.findIndex(x=>x.id===r.id);if(r.hidden){if(i>=0)list.splice(i,1);continue;}if(i>=0)Object.assign(list[i],r,{src:'github + changed here'});else list.push(Object.assign({},r,{src:'added here'}));}
+  for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id])k.shop=SHOP_DEFAULTS[k.id];if(k.code&&String(k.code).toLowerCase()!=='travvypatty'&&k.shop)k.code=null;}
   L.innerHTML='';if(!list.length)L.textContent='NO SKINS YET';
   for(const k of list){const row=document.createElement('div');row.className='sk';
    const nm=document.createElement('b');nm.textContent=String(k.name||k.id).toUpperCase();row.appendChild(nm);
@@ -193,17 +200,18 @@ async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp'
  }catch(e){L.textContent='CAN\'T REACH THE GAME SERVER: '+e.message;}}
 function openSettings(k,png){EDIT={id:k.id,png};$('setp').style.display='';$('setTitle').textContent=png?'ADD TO THE GAME':'EDIT '+String(k.name||k.id).toUpperCase();
  $('aName').value=String(k.name||k.id).toUpperCase();$('aUnlock').value=k.code?'code':k.egg?'egg'+k.egg:'open';$('aCode').value=k.code||'';$('aShow').value=k.codeShow||'';
- $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
+ $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aShop').value=k.shop&&k.shop.price?'1':'';$('aPrice').value=k.shop&&k.shop.price||'';$('aRarity').value=(k.shop&&k.shop.rarity)||'rare';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
 async function skSave(){if(!EDIT)return;const m=$('aMsg'),u=$('aUnlock').value,code=$('aCode').value.trim();
  if(u==='code'&&!code){m.textContent='TYPE A CODE';return}
  const e={id:EDIT.id,name:($('aName').value.trim()||EDIT.id).toUpperCase(),secret:u!=='open'};
  /* null (not missing) so a change made here also clears what skins.json says */
  if(u==='code'){e.code=code;e.codeShow=$('aShow').value||null}else{e.code=null;e.codeShow=null}
  e.egg=u.startsWith('egg')?+u.slice(3):null;e.eggTitle=$('aTitle').value.trim()||null;e.eggSub=$('aSub').value.trim()||null;e.trail=$('aTrail').value||null;
+ if($('aShop').value){const pr=Math.round(+$('aPrice').value);if(!(pr>0)){m.textContent='TYPE A SHOP PRICE';return}e.shop={price:pr,rarity:$('aRarity').value};e.secret=true;}else e.shop=null;
  if(EDIT.png){Object.assign(e,EDIT.png);}
  m.textContent='SAVING...';
  try{await skChange(d=>{const i=d.skins.findIndex(x=>x.id===e.id);const clean=JSON.parse(JSON.stringify(e));
-   if(i>=0){const keep=d.skins[i];for(const k of ['code','codeShow','egg','eggTitle','eggSub','trail'])delete keep[k];d.skins[i]=Object.assign(keep,clean);delete d.skins[i].hidden;}else d.skins.push(clean);
+   if(i>=0){const keep=d.skins[i];for(const k of ['code','codeShow','egg','eggTitle','eggSub','trail','shop'])delete keep[k];d.skins[i]=Object.assign(keep,clean);delete d.skins[i].hidden;}else d.skins.push(clean);
    for(const x of d.skins)if(x.id!==e.id&&e.egg&&x.egg===e.egg)x.egg=null;});   // one skin per easter egg
   m.textContent='DONE · IT\'S IN THE GAME (RELOAD THE GAME TO SEE IT)';skList();}
  catch(err){m.textContent=String(err.message||err)}}
