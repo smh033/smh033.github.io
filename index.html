@@ -1327,9 +1327,14 @@ function logoMini(t,px,tint){const img=NFL_FIELD_LOGOS[t];if(!img||!img.complete
  return LOGO_MINI[k]=out;}
 /* ---------- player skins (skins/ folder: skins.json + one 12x16-per-frame PNG sheet each; see skins/README.md) ---------- */
 const SKINS={list:[],img:{},tint:new Map(),fw:12,fh:16,ok:false};
+/* the file name in skins.json, plus the usual ways an upload ends up spelled: IMG_1177.png / img_1177.png / img-1177.png / .PNG */
+function skinFileTries(f){const m=String(f).match(/^(.*?)(\.[a-z0-9]+)?$/i),b=m[1],e=m[2]||'.png',out=[];
+ for(const bb of [b,b.toLowerCase(),b.toUpperCase(),b.replace(/_/g,'-'),b.replace(/-/g,'_'),b.toLowerCase().replace(/_/g,'-'),b.toUpperCase().replace(/-/g,'_')])for(const ee of [e,e.toLowerCase(),e.toUpperCase()]){const x=bb+ee;if(!out.includes(x))out.push(x);}
+ return out;}
 function loadSkins(){fetch('skins/skins.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{if(!j||!Array.isArray(j.skins))return;
  if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}SKINS.list=j.skins.filter(x=>x&&x.id&&x.file);SKINS.ok=true;
- for(const k of SKINS.list){const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};im.onerror=()=>{SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: skins/'+k.file);};im.src='skins/'+k.file;}}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
+ for(const k of SKINS.list){const tries=skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
+  im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n];return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: skins/'+k.file);};im.src='skins/'+tries[0];}}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
 const SKU_KEY='rf_skins_unlocked',SKM_KEY='rf_skin_map';
 const skinsUnlocked=()=>{try{return JSON.parse(localStorage.getItem(SKU_KEY)||'[]')||[];}catch(e){return[];}};
 const skinOpen=id=>{const k=SKINS.list.find(x=>x.id===id);return !!k&&(!k.secret||skinsUnlocked().includes(id));};
