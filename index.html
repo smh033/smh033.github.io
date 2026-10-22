@@ -5054,7 +5054,7 @@ function plState(f,holder){
  const oneh=f.oneh>0&&!dn,reach=!oneh&&!hasB&&!dn&&!hur&&(jy>0||f.reach>0);
  if(M.celeb&&f===M.celeb.who&&(M.phase==='dead'||M.phase==='replay')){const dp=dancePose(M.celeb);
   return{x:f.x,y:f.y,jy:dp.jy,lk:f.lk,star:f.star,dn:dp.down,o:{u:2,face:f.face*M.dir,pose:dp.pose,pk:dp.pk,down:dp.down,glow:f.star,shadow:!dp.jy}};}
- return{x:f.x,y:f.y,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
+ return{x:f.x,y:f.y,vx:f.vx||0,vy:f.vy||0,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
 }
 /* Helmet logos are drawn on a separate full-resolution layer over the pixel-art canvas: at the game's
    640x360 resolution a helmet is only ~14 px wide, far too small for a logo to read. The layer uses the
@@ -5089,8 +5089,21 @@ function drawLogoLayer(sh,maxY){
  for(const h of HELM_Q){const lm=logoMini(h.t,Math.ceil(6*k),M.night?'#c4cdee':null);if(!lm)continue;g.setTransform(k,0,0,k,0,0);g.translate(h.x+sh,h.y+sh*0.6);g.rotate(h.r);g.drawImage(lm,-4,-3,6,6);}
 
 }
+/* skin trails: "trail": "sandevistan" in skins.json leaves neon afterimages behind a running player */
+const TRAIL_TINT=new WeakMap(),SANDE=['#00f0ff','#ff2bd6','#ffe600','#7cff4d','#b05cff'];
+function trailTint(c,col){let m=TRAIL_TINT.get(c);if(!m){m=new Map();TRAIL_TINT.set(c,m);}let t=m.get(col);if(t)return t;
+ t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);g.globalCompositeOperation='source-atop';g.globalAlpha=0.82;g.fillStyle=col;g.fillRect(0,0,t.width,t.height);m.set(col,t);return t;}
+function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='sandevistan'||!SKINS.img[K.id])return;
+ const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
+ const o=st.o,u=o.u||2,n=5,T=0.075,k=Math.min(1,(sp-2.5)/4);
+ cx.save();
+ for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy);
+  const spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));cx.globalAlpha=k*0.7*(1-(i-1)/(n+1));
+  cx.drawImage(trailTint(spr,SANDE[(i-1)%SANDE.length]),gx-18*u,gy-20*u);}
+ cx.restore();}
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
+ if(st.lk&&st.lk.spr&&st.o.run)skinTrail(st,sx,sy);
  drawSpr(cx,sx,sy-st.jy,st.lk,st.o);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
  if(st.star&&!st.dn&&M.phase!=='kick')miniStar(sx,sy-40-st.jy);}
 function drawPlayers(){

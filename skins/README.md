@@ -87,6 +87,8 @@ You can add any of these to a skin's line in `skins.json`:
 
 - `"eggTitle": "00 KING"` and `"eggSub": "ANTAGONIST TOUR"`: the big dripping title and the gold line under it in
   easter eggs 3 and 4 (used on the skin with `"egg": 3` or `"egg": 4`). Long titles shrink to fit.
+- `"trail": "sandevistan"`: running leaves a trail of neon afterimages behind the player (cyan, pink, yellow,
+  green, purple); faster running stretches it out.
 - `"codeShow": "america"`: plays a show before a code's skin unlocks (`america`: waving flag, fireworks and a brass
   fanfare; `winter`: snowfall, aurora, frost and sleigh bells). `eggTitle` / `eggSub` set its text.
 - `"code": "Cross"`: players unlock this skin by typing the code on the title screen's CODES button
