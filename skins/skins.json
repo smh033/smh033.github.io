@@ -11,7 +11,7 @@
     { "id": "ck", "name": "CK", "file": "ck.png", "frame": [48, 64], "scale": 0.25, "tint": false, "secret": true, "code": "AMERICA", "codeShow": "america", "eggTitle": "CK", "eggSub": "LAND OF THE FREE" },
     { "id": "zero-two", "name": "ZERO TWO", "file": "zero-two.png", "frame": [72, 96], "scale": 0.1667, "tint": false, "secret": true, "code": "DARLING", "codeShow": "winter", "eggSub": "WINTER WONDERLAND" },
     { "id": "tung-tung", "name": "TUNG TUNG", "file": "tung-tung.png", "frame": [72, 96], "scale": 0.1667, "tint": false, "secret": true, "code": "SAHUR" },
-    { "id": "john", "name": "JOHN", "file": "john.png", "frame": [72, 96], "scale": 0.1667, "tint": false, "secret": true, "code": "FORT" },
+    { "id": "john", "name": "JONESY", "file": "john.png", "frame": [72, 96], "scale": 0.1667, "tint": false, "secret": true, "code": "FORT", "codeShow": "royale", "eggSub": "LEGENDARY OUTFIT" },
     { "id": "ninja", "name": "NARUTO", "file": "IMG_1177.png", "frame": [72, 96], "scale": 0.1667, "tint": false, "secret": true, "code": "NINJA", "codeShow": "ninja", "eggSub": "SILENT BUT DEADLY" },
     { "id": "steve", "name": "STEVE", "file": "IMG_1178.png", "frame": [72, 96], "scale": 0.1667, "tint": false, "secret": true, "code": "STEVE", "codeShow": "blocks", "eggSub": "BLOCK BY BLOCK" }
   ]

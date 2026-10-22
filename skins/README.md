@@ -97,7 +97,8 @@ You can add any of these to a skin's line in `skins.json`:
 - `"codeShow": "america"`: plays a show before a code's skin unlocks (`america`: waving flag, fireworks and a brass
   fanfare; `winter`: snowfall, aurora, frost and sleigh bells;
   `ninja`: moonlit rooftops, shuriken, a smoke bomb reveal, katana slashes and taiko drums;
-  `blocks`: a blocky world builds itself, a block gets mined, then an unlock banner). `eggTitle` / `eggSub` set its text.
+  `blocks`: a blocky world builds itself, a block gets mined, then an unlock banner;
+  `royale`: skydive and glider, a storm circle closing in, quick wall builds and a legendary glow). `eggTitle` / `eggSub` set its text.
 - `"code": "Cross"`: players unlock this skin by typing the code on the title screen's CODES button
   (capitals don't matter). Use it together with `"secret": true`. Anyone who opens skins.json on GitHub can read it.
 
