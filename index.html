@@ -2252,7 +2252,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}</div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -7615,6 +7615,83 @@ requestAnimationFrame(loop);
   location.replace(location.pathname+'?v='+Date.now()+location.hash);}).catch(()=>{}).finally(()=>{busy=0;});}
  check();})();
 
+/* ---------- SYNC DEVICES: one sync code keeps every device (and the home-screen app, which iPhone gives its own storage) on the same saves.
+   The saves are zipped, locked with the code's PIN (AES) and kept on the relay's league store under the 6-letter code.
+   Newest change wins; a device only takes the other's saves while it's on the title screen, then reloads. ---------- */
+const SYNC_KEY='rf_sync',SYNC_SKIP=/^(rf_sync|rf_fresh|rf_netsess|rf_olg$)|cache/i;
+const SY={st:null,busy:0,err:'',dirtyMem:0};
+function syncGet(){try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'null');}catch(e){return null;}}
+function syncSet(o){SY.st=o;try{if(o)localStorage.setItem(SYNC_KEY,JSON.stringify(o));else localStorage.removeItem(SYNC_KEY);}catch(e){}}
+function syncKeys(){const out=[],raw=Storage.prototype.key,T=TEST_SITE&&Storage.prototype.__tst;
+ for(let i=0;i<localStorage.length;i++){let k=raw.call(localStorage,i);if(!k)continue;if(T){if(!k.startsWith('test:'))continue;k=k.slice(5);}else if(k.startsWith('test:'))continue;if(!SYNC_SKIP.test(k))out.push(k);}return out;}
+function syncCollect(){const d={};for(const k of syncKeys()){const v=localStorage.getItem(k);if(v!=null)d[k]=v;}return d;}
+function syncApply(d){const keep=new Set(Object.keys(d));for(const k of syncKeys())if(!keep.has(k))localStorage.removeItem(k);for(const k in d){if(SYNC_SKIP.test(k))continue;try{localStorage.setItem(k,d[k]);}catch(e){}}}
+async function syncAes(code,pin){const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('rfsync:'+code+':'+pin));return crypto.subtle.importKey('raw',h,'AES-GCM',false,['encrypt','decrypt']);}
+async function syncPack(st){const txt=JSON.stringify({rfSave:1,at:Date.now(),dev:st.dev,data:syncCollect()});
+ const z=await new Response(new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+ const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},await syncAes(st.code,st.pin),z));
+ const out=new Uint8Array(12+ct.length);out.set(iv,0);out.set(ct,12);return out;}
+async function syncUnpack(buf,code,pin){const b=new Uint8Array(buf);let z;
+ try{z=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},await syncAes(code,pin),b.slice(12));}catch(e){throw new Error('WRONG PIN');}
+ const j=JSON.parse(await new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream('gzip'))).text());if(!j||j.rfSave!==1)throw new Error('NOT A SYNC CODE');return j;}
+const syncUrl=c=>OL_URL+'/lg/'+c;
+async function syncFetch(st,have){const r=await fetch(syncUrl(st.code)+(have?'?have='+have:''),{cache:'no-store',signal:olTimeout()});
+ if(r.status===204)return null;if(r.status===404)throw new Error('NO SAVES ON THAT CODE');if(!r.ok)throw new Error('SYNC SERVER ERROR '+r.status);
+ const v=+r.headers.get('x-v');return{v,j:await syncUnpack(await r.arrayBuffer(),st.code,st.pin)};}
+async function syncPush(st){const body=await syncPack(st),dirtyAt=st.dirty||0;
+ const r=await fetch(syncUrl(st.code)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'raw'},body,signal:olTimeout()});
+ if(r.status===409)return false;if(!r.ok)throw new Error('SYNC SERVER ERROR '+r.status);
+ const j=await r.json();const cur=syncGet()||st;cur.v=j.v;cur.at=Date.now();if((cur.dirty||0)<=dirtyAt)cur.dirty=0;syncSet(cur);return true;}
+const syncIdle=()=>UI.scr==='title'&&!UI.modal&&!M;
+/* one sync pass: push our changes, or pull theirs (pull only applies on the title screen) */
+async function syncNow(manual){const st=syncGet();if(!st||SY.busy)return;SY.busy=1;SY.err='';
+ try{for(let tries=0;tries<3;tries++){
+   const cur=syncGet();if(!cur)break;
+   const got=await syncFetch(cur,cur.v||0);
+   if(!got){if(cur.dirty){if(await syncPush(cur))break;continue;}cur.at=Date.now();syncSet(cur);break;}
+   const theirs=got.j.at||0;
+   if(cur.dirty&&cur.dirty>theirs){cur.v=got.v;syncSet(cur);if(await syncPush(cur))break;continue;}   /* ours is newer */
+   if(!syncIdle()&&!manual)break;   /* wait for the title screen */
+   syncApply(got.j.data);cur.v=got.v;cur.dirty=0;cur.at=Date.now();syncSet(cur);
+   setTimeout(()=>location.reload(),manual?400:50);if(manual)toast('SAVES SYNCED');return;}
+  if(manual)toast('SAVES SYNCED');
+ }catch(e){SY.err=String(e.message||e).toUpperCase();if(manual)toast(SY.err);console.warn('sync',e);}
+ finally{SY.busy=0;if(UI.modal&&UI.modal.indexOf('data-a="syncOff"')>=0)ACT.sync();}}
+/* any save marks the device as changed */
+(function(){const S=Storage.prototype,st=S.setItem,rm=S.removeItem;
+ const mark=k=>{if(SYNC_SKIP.test(String(k)))return;const now=Date.now();if(now-SY.dirtyMem<2000)return;SY.dirtyMem=now;const o=syncGet();if(o){o.dirty=now;try{st.call(localStorage,SYNC_KEY,JSON.stringify(o));}catch(e){}SY.st=o;}};
+ S.setItem=function(k,v){const r=st.call(this,k,v);if(this===localStorage)mark(k);return r;};
+ S.removeItem=function(k){const r=rm.call(this,k);if(this===localStorage)mark(k);return r;};})();
+function syncCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<6;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
+const syncDev=()=>Math.random().toString(36).slice(2,10);
+ACT.sync=()=>{const st=syncGet();
+ const when=t=>{if(!t)return'NEVER';const s=Math.round((Date.now()-t)/1000);return s<60?'JUST NOW':s<3600?Math.round(s/60)+' MIN AGO':Math.round(s/3600)+' HR AGO';};
+ modal(`<div class="mp" style="width:440px;align-items:center;text-align:center;gap:10px">${ttl('SYNC DEVICES',true)}
+ ${st?`<div class="s7 dim">THIS DEVICE IS LINKED. TYPE THIS CODE ON YOUR OTHER DEVICES (OR THE HOME-SCREEN APP):</div>
+  <div class="s16 yl" style="letter-spacing:3px;user-select:all">${st.code}-${st.pin}</div>
+  <div class="s7 dim">LAST SYNCED: ${when(st.at)}${st.dirty?' · CHANGES WAITING':''}</div>${SY.err?`<div class="s7 rdt">${esc(SY.err)}</div>`:''}
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="syncGo">SYNC NOW</button><button class="bt r" data-a="syncOff">UNLINK</button></div>`
+ :`<div class="s7" style="line-height:1.7">KEEP YOUR SAVES, SKINS, CANDY CORN AND PASS THE SAME ON EVERY DEVICE, INCLUDING THE APP ON YOUR HOME SCREEN.</div>
+  <button class="bt y" data-a="syncNew">CREATE A SYNC CODE</button>
+  <div class="s7 dim">OR TYPE THE CODE FROM YOUR OTHER DEVICE:</div>
+  <input class="txt" id="syncIn" maxlength="11" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDEF-1234" style="text-align:center;width:220px">
+  <div class="s7 rdt">LINKING REPLACES THIS DEVICE'S SAVES WITH THE ONES ON THAT CODE.</div>${SY.err?`<div class="s7 rdt">${esc(SY.err)}</div>`:''}
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="syncLink">LINK</button></div>`}</div>`);};
+ACT.syncGo=()=>syncNow(true);
+ACT.syncOff=()=>{syncSet(null);SY.err='';toast('THIS DEVICE IS UNLINKED (SAVES KEPT)');ACT.sync();};
+ACT.syncNew=async()=>{if(SY.busy)return;SY.busy=1;SY.err='';try{
+  for(let i=0;i<6;i++){const st={code:syncCode(),pin:String(1000+Math.floor(Math.random()*9000)),v:0,dev:syncDev(),dirty:Date.now()};
+   if(await syncPush(st)){const cur=syncGet()||st;Object.assign(st,cur);syncSet(Object.assign(st,{dirty:0}));break;}}
+  if(!syncGet())throw new Error('COULD NOT MAKE A CODE, TRY AGAIN');}catch(e){SY.err=String(e.message||e).toUpperCase();}finally{SY.busy=0;}ACT.sync();};
+ACT.syncLink=async()=>{const el=document.getElementById('syncIn'),raw=String(el&&el.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+ const m=raw.match(/^([A-Z]{6})(\d{4})$/);if(!m){SY.err='TYPE THE CODE LIKE ABCDEF-1234';ACT.sync();return;}
+ if(SY.busy)return;SY.busy=1;SY.err='';try{const st={code:m[1],pin:m[2],v:0,dev:syncDev()};const got=await syncFetch(st,0);
+  syncApply(got.j.data);syncSet(Object.assign(st,{v:got.v,at:Date.now(),dirty:0}));closeModal();toast('LINKED · LOADING YOUR SAVES');setTimeout(()=>location.reload(),600);}
+ catch(e){SY.err=String(e.message||e).toUpperCase();ACT.sync();}finally{SY.busy=0;}};
+/* background: check on open, every 30 s, and when the tab comes back; push right away when the tab is being left */
+(function syncBoot(){if(!syncGet()||!window.crypto||!crypto.subtle||!window.CompressionStream)return;
+ setTimeout(()=>syncNow(false),1500);setInterval(()=>{if(document.visibilityState!=='hidden')syncNow(false);},30000);
+ document.addEventListener('visibilitychange',()=>{const st=syncGet();if(!st)return;if(document.visibilityState==='visible')setTimeout(()=>syncNow(false),800);else if(st.dirty)syncNow(false);});})();
 olmBoot();
 setTimeout(()=>{try{dailyLogin();}catch(e){}},800);
 if(UI.scr==='title'&&!UI.modal)netsBoot();
