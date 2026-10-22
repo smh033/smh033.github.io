@@ -2004,7 +2004,8 @@ function skinSheet(id,lk){const im=SKINS.img[id];if(!im)return null;const K=SKIN
   g.putImageData(d,0,0);}catch(e){}
  if(SKINS.tint.size>300)SKINS.tint.clear();SKINS.tint.set(key,c);return c;}
 /* frame order on the sheet: 0 stand, 1-4 run, 5 dive, 6 carry, 7 throw, 8 reach */
-function drawSkin(c,lk,o,fr,u){let sh=skinSheet(lk.spr,lk);if(!sh)return false;if(o.sil)sh=silSheet(sh,o.sil);const K=SKINS.list.find(x=>x.id===lk.spr)||{},fw=(K.frame&&+K.frame[0])||SKINS.fw,fh=(K.frame&&+K.frame[1])||SKINS.fh,sc=+K.scale||1,n=Math.max(1,Math.floor(sh.width/fw));
+var FIELDSZ=0;   /* on while drawing field players, so a skin's "size" (tall characters) only grows them on the field */
+function drawSkin(c,lk,o,fr,u){let sh=skinSheet(lk.spr,lk);if(!sh)return false;if(o.sil)sh=silSheet(sh,o.sil);const K=SKINS.list.find(x=>x.id===lk.spr)||{},fw=(K.frame&&+K.frame[0])||SKINS.fw,fh=(K.frame&&+K.frame[1])||SKINS.fh,sc=(+K.scale||1)*(FIELDSZ?Math.min(1.25,Math.max(1,+K.size||1)):1),n=Math.max(1,Math.floor(sh.width/fw));
  if(o.pk&&/^dSKELETON\d/.test(o.pk)){   /* skeleton dance: arms-up hops that flip side to side, a sway, a squat and a kick */
   const j=+o.pk.slice(9),F=[[8,1,-1,-0.12],[8,-1,-3,0.12],[8,1,-1,-0.12],[0,1,2,0],[8,-1,-1,0.12],[8,1,-3,-0.12],[8,-1,-1,0.12],[7,1,-2,0]][j%8],fi=Math.min(F[0],n-1),dw=fw*sc*u,dh=fh*sc*u;
   c.save();c.translate(0,F[2]*u);c.rotate(F[3]);c.scale(F[1],j===3?0.88:1);c.imageSmoothingEnabled=false;c.drawImage(sh,fi*fw,0,fw,fh,Math.round(-dw/2),Math.round(-dh),Math.round(dw),Math.round(dh));c.restore();return true;}
@@ -2087,15 +2088,15 @@ function sprite(lk,o){
  const fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1,u=o.u||2;
  const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0)+(o.hurdle?1:0)+(o.pk||'')+(lk.teamId!=null&&NFL_FIELD_LOGOS[lk.teamId]?'L':'');
  let out=SPC.get(key);if(out)return out;
- const W=36*u,H=22*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
- const a=mk(),g=a.getContext('2d');drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr}));
+ const W=36*u,H=24*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+ const a=mk(),g=a.getContext('2d');FIELDSZ=1;try{drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr}));}finally{FIELDSZ=0;}
  const sil=col=>{const b=mk(),gb=b.getContext('2d');gb.drawImage(a,0,0);gb.globalCompositeOperation='source-in';gb.fillStyle=col;gb.fillRect(0,0,W,H);return b;};
  out=mk();const go=out.getContext('2d');
  if(o.glow){const y=sil('#ffe600');for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]])go.drawImage(y,dx,dy);}
  const b=sil('#0a0a12');for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1]])go.drawImage(b,dx,dy);go.drawImage(a,0,0);
  if(SPC.size>3000)SPC.clear();SPC.set(key,out);return out;
 }
-function drawSpr(c,x,y,lk,o){const u=o.u||2;x=Math.round(x);y=Math.round(y);if(o.shadow!==false){c.fillStyle='rgba(0,0,0,.3)';c.fillRect(x-5*u,y-u,10*u,2*u);}c.drawImage(sprite(lk,o),x-18*u,y-20*u);}
+function drawSpr(c,x,y,lk,o){const u=o.u||2;x=Math.round(x);y=Math.round(y);if(o.shadow!==false){c.fillStyle='rgba(0,0,0,.3)';c.fillRect(x-5*u,y-u,10*u,2*u);}c.drawImage(sprite(lk,o),x-18*u,y-22*u);}
 const AVC={};
 function avatar(p,t,u,away){u=u||3;const lk=lookFor(p,t,away);const key=lk.key+u;if(!AVC[key]){const cc=document.createElement('canvas');cc.width=12*u;cc.height=17*u;drawMan(cc.getContext('2d'),6*u,16.5*u,lk,{u,shadow:false,face:1});AVC[key]=cc.toDataURL();}return`<img class="ava" src="${AVC[key]}" width="${12*u}" height="${17*u}" alt="">`;}
 const DIG={0:'111101101101111',1:'010110010010111',2:'111001111100111',3:'111001111001111',4:'101101111001001',5:'111100111001111',6:'111100111101111',7:'111001010010010',8:'111101111101111',9:'111101111001111'};
@@ -2236,7 +2237,7 @@ function pcard(p,t,o){
 SCR.title=()=>{
  if(!hasSave()){let best=0,bt=-1;for(let n=1;n<=SLOTS_N;n++){const s=slotInfo(n);if(s&&s.at>bt){bt=s.at;best=n;}}if(best)setSlot(best);}
  const sv=hasSave()?loadSave():null;
- const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-4);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
+ const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-8);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px" data-a="egg4">
   <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
   <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
@@ -5444,9 +5445,9 @@ function silSheet(sh,col){let m=SIL.get(sh);if(!m){m={};SIL.set(sh,m);}if(m[col]
 function drawSkinHi(x,y,lk,o){const u=o.u||2;x=Math.round(x);y=Math.round(y);
  if(o.shadow!==false){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(x-5*u,y-u,10*u,2*u);}
  const oo=Object.assign({},o,{shadow:false}),fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1;oo.fr=fr;
- if(o.glow)for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]])drawMan(cx,x+dx,y+dy,lk,Object.assign({},oo,{sil:'#ffe600'}));
- for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1]])drawMan(cx,x+dx,y+dy,lk,Object.assign({},oo,{sil:'#0a0a12'}));
- drawMan(cx,x,y,lk,oo);}
+ FIELDSZ=1;if(o.glow)for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1],[-1,1],[1,-1]])drawMan(cx,x+dx,y+dy,lk,Object.assign({},oo,{sil:'#ffe600'}));
+ FIELDSZ=1;try{for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1]])drawMan(cx,x+dx,y+dy,lk,Object.assign({},oo,{sil:'#0a0a12'}));
+ drawMan(cx,x,y,lk,oo);}finally{FIELDSZ=0;}}
 function drawLogoLayer(sh,maxY){
  const lg=document.getElementById('lg');if(!lg)return;
  const st=document.getElementById('stage'),sc=st?(st.getBoundingClientRect().width/640||1):1,dpr=window.devicePixelRatio||1;

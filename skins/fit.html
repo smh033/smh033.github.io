@@ -131,6 +131,7 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     </div>
     <div class="row">
       <div><label>Celebration</label><select id="aCeleb"><option value="">Normal (random dances)</option><option value="skeleton">Skeleton dance (exclusive)</option></select></div>
+      <div><label>Size on the field</label><select id="aSize"><option value="">Normal</option><option value="1.1">A bit bigger</option><option value="1.2">Bigger</option><option value="1.25">Biggest (tall characters)</option></select></div>
     </div>
     <div class="row">
       <div><label>Shop section</label><select id="aCat"><option value="">Daily rotation</option><option value="halloween">Halloween</option></select></div>
@@ -214,13 +215,13 @@ async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp'
  }catch(e){L.textContent='CAN\'T REACH THE GAME SERVER: '+e.message;}}
 function openSettings(k,png){EDIT={id:k.id,png};$('setp').style.display='';$('setTitle').textContent=png?'ADD TO THE GAME':'EDIT '+String(k.name||k.id).toUpperCase();
  $('aName').value=String(k.name||k.id).toUpperCase();$('aUnlock').value=k.code?'code':k.egg?'egg'+k.egg:'open';$('aCode').value=k.code||'';$('aShow').value=k.codeShow||'';
- $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aShop').value=k.shop&&k.shop.price?'1':'';$('aCeleb').value=k.celeb||'';$('aCat').value=(k.shop&&k.shop.cat)||'';$('aStyle').value=k.styleOf||'';$('aPrice').value=k.shop&&k.shop.price||'';$('aRarity').value=(k.shop&&k.shop.rarity)||'rare';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
+ $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aShop').value=k.shop&&k.shop.price?'1':'';$('aCeleb').value=k.celeb||'';$('aSize').value=k.size?String(k.size):'';$('aCat').value=(k.shop&&k.shop.cat)||'';$('aStyle').value=k.styleOf||'';$('aPrice').value=k.shop&&k.shop.price||'';$('aRarity').value=(k.shop&&k.shop.rarity)||'rare';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
 async function skSave(){if(!EDIT)return;const m=$('aMsg'),u=$('aUnlock').value,code=$('aCode').value.trim();
  if(u==='code'&&!code){m.textContent='TYPE A CODE';return}
  const e={id:EDIT.id,name:($('aName').value.trim()||EDIT.id).toUpperCase(),secret:u!=='open'};
  /* null (not missing) so a change made here also clears what skins.json says */
  if(u==='code'){e.code=code;e.codeShow=$('aShow').value||null}else{e.code=null;e.codeShow=null}
- e.celeb=$('aCeleb').value||null;e.egg=u.startsWith('egg')?+u.slice(3):null;e.eggTitle=$('aTitle').value.trim()||null;e.eggSub=$('aSub').value.trim()||null;e.trail=$('aTrail').value||null;
+ e.celeb=$('aCeleb').value||null;e.size=+$('aSize').value||null;e.egg=u.startsWith('egg')?+u.slice(3):null;e.eggTitle=$('aTitle').value.trim()||null;e.eggSub=$('aSub').value.trim()||null;e.trail=$('aTrail').value||null;
  if($('aShop').value){const pr=Math.round(+$('aPrice').value);if(!(pr>0)){m.textContent='TYPE A SHOP PRICE';return}e.shop={price:pr,rarity:$('aRarity').value};if($('aCat').value)e.shop.cat=$('aCat').value;e.secret=true;}else e.shop=null;
  const so=$('aStyle').value.trim().toLowerCase();e.styleOf=so&&so!==e.id?so:null;if(e.styleOf){e.shop=null;e.code=null;e.egg=null;e.secret=true;}
  if(EDIT.png){Object.assign(e,EDIT.png);}
