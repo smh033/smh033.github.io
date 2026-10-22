@@ -5602,7 +5602,7 @@ const NET={on:false,role:null,peer:null,conn:null,code:'',stage:'menu',status:''
  snap:null,sendAcc:0,lO:null,lD:null,lN:-1,rT:0,lov:undefined,ev:[],pup:[],joyT:0,joyLast:null,menu:false,ovH:null,wasPre:false,
  buf:[],tok:'',gtok:'',lastRx:0,wait:false,waitT:0,rc:null,hbT:0,kSent:0,cands:[],rtt:0,iv:100,jit:20,pl:{x:0,y:0},joyV:null};
 const NET_MOCK=/netmock/.test(location.search);
-const NET_DELAY=100,NET_VER=9;   /* bump whenever the messages change: both players must run the same version */
+const NET_DELAY=100,NET_VER=10;   /* bump whenever the messages change: both players must run the same version */
 /* how far behind the host the friend's screen runs: just enough to cover the gaps between updates on this connection */
 const netDelay=()=>clamp(NET.jit*2,25,140);   /* the friend's screen runs this far behind the host so movement can be smoothed between updates */
 /* STUN finds a direct route between the two devices; the TURN relays are a fallback for strict networks */
@@ -5628,9 +5628,9 @@ function netAccept(c){if(NET.stage==='game'){NET.cands=(NET.cands||[]).filter(x=
  if(NET.conn&&NET.connOpen&&NET.conn!==c){try{c.close();}catch(e){}return;}NET.conn=c;netWire(c);}
 function netWire(c){
  const isCand=()=>NET.role==='host'&&(NET.cands||[]).includes(c);
- c.on('open',()=>{if(c!==NET.conn&&!isCand())return;
+ c.on('open',()=>{if(c!==NET.conn&&!isCand()){if(NET.role==='guest'&&NET.connOpen)try{c.close();}catch(e){}return;}
   if(NET.role==='host'){if(isCand())return;NET.connOpen=true;NET.on=true;NET.stage='lobby';NET.lastRx=performance.now();netLobbySend();}
-  else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;netSend({t:'rejoin',tok:NET.tok});}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER,sk:skinMap()});}}
+  else{clearTimeout(NET.p2pT);NET.connOpen=true;NET.on=true;NET.lastRx=performance.now();if(c.mode==='relay')NET.mode='relay';if(NET.stage==='game'){NET.rc=null;Object.assign(NET,{buf:[],lsT:0,iv:100,jit:20,Rused:null});netSend({t:'rejoin',tok:NET.tok});netSend({t:'needR'});netGuestTidy(c);}else{NET.stage='lobby';NET.status='';netSend({t:'pick',team:NET.lob.g.team,uni:NET.lob.g.uni,tok:NET.tok,v:NET_VER,sk:skinMap()});}}
   sfx('first');if(UI.scr==='online'||UI.scr==='olroom')render();});
  c.on('data',m=>{try{
   if(isCand()){if(m&&(m.t==='rejoin'||m.t==='pick')&&m.tok&&m.tok===NET.gtok){if(m.t==='pick'&&NET.startMsg)setTimeout(()=>{netSend(NET.startMsg);NET.lN=-1;NET.rN=2;NET.lov=undefined;},50);const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
@@ -5721,10 +5721,15 @@ function netJoinFail(){if(OLG&&UI.scr==='olroom'&&!OLG.live){const c=OLG.code;ne
 /* guest: try to get back into the same game */
 function netGuestRetry(){const r=NET.rc;r.n++;r.next=performance.now()+3000;
  if(NET_MOCK){const m=mockConn(NET.code,'guest');NET.mock=m;NET.conn=m.c;netWire(m.c);m.hello();return;}
- if(NET.mode==='relay'||r.n%3===0){r.next=performance.now()+11000;netGuestRelay(0,true);return;}   /* every third try goes through the backup route */
+ const now=performance.now(),relayFree=now-(r.relT||0)>12000;
+ if((NET.mode==='relay'||r.n%3===0)&&relayFree){r.relT=now;r.next=now+11000;netGuestRelay(0,true);return;}   /* every third try goes through the backup route, never two at once */
+ if(NET.mode==='relay')return;
  const p=NET.peer;if(!p||p.destroyed){netGuestPeer();return;}
  if(p.disconnected){try{p.reconnect();}catch(e){}return;}
+ const old=NET.conn;if(old&&!NET.connOpen&&!old.own)try{old.close();}catch(e){}   /* the last direct try never opened: drop it */
  try{const c=p.connect('retrofootball-'+NET.code,{reliable:true});NET.conn=c;netWire(c);}catch(e){}}
+/* back in: close every other half-open attempt so nothing keeps running in the background */
+function netGuestTidy(won){try{if(NET.peer&&NET.peer.connections)for(const id in NET.peer.connections)for(const x of NET.peer.connections[id])if(x!==won&&x.open===false)try{x.close();}catch(e){}}catch(e){}}
 function netGuestPeer(){let p;try{p=new Peer(netPeerOpts());}catch(e){if(NET.stage==='joining')netGuestRelay(0);return;}NET.peer=p;
  p.on('open',()=>{NET.p2pReach=true;if(NET.stage==='game'&&NET.rc){NET.rc.next=0;return;}if(NET.stage!=='joining'||NET.mode==='relay')return;const c=p.connect('retrofootball-'+NET.code,{reliable:true});NET.conn=c;netWire(c);});
  p.on('disconnected',()=>{});
@@ -5941,7 +5946,7 @@ function netGuestMsg(m){
  if(m.t==='start'){netGuestStart(m);return;}
  if(m.t==='end'&&m.olg&&OLG){olGuestEnd(m);return;}
  if(m.t==='end'){netsClear();NET.last=m.last||'';NET.stage='lobby';M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('online');toast(m.last||'GAME OVER');return;}
- if(m.t==='s'){const now=performance.now();if(m.R){const k=JSON.stringify(m.R);if(k!==NET.Rk){NET.Rk=k;NET.R=m.R;}}
+ if(m.t==='s'){const now=performance.now();if(m.R){const k=JSON.stringify(m.R);if(k!==NET.Rk||!NET.R){NET.Rk=k;NET.R=m.R;}}
   if(NET.lsT){const d=now-NET.lsT;if(d<1000){NET.iv+=(d-NET.iv)*0.1;NET.jit+=(Math.abs(d-NET.iv)-NET.jit)*0.1;}}NET.lsT=now;
   const e={tm:now,s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
 }
@@ -5949,7 +5954,7 @@ function netGuestStart(m){
  if(m.olg&&OLG){if(!OLG.live)OLG.L=L;OLG.live=true;olgPut({room:OLG.code,league:OL&&OL.code,role:'guest',tok:NET.tok,team:m.guest});}
  L=m.L;L.user=m.guest;L.custom=null;L.net=false;L.exh=true;indexPlayers();cfbSync(null);
  if(m.olg){const S=L.seats&&L.seats[m.guest];if(S){L.custom=S.custom||null;L.oc=S.oc;L.dc=S.dc;L.style=S.style;}}
- Object.assign(NET,{stage:'game',snap:null,R:null,Rused:null,buf:[],pup:[],ovH:null,joyLast:null,menu:false,wasPre:false,rc:null,lastRx:performance.now()});
+ Object.assign(NET,{stage:'game',snap:null,R:null,Rk:'',Rused:null,iv:100,jit:20,lsT:0,buf:[],pup:[],ovH:null,joyLast:null,menu:false,wasPre:false,rc:null,lastRx:performance.now()});
  startMatch(m.g,{uU:m.gu,uO:m.hu});
  M.netGuest=true;if(m.olg)M.olg=true;M.night=m.night;M.wx=m.wx;M.wind=m.wind;M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  M.fieldCvs=[];M.ov=null;M.phase='dead';M.dir=1;M.udir=1;
