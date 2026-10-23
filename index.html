@@ -1390,11 +1390,22 @@ function skinFileTries(f){const m=String(f).match(/^(.*?)(\.[a-z0-9]+)?$/i),b=m[
  return out;}
 /* skins come from skins/skins.json in the repo, plus the ones added from the fitter page (stored on the relay at /sk).
    A fitter entry with the same id changes that skin (name, code, ...); "hidden": true takes it out of the game. */
-function skinsRemote(){const ctl=typeof AbortController!=='undefined'?new AbortController():null;if(ctl)setTimeout(()=>ctl.abort(),7000);
- const q=(location.search.match(/[?&]lghost=([^&]+)/)||[])[1],base=q?decodeURIComponent(q).replace(/\/$/,''):NET_CF.replace(/^wss:/,'https:');   /* OL_URL isn't set up yet this early */
- return fetch(base+'/sk?t='+Date.now(),{cache:'no-store',signal:ctl&&ctl.signal}).then(r=>r.status===200?r.arrayBuffer().then(b=>{const enc=r.headers.get('x-enc');
-  if(enc==='gz'&&typeof DecompressionStream!=='undefined')return new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text();return new TextDecoder().decode(b);}).then(t=>JSON.parse(t)):null).catch(()=>null);}
-function loadSkins(){const rem=skinsRemote();
+/* the online skin store is big (pictures inside), so each device keeps a copy (IndexedDB) and only asks the server
+   "anything new since version N?" - a tiny answer when nothing changed. A changed store downloads in the background. */
+const SKDB={open(){return new Promise(r=>{try{const q=indexedDB.open('rf_skins',1);q.onupgradeneeded=()=>q.result.createObjectStore('k');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null);}catch(e){r(null);}});},
+ async get(){const db=await this.open();if(!db)return null;return new Promise(r=>{try{const t=db.transaction('k').objectStore('k').get(TEST_SITE?'test':'main');t.onsuccess=()=>r(t.result||null);t.onerror=()=>r(null);}catch(e){r(null);}});},
+ async put(v){const db=await this.open();if(!db)return;try{db.transaction('k','readwrite').objectStore('k').put(v,TEST_SITE?'test':'main');}catch(e){}}};
+function skinsBase(){const q=(location.search.match(/[?&]lghost=([^&]+)/)||[])[1];return q?decodeURIComponent(q).replace(/\/$/,''):NET_CF.replace(/^wss:/,'https:');}   /* OL_URL isn't set up yet this early */
+async function skinsFetch(have,ms){const ctl=typeof AbortController!=='undefined'?new AbortController():null;if(ctl)setTimeout(()=>ctl.abort(),ms);
+ const r=await fetch(skinsBase()+'/sk?t='+Date.now()+(have?'&have='+have:''),{cache:'no-store',signal:ctl&&ctl.signal});if(r.status===204)return{same:true};if(r.status!==200)return null;
+ const v=+r.headers.get('x-v')||0,b=await r.arrayBuffer(),enc=r.headers.get('x-enc');
+ const t=enc==='gz'&&typeof DecompressionStream!=='undefined'?await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text():new TextDecoder().decode(b);
+ return{v,d:JSON.parse(t)};}
+function skinsRemote(){return(async()=>{let c=null;try{c=await SKDB.get();}catch(e){}
+  const fresh=async()=>{try{const g=await skinsFetch(c&&c.v,c?20000:45000);if(!g||g.same)return null;SKDB.put({v:g.v,d:g.d});return g.d;}catch(e){return null;}};
+  if(c&&c.d){fresh().then(d=>{if(d){SKINS.newer=d;loadSkins();}});return c.d;}   /* show the saved copy now, swap in a newer one when it arrives */
+  return await fresh();})();}
+function loadSkins(){let rem;if(SKINS.newer){const d=SKINS.newer;SKINS.newer=null;rem=Promise.resolve(d);}else rem=skinsRemote();
  fetch('skins/skins.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(async tx=>{let j=null;try{j=tx?JSON.parse(tx):null;}catch(e){SKINS.err='skins.json has a mistake: '+e.message;j=null;}
   let hv=0;for(let i=0;i<(tx||'').length;i++)hv=(hv*31+tx.charCodeAt(i))|0;SKINS.ver=(hv>>>0).toString(36);
   const R=await rem;if((!j||!Array.isArray(j.skins))&&!R)return;j=j&&Array.isArray(j.skins)?j:{skins:[]};
@@ -1405,7 +1416,7 @@ function loadSkins(){const rem=skinsRemote();
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
   for(const k of list){if(k.code&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* old codes are off everywhere now (the shop sells those skins from release) */if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
-  for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
+  for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}SHOPC.clear();clearTimeout(SKINS.rt);SKINS.rt=setTimeout(()=>{if(UI.scr!=='game')render();},150);};   /* one redraw after a batch of pictures, not one per picture */
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
    im.src=k.png?k.png:'skins/'+tries[0]+'?v='+SKINS.ver;}
   if(UI.scr!=='game')render();}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
@@ -1997,8 +2008,9 @@ function dailyAfterGame(g){const d=dailyGet();let msgs=[];
  dailyPut(d);msgs.forEach((m,i)=>setTimeout(()=>toast(m),3300+i*2400));}
 function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
  return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
+const SHOPC=new Map();
 function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=big?8.5:3.4,W=big?150:110,H=big?144:57;   /* characters fill their cards */
- let src='';if(SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*3;cc.height=H*3;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();}   /* 3x for sharp cards (ultra-HD skins keep their detail) */
+ let src=SHOPC.get(k.id+'|'+u)||'';if(!src&&SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*3;cc.height=H*3;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();SHOPC.set(k.id+'|'+u,src);}   /* 3x for sharp cards (ultra-HD skins keep their detail); drawn once, then reused */
  return`<div class="shc${big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
   <div class="shimg">${src?`<img src="${src}" width="${W}" height="${H}" style="image-rendering:pixelated">`:'<span class="s16">?</span>'}</div>
   <div class="shnm"><div style="${(()=>{const nm=String(k.name||k.id),max=big?10:7,w=big?140:100,sz=Math.max(5,Math.min(max,Math.floor(w/(nm.length*0.95))));return'font-size:'+sz+'px;line-height:'+(max+2)+'px;';})()}white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
@@ -2343,6 +2355,18 @@ ACT.codes=()=>{modal(`<div class="mp" style="width:380px">${ttl('CODES',true)}<d
  <div class="row end"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="codeGo">REDEEM</button></div></div>`);setTimeout(()=>{const i=$('#codeIn');if(i)i.focus();},50);};
 ACT.codeGo=()=>{const i=$('#codeIn'),m=$('#codeMsg');if(!i)return;const c=(i.value||'').trim().toLowerCase().replace(/\s+/g,' ');if(!c)return;
  const say=(t,col)=>{if(m){m.textContent=t;m.style.color=col;}};
+ /* one-time codes: only the FIRST person anywhere who types it gets the skin. The claim is a record on the relay
+    (create-only, so two people can't both win); only the code's hash is in this file. */
+ const ONE={'d3ee806f21b2a428e5ca0b050222667024cf02e3806f016090a219e909ca597d':{id:'joebart-',slot:'QZJBRX'}};
+ if(!ACT.codeGo.busy&&window.crypto&&crypto.subtle){const run=async()=>{const hx=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(c)))].map(b=>b.toString(16).padStart(2,'0')).join('');return ONE[hx];};
+  ACT.codeGo.busy=1;run().then(async o=>{if(!o){ACT.codeGo.busy=0;ACT.codeGo.rest(c,i,say);return;}
+   if(skinOpen(o.id)){ACT.codeGo.busy=0;say('YOU ALREADY HAVE THIS SKIN','#ffd23f');return;}
+   say('CHECKING CODE...','#cfe0ff');
+   try{const r=await fetch(OL_URL+'/lg/'+o.slot+'?v=0',{method:'PUT',headers:{'x-enc':'raw'},body:JSON.stringify({claimed:Date.now()})});
+    if(r.status===409){say('THIS CODE HAS ALREADY BEEN USED','#ff5a5a');}else if(r.ok){const k=SKINS.list.find(x=>x.id===o.id);closeModal();eggReward(o.id,String(k&&k.name||o.id).toUpperCase(),'#ffd23f','#ffffff');}else say('NO CONNECTION, TRY AGAIN','#ff5a5a');}
+   catch(e){say('NO CONNECTION, TRY AGAIN','#ff5a5a');}finally{ACT.codeGo.busy=0;}});return;}
+ ACT.codeGo.rest(c,i,say);};
+ACT.codeGo.rest=(c,i,say)=>{
  if(!SKINS.ok){say(SKINS.err||'SKINS NOT LOADED YET, TRY AGAIN','#ff5a5a');return;}
  const k=SKINS.list.find(x=>x.code!=null&&String(x.code).trim().toLowerCase().replace(/\s+/g,' ')===c);
  if(!k){sfx('juke');say('INVALID CODE','#ff5a5a');i.select();return;}

@@ -197,7 +197,9 @@ async function skGet(){const r=await fetch(SKB+'?t='+Date.now(),{cache:'no-store
  const d=JSON.parse(t||'{}');if(!Array.isArray(d.skins))d.skins=[];return{v,d};}
 async function skChange(fn){if(!FKEY())throw new Error('OPEN THE UNLOCK LINK (WITH ?key=) ON THIS DEVICE ONCE MORE TO ALLOW ADDING');
  for(let i=0;i<5;i++){const{v,d}=await skGet();fn(d);
-  const r=await fetch(SKB+'?v='+v,{method:'PUT',headers:{'content-type':'application/octet-stream','x-key':FKEY()},body:JSON.stringify(d)});
+  const txt=JSON.stringify(d);let body=txt,hd={'content-type':'application/octet-stream','x-key':FKEY()};
+  if(window.CompressionStream){body=await new Response(new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();hd['x-enc']='gz';}   /* smaller download for every player */
+  const r=await fetch(SKB+'?v='+v,{method:'PUT',headers:hd,body});
   if(r.status===409)continue;if(r.status===403)throw new Error('WRONG KEY: OPEN THE UNLOCK LINK AGAIN');if(!r.ok)throw new Error('SERVER SAID '+r.status);return;}
  throw new Error('BUSY, TRY AGAIN');}
 async function skRepo(){try{const r=await fetch('skins.json?t='+Date.now(),{cache:'no-store'});return r.ok?(await r.json()).skins||[]:[]}catch(e){return[]}}
