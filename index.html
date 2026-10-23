@@ -1403,13 +1403,19 @@ async function skinsFetch(have,ms){const ctl=typeof AbortController!=='undefined
  const t=enc==='gz'&&typeof DecompressionStream!=='undefined'?await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).text():new TextDecoder().decode(b);
  return{v,d:JSON.parse(t)};}
 function skinsRemote(){return(async()=>{let c=null;try{c=await SKDB.get();}catch(e){}
-  const fresh=async()=>{try{const g=await skinsFetch(c&&c.v,c?20000:45000);if(!g||g.same)return null;SKDB.put({v:g.v,d:g.d});return g.d;}catch(e){return null;}};
+  if(c&&c.v)SKINS.rv=c.v;
+  const fresh=async()=>{try{const g=await skinsFetch(c&&c.v,c?20000:45000);if(!g||g.same)return null;SKINS.rv=g.v;SKDB.put({v:g.v,d:g.d});return g.d;}catch(e){return null;}};
   if(c&&c.d){fresh().then(d=>{if(d){SKINS.newer=d;loadSkins();}});return c.d;}   /* show the saved copy now, swap in a newer one when it arrives */
   return await fresh();})();}
-function loadSkins(){let rem;if(SKINS.newer){const d=SKINS.newer;SKINS.newer=null;rem=Promise.resolve(d);}else rem=skinsRemote();
+/* a game that stays open picks up skins changed in the fitter: checked when you open the shop, the pass or
+   the skin picker, and when you come back to the tab (a tiny "nothing new" answer most of the time) */
+function skinsRecheck(){const now=Date.now();if(!SKINS.ok||SKINS.rcBusy||now-(SKINS.rcT||0)<15000)return;SKINS.rcT=now;SKINS.rcBusy=true;
+ skinsFetch(SKINS.rv||0,20000).then(g=>{if(g&&!g.same&&g.v&&g.v!==SKINS.rv){SKINS.rv=g.v;SKDB.put({v:g.v,d:g.d});SKINS.newer=g.d;loadSkins();}}).catch(()=>{}).finally(()=>{SKINS.rcBusy=false;});}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&UI.scr!=='game')skinsRecheck();});
+function loadSkins(){const gen=SKINS.gen=(SKINS.gen||0)+1;let rem;if(SKINS.newer){const d=SKINS.newer;SKINS.newer=null;rem=Promise.resolve(d);}else rem=skinsRemote();
  fetch('skins/skins.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(async tx=>{let j=null;try{j=tx?JSON.parse(tx):null;}catch(e){SKINS.err='skins.json has a mistake: '+e.message;j=null;}
   let hv=0;for(let i=0;i<(tx||'').length;i++)hv=(hv*31+tx.charCodeAt(i))|0;SKINS.ver=(hv>>>0).toString(36);
-  const R=await rem;if((!j||!Array.isArray(j.skins))&&!R)return;j=j&&Array.isArray(j.skins)?j:{skins:[]};
+  const R=await rem;if(gen!==SKINS.gen)return;   /* a newer copy of the skins is already loading */if((!j||!Array.isArray(j.skins))&&!R)return;j=j&&Array.isArray(j.skins)?j:{skins:[]};
   if(Array.isArray(j.frame)){SKINS.fw=+j.frame[0]||12;SKINS.fh=+j.frame[1]||16;}
   const list=j.skins.filter(x=>x&&x.id&&x.file).map(x=>Object.assign({},x));
   if(R&&Array.isArray(R.skins))for(const r of R.skins){if(!r||!r.id)continue;const i=list.findIndex(x=>x.id===r.id);
@@ -1417,7 +1423,7 @@ function loadSkins(){let rem;if(SKINS.newer){const d=SKINS.newer;SKINS.newer=nul
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
   for(const k of list){if(k.code&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* old codes are off everywhere now (the shop sells those skins from release) */if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
-  for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}SHOPC.clear();clearTimeout(SKINS.rt);SKINS.rt=setTimeout(()=>{if(UI.scr!=='game')render();},150);};   /* one redraw after a batch of pictures, not one per picture */
+  for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{if(gen!==SKINS.gen)return;   /* an older picture finishing late never paints over the new one */SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}SHOPC.clear();clearTimeout(SKINS.rt);SKINS.rt=setTimeout(()=>{if(UI.scr!=='game')render();},150);};   /* one redraw after a batch of pictures, not one per picture */
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
    im.src=k.png?k.png:'skins/'+tries[0]+'?v='+SKINS.ver;}
   if(UI.scr!=='game')render();}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
@@ -1949,7 +1955,7 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
  <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
   <div class="bpwrap scroll" id="bpw" onscroll="UI.bpX=this.scrollLeft" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)">${cols}</div></div>
  <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN CANDY CORN AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
-ACT.bp=()=>{if(!PASS_ON)return;if(!SKINS.ok)loadSkins();UI.bpX=null;go('bpass');};
+ACT.bp=()=>{if(!PASS_ON)return;if(!SKINS.ok)loadSkins();else skinsRecheck();UI.bpX=null;go('bpass');};
 ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' CANDY CORN');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
 ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH CANDY CORN');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
@@ -2040,7 +2046,7 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
    :`<div class="row" style="gap:8px;align-items:stretch;justify-content:center">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>`}
    <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY (NO GAMEPLAY CHANGES)</div>
   </div></div></div>`;};
-ACT.shop=()=>{if(!SKINS.ok)loadSkins();go('shop');};
+ACT.shop=()=>{if(!SKINS.ok)loadSkins();else skinsRecheck();go('shop');};
 ACT.shopCat=d=>{UI.shopCat=d.v||'';render();};
 ACT.shopQ=d=>{UI.shopQ=d.v?1:0;render();};
 ACT.shopBuy=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price,R=RARITY[k.shop.rarity]||RARITY.rare;
@@ -2855,7 +2861,7 @@ ACT.pBk=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;const t=L.user;
  else{const b=bkOf(t).find(x=>x.pos===p.pos);p.bk=true;p.bench=false;if(b){b.bk=false;toast(pname(b).toUpperCase()+' MOVES UP TO THE STARS');}}
  sfx('tick');save();render();};
 /* skin picker: every skin from skins/skins.json, drawn in this player's team colors */
-ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)loadSkins();
+ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)loadSkins();else skinsRecheck();
  const prev=id=>{const lk=lookFor(Object.assign({},p,{spr:id||null}),L.user);const cc=document.createElement('canvas');cc.width=108;cc.height=153;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();};
  const cell=(id,nm)=>`<button class="bt ${(p.spr||null)===(id||null)?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 4px;min-width:0" data-a="pSkin2" data-v="${esc(id||'')}"><img src="${prev(id)}" width="36" height="51" style="image-rendering:pixelated"><span class="s7" style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span></button>`;
  modal(`<div class="mp" style="width:520px;align-items:center;gap:8px">${ttl('SKIN · '+esc(pname(p).toUpperCase()),true)}

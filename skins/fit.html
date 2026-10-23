@@ -253,7 +253,7 @@ function init(){
   ['fsz','bgm','tol','nfr','cut','tint','sid','sname','rfix','hip'].forEach(id=>$(id).addEventListener('input',run));
   $('hip').addEventListener('input',()=>$('hipv').textContent=$('hip').value);
   $('toAdd').onclick=()=>{const out=$('out'),[fw,fh]=$('fsz').value.split('x').map(Number),id=($('sid').value||'my-skin').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
-   const png={png:out.toDataURL('image/png'),frame:[fw,fh],scale:+(12/fw).toFixed(4),tint:$('tint').value!=='false'?undefined:false};if(fw===12&&fh===16){delete png.frame;delete png.scale}
+   const png={png:out.toDataURL('image/png'),frame:[fw,fh],scale:+(12/fw).toFixed(4),tint:$('tint').value!=='false'?null:false};if(fw===12&&fh===16){png.frame=null;png.scale=null;}   /* null, not missing: a new image never keeps the old one's frame size or tint */
    const prev=(LOADED&&LOADED.id===id&&LOADED)||SKALL.find(x=>x.id===id);openSettings(prev?Object.assign({},prev,{name:$('sname').value}):{id,name:$('sname').value},png);};   /* same id as a skin already in the game: keep its settings */
   $('aGo').onclick=skSave;$('aCancel').onclick=()=>{EDIT=null;$('setp').style.display='none'};
   $('skReload').onclick=skList;$('skReset').onclick=skReset;skList();
@@ -274,7 +274,7 @@ function runFix(cv,FW,FH,hip){const g=cv.getContext('2d'),A=g.getImageData(FW,0,
 /* load a skin that's already in the game back into the fitter (to fix it and save it over itself) */
 let LOADED=null,REPL=null,SKALL=[];
 async function loadSkin(k){try{const src=k.png||('../skins/'+k.file+'?t='+Date.now());const im=new Image();im.crossOrigin='anonymous';
- im.onload=()=>{IMG=im;LOADED=k;$('sid').value=k.id;$('sname').value=String(k.name||k.id).toUpperCase();if(k.frame)$('fsz').value=k.frame[0]+'x'+k.frame[1];$('bgm').value='alpha';$('cut').value='even';
+ im.onload=()=>{IMG=im;LOADED=k;$('sid').value=k.id;$('sname').value=String(k.name||k.id).toUpperCase();$('fsz').value=k.frame?k.frame[0]+'x'+k.frame[1]:'12x16';$('bgm').value='alpha';$('cut').value='even';
   $('opts').style.display='';$('srcp').style.display='';run();$('outp').scrollIntoView({behavior:'smooth'});msg('LOADED '+String(k.name||k.id).toUpperCase()+': FIX IT, THEN "ADD THIS SKIN TO THE GAME" SAVES IT OVER THE OLD ONE');};
  im.onerror=()=>msg('Could not load that skin image.',1);im.src=src;}catch(e){msg(String(e.message||e),1)}}
 function load(f){
