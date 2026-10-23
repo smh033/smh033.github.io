@@ -6138,7 +6138,7 @@ function netGuestPeer(){let p;try{p=new Peer(netPeerOpts());}catch(e){if(NET.sta
 function netToRelay(){if(NET.mode==='relay'||NET.connOpen||NET.stage!=='joining')return;NET.mode='relay';clearTimeout(NET.p2pT);const c=NET.conn;NET.conn=null;try{c&&c.close();}catch(e){}try{NET.peer&&NET.peer.destroy();}catch(e){}NET.peer=null;netGuestRelay(0);}
 ACT.online=()=>{if(L&&L.online){OL=null;L=null;}if(L&&!L.exh&&!L.net)window.__franchL=L;netReset();NET.err='';go('online');};
 ACT.netBack=()=>{netsClear();netSend({t:'bye'});netReset();L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('title');};
-ACT.netHost=async(d,code1)=>{NET.err='';let lib=true;try{await loadPeerLib();}catch(e){lib=false;}
+ACT.netHost=async(d,code1)=>{if(typeof code1!=='string')code1=null;NET.err='';let lib=true;try{await loadPeerLib();}catch(e){lib=false;}
  NET.role='host';NET.code=code1||netCode();NET.stage='hosting';NET.status='STARTING...';NET.hrel=false;NET.rconns={};NET.lob={h:{team:13,uni:0},g:{team:30,uni:1},qlen:180,home:'h',rm:'CUSTOM'};render();
  if(NET_MOCK){const m=mockConn(NET.code,'host');NET.mock=m;NET.status='WAITING FOR YOUR FRIEND';return render();}
  const code0=NET.code;setTimeout(()=>{if(NET.stage==='hosting'&&NET.code===code0&&!NET.hrel&&!NET.hp2p){NET.err='CAN\'T REACH THE ONLINE SERVERS FROM THIS WI-FI. TRY A PHONE HOTSPOT.';if(UI.scr==='online'||UI.scr==='olroom')render();}},12000);
@@ -6150,7 +6150,7 @@ ACT.netHost=async(d,code1)=>{NET.err='';let lib=true;try{await loadPeerLib();}ca
    if(e.type==='unavailable-id'&&NET.stage==='game'&&NET.resumed){p.destroy();const c0=NET.code;setTimeout(()=>{if(NET.stage==='game'&&NET.code===c0&&NET.role==='host')start();},5000);return;}   /* resumed game: same code, wait for the old link to close */
    if(e.type==='unavailable-id'&&NET.stage==='hosting'&&!NET.hrel){p.destroy();NET.code=netCode();NET.rsocks&&NET.rsocks.forEach(s=>s.close());NET.rsocks=[];netHostRelay();start();return;}});};
  start();netHostRelay();};
-ACT.netJoin=async(d,code1,tok1)=>{const code=code1||String(($('#netCode')||{}).value||'').trim().toUpperCase().replace(/[^A-Z]/g,'');if(code.length!==4){NET.err='TYPE THE 4-LETTER CODE';return render();}
+ACT.netJoin=async(d,code1,tok1)=>{if(typeof code1!=='string')code1=null;if(typeof tok1!=='string')tok1=null;const code=code1||String(($('#netCode')||{}).value||'').trim().toUpperCase().replace(/[^A-Z]/g,'');if(code.length!==4){NET.err='TYPE THE 4-LETTER CODE';return render();}
  NET.err='';let lib=true;try{await loadPeerLib();}catch(e){lib=false;}
  NET.role='guest';NET.code=code;NET.tok=tok1||Math.random().toString(36).slice(2,10);NET.stage='joining';NET.status='CONNECTING...';NET.mode='p2p';NET.relReach=false;NET.p2pReach=false;NET.lob={h:{team:13,uni:0},g:{team:30,uni:1},qlen:180,home:'h',rm:'CUSTOM'};render();
  if(NET_MOCK){const m=mockConn(code,'guest');NET.mock=m;NET.conn=m.c;netWire(m.c);m.hello();return;}
