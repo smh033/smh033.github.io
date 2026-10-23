@@ -911,7 +911,8 @@ function aiRelease(t,refill){
    Like the NFL: trades are open in the offseason and up to week 9, then locked
    until the season ends. Other teams also trade with each other. */
 const TRADE_DEADLINE=9;
-function tradesOpen(){return L.phase==='OFF'||L.phase==='FOUND'||(L.phase==='REG'&&myWk()<=TRADE_DEADLINE);}
+function tradesOpen(){if(L.draft&&!L.draft.done&&L.phase==='OFF')return false;   /* not mid-draft: the pick order is being used */
+ return L.phase==='OFF'||L.phase==='FOUND'||(L.phase==='REG'&&myWk()<=TRADE_DEADLINE);}
 function aiTrade(){
  const ids=L.teams.map(t=>t.id).filter(t=>!isHuman(t));
  for(let tries=0;tries<12;tries++){
@@ -3419,6 +3420,11 @@ ACT.off5=()=>{bkAuto(L.user,true);if(mainN(L.user)>rmax())return toast('TOO MANY
 /* =====================================================================
    AUDIO
    ===================================================================== */
+{const _off=SCR.off;SCR.off=()=>{const h=_off();const O=L&&L.off;
+ if(!O||O.step==='sum'||L.cfbTeams||!tradesOpen()||/olwait|WAITING FOR/.test(h&&h.slice(0,400)||''))return h;
+ /* offseason trades: players and draft picks, any time before and after the draft */
+ const btn=`<button class="bt" data-a="trOpen" style="position:absolute;right:10px;top:10px;z-index:4">TRADE</button>`;
+ return h.replace(/<\/div>\s*$/,btn+'</div>');};}
 let AC=null,NOISE=null;
 const TONES={tick:[[620,.022]],whistle:[[2100,.06],[1700,.14]],catch:[[700,.04],[1050,.07]],td:[[523,.09],[659,.09],[784,.09],[1047,.3]],bad:[[230,.1],[150,.2]],hit:[[95,.08]],kick:[[170,.04],[400,.05]],coin:[[988,.05],[1319,.1]],first:[[784,.07],[1047,.11]],juke:[[500,.03],[900,.04]]};
 const sndOn=()=>!L||!L.settings||L.settings.sound!==false;
@@ -6742,10 +6748,15 @@ async function olSync0(fn){
    if(o.gen!==gen0){const now=olCanon();olMount(olClone(olMerge(pre,now,out)));olDirty();}
    else if(changed&&!fn)olMount(olClone(out));
    olAfter(changed);return true;}
-  o.err='BUSY';return false;
- }catch(e){console.warn('league sync',e);if(OL===o){o.err='OFFLINE';if(fn)toast('NO CONNECTION · TRY AGAIN');}return false;}
+  o.err='BUSY';if(fn&&pre&&OL===o)try{olMount(olClone(pre));}catch(e){}   /* undo the half-done step so a retry doesn't do it twice */
+  return false;
+ }catch(e){console.warn('league sync',e);if(OL===o){o.err='OFFLINE';if(fn&&pre)try{olMount(olClone(pre));}catch(e2){}}return false;}
  finally{o.lock=false;$('#ui').classList.remove('olbusy');}}
-const olTx=fn=>olSync(fn);
+/* a step that must be saved (CONTINUE, a draft pick, readying up): if the save fails (busy league, school wifi),
+   try again by itself a few times instead of silently doing nothing */
+const olTx=fn=>{let n=0;const go=()=>olSync(fn).then(ok=>{if(ok||!OL||!olLive()||M)return ok;
+  if(++n>4){toast('COULD NOT SAVE TO THE LEAGUE · CHECK YOUR CONNECTION AND TAP AGAIN');return false;}
+  if(n===1)toast('LEAGUE IS BUSY · SAVING...');return new Promise(r=>setTimeout(r,900+n*700)).then(go);});return go();};
 /* after a sync: if the league can move on, move it; refresh what's on screen */
 function olAfter(changed){
  if(!olLive())return;
