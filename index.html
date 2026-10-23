@@ -5414,7 +5414,7 @@ function step(dt){
  if(M.shake>0)M.shake=Math.max(0,M.shake-dt*14);if(M.hype>0)M.hype-=dt;if(M.banT>0)M.banT-=dt;
  for(const p of M.parts){if(M.wx==='snow'){p.y+=22*p.s*dt;p.x+=Math.sin(M.tt+p.s*9)*8*dt+M.wind*0.6*dt;}else{p.y+=260*p.s*dt;p.x+=M.wind*2*dt-30*dt;}if(p.y>CH)p.y-=CH;if(p.x<0)p.x+=CW;if(p.x>CW)p.x-=CW;}
  if(M.ov){if(M.ov.type==='drive'&&!M.ov.done){M.ov.tm-=dt;if(M.ov.tm<=0){revealLine();M.ov.tm=0.34;}}upCam(dt);return;}
- if(M.phase==='pre'&&M.pc!=null&&!M.paused){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
+ if(M.phase==='pre'&&M.pc!=null&&!M.paused&&!M.pb){M.pc-=dt;if(M.pc<=0){delayOfGame();return;}}
  if(M.def&&M.phase==='pre')for(const f of M.D)if(f.preMv){f.preMv=false;f.mv=false;}
  if(M.def&&M.phase==='pre'&&M.dragD)dragPre(dt);
  if(M.def&&M.phase==='pre'&&M.input==='joy')joyPre(dt);
@@ -5839,8 +5839,8 @@ ACT.gPlay=d=>callPlay(d.n);
 function pbOrder(){const pb=playbook(L.user),only=M&&M.prac&&M.prac.D.only,ps=only==='run'?[]:pb.filter(n=>PLAYS[n].k==='pass'),tr=only?[]:pb.filter(n=>PLAYS[n].k==='trick'),rn=only==='pass'?[]:pb.filter(n=>PLAYS[n].k==='run');
  return[...ps.slice(0,6),...tr,...rn.slice(0,1),...ps.slice(6),...rn.slice(1)];}
 ACT.pbPg=d=>{if(M){M.pbPage=+d.p;}};
-function pbHTML(){const all=pbOrder(),pages=Math.ceil(all.length/8),pg=clamp(M.pbPage||0,0,pages-1),pb=all.slice(pg*8,pg*8+8);return`<div class="gov" style="z-index:35"><div class="mp" style="width:600px;gap:6px"><div class="row" style="gap:6px"><div class="grow">${ttl('PLAYBOOK · '+teamStyle(L.user),true)}</div><button class="bt" data-a="pbPg" data-p="${pg-1}" ${pg>0?'':'disabled'}>&lt;</button><span class="s7">PAGE ${pg+1}/${pages}</span><button class="bt" data-a="pbPg" data-p="${pg+1}" ${pg<pages-1?'':'disabled'}>&gt;</button><button class="bt" data-a="gPB">CLOSE</button></div>
- <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${pb.map(n=>`<button class="bt" style="padding:4px 4px 3px;display:flex;flex-direction:column;align-items:center;gap:3px;${n===M.called?'border-color:#ffe94a':''}" data-a="gPlay" data-n="${n}">${playSVG(n)}<span class="s7">${n}</span><span class="s6 ${PLAYS[n].k==='run'?'yl':PLAYS[n].k==='trick'?'yl':'cyt'}">${PLAYS[n].k==='run'?'RUN · SNAPS NOW':PLAYS[n].k==='trick'?'TRICK PLAY':'PASS'}</span></button>`).join('')}</div></div></div>`;}
+function pbHTML(){const all=pbOrder(),pages=Math.ceil(all.length/8),pg=clamp(M.pbPage||0,0,pages-1),pb=all.slice(pg*8,pg*8+8);return`<div class="gov" style="z-index:35"><div class="mp" style="width:600px;max-width:calc(100% - 12px);max-height:calc(100% - 8px);overflow:hidden;gap:6px"><div class="row" style="gap:6px"><div class="grow">${ttl('PLAYBOOK · '+teamStyle(L.user),true)}</div><button class="bt" data-a="pbPg" data-p="${pg-1}" ${pg>0?'':'disabled'}>&lt;</button><span class="s7">PAGE ${pg+1}/${pages}</span><button class="bt" data-a="pbPg" data-p="${pg+1}" ${pg<pages-1?'':'disabled'}>&gt;</button><button class="bt" data-a="gPB">CLOSE</button></div>
+ <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${pb.map(n=>`<button class="bt" style="padding:4px 3px 3px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;overflow:hidden;${n===M.called?'border-color:#ffe94a':''}" data-a="gPlay" data-n="${n}">${playSVG(n)}<span class="s7" style="${n.length>18?'font-size:6px;':''}line-height:1.25;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center">${n}</span><span class="s6 ${PLAYS[n].k==='run'?'yl':PLAYS[n].k==='trick'?'yl':'cyt'}">${PLAYS[n].k==='run'?'RUN · SNAPS NOW':PLAYS[n].k==='trick'?'TRICK PLAY':'PASS'}</span></button>`).join('')}</div></div></div>`;}
 ACT.gFG=()=>{if(M)startKick('fg');};
 ACT.gKneel=()=>{if(M)kneel();};
 ACT.gTO=()=>{if(M)timeout();};
@@ -5871,8 +5871,8 @@ cv.addEventListener('pointerdown',e=>{
   if(M.rb){const rx=wx(M.rb.x),ry=wy(M.rb.y),qx=M.qb?wx(M.qb.x):-999,qy=M.qb?wy(M.qb.y):-999;
    const dR=Math.hypot(p.x-rx,p.y-(ry-15)),dQ=Math.hypot(p.x-qx,p.y-(qy-15));
    if(Math.abs(p.x-rx)<=11&&p.y>=ry-36&&p.y<=ry+5&&dR<dQ){snapRun('dive','HB DIVE');return;}}
-  if(M.trick){snap('pass');M.input=null;return;}
-  snap('pass');M.aim={sx:p.x,sy:p.y,cx:p.x,cy:p.y};M.input='aim';return;}
+  /* the snap happens when you start pulling back, not on touch: a tap that just misses PLAYBOOK / CHANGE PLAY no longer snaps the ball */
+  M.input='presnap';return;}
  if(M.phase==='live'){
   if(M.play==='pass'&&!M.thrown&&!M.carrier){if(trickBusy())return;M.aim={sx:p.x,sy:p.y,cx:p.x,cy:p.y};M.passBullet=false;M.input='aim';return;}
   if(M.play==='intret'){M.input='chase';M.steer={x0:p.x,y0:p.y,chase:true};return;}
@@ -5890,6 +5890,7 @@ cv.addEventListener('pointermove',e=>{
  }
  ptr.x=p.x;ptr.y=p.y;ptr.moved=Math.max(ptr.moved,Math.hypot(p.x-ptr.sx,p.y-ptr.sy));
  ptr.hist.push({x:p.x,y:p.y,t:now});while(ptr.hist.length&&now-ptr.hist[0].t>130)ptr.hist.shift();
+ if(M.input==='presnap'&&ptr.moved>=9){if(M.phase!=='pre'||M.ov||M.pb){M.input=null;}else if(M.trick){snap('pass');M.input=null;}else{snap('pass');M.aim={sx:ptr.sx,sy:ptr.sy,cx:p.x,cy:p.y};M.input='aim';}}
  if(M.aim){M.aim.cx=p.x;M.aim.cy=p.y;}
  if(M.kick&&M.kick.sw){M.kick.sw.cx=p.x;M.kick.sw.cy=p.y;}
  /* Do NOT steer continuously while dragging. Retro Bowl interprets the
@@ -5911,6 +5912,7 @@ function applyRunSwipe(c,cmd){
 function ptrUp(e){
  if(!ptr.down||(e&&e.pointerId!==ptr.id))return;ptr.down=false;ptr.id=null;if(!M)return;
  const inp=M.input;M.input=null;
+ if(inp==='presnap'){if(M.phase==='pre'&&!M.ov&&!M.pb&&performance.now()-(M.psT||0)>4000){M.psT=performance.now();toast('PULL BACK TO SNAP AND THROW');}return;}   /* a plain tap does nothing */
  if(inp==='joy'){if(IS_MOBILE&&M.def&&ptr.moved<10&&performance.now()-ptr.t0<260){if(M.phase==='pre')defSelectAt(ptr.sx,ptr.sy);else if(M.phase==='live')ctlTap();}return;}   /* a tap in the stick area */
  if(inp==='dctl'){M.dragD=null;if(M.def&&M.phase==='live'&&!ptr.sel&&ptr.moved<14&&performance.now()-ptr.t0<320)ctlTap();return;}
  if(M.aim){const a=M.aim;M.aim=null;if(inp==='aim'&&(M.phase==='live'&&M.play==='pass'||netGuest()&&M.phase==='pre')&&!M.thrown&&!M.carrier){const ai=aimInfo(a);if(ai.pull>=PULL_MIN){if(ai.run)tuck();else throwBall(ai);}}return;}
