@@ -2297,6 +2297,16 @@ document.addEventListener('click',e=>{
    marked so the same action is not fired twice. Keyboard clicks still use the
    normal click handler above. */
 const UI_PTR={t:-1e9,down:null};
+/* FAIR PLAY (online): the host's game runs on the host's device, so their taps used to land instantly while the
+   guest's had to travel to the host first. Now the host's own play actions are held back by the guest's delay,
+   so both players' throws, snaps, swipes and tackles land equally late. USER_EV marks calls that come straight
+   from the host's finger/keyboard (not the guest's messages or the computer). */
+let USER_EV=0;
+function fairDelay(){if(!netHost()||NET.stage!=='game')return 0;return clamp(Math.round(NET.rtt+(NET.gdl||40)),0,250);}   /* the guest reacts to a screen (rtt/2+delay) old and their tap takes rtt/2 to arrive */
+function fairWrap(name){const orig=window[name];if(typeof orig!=='function')return;window[name]=function(...a){const D=USER_EV&&M?fairDelay():0;
+ if(D<15)return orig.apply(this,a);const np=M.plays,ph=M.phase,mm=M;setTimeout(()=>{if(M!==mm||M.plays!==np||(M.phase!==ph&&!(ph==='pre'&&M.phase==='live')))return;USER_EV=0;orig.apply(this,a);},D);};}
+function fairJoy(){const orig=window.joyVec;if(typeof orig!=='function')return;const H=[];window.joyVec=function(){const v=orig.apply(this,arguments);const D=fairDelay();if(D<15||!M||!M.def){H.length=0;return v;}
+ const now=performance.now();H.push({t:now,v:v&&{x:v.x,y:v.y,m:v.m}});while(H.length>2&&H[1].t<=now-D)H.shift();return H[0].t<=now-D?H[0].v:null;};}
 /* online leagues: while the league is saving, a tap used to be dropped (press conference answers, CONTINUE...).
    Now it waits for the save to finish (up to 10 s) and then runs, as long as you're still on the same screen. */
 let UI_DEFER=null;
@@ -5671,6 +5681,7 @@ function drawPlayers(){
  }
 }
 function drawBall(){
+ if(M.predBall){const pb=M.predBall;pb.t=(performance.now()-pb.at)/1000;if(M.ball||(M.plays!==pb.np&&pb.t>0.6)||pb.t>pb.T+0.3)M.predBall=null;else{const bp=ballPos(pb);drawBallAt(bp.x,bp.y,bp.z,M.tt*20);}}
  const b=M.ball;if(!b)return;const bp=ballPos(b),sx=wx(bp.x),sy=wy(bp.y);
  cx.fillStyle='rgba(0,0,0,.3)';cx.beginPath();cx.ellipse(sx,sy,3+bp.z*0.15,1.5,0,0,Math.PI*2);cx.fill();
  const hy=Math.round(sy-bp.z*PZ),sp=Math.floor(M.tt*14)%2,w=sp?9:7,h=sp?5:7;
@@ -6238,7 +6249,7 @@ function netHostMsg(m){
  if(m.t==='bye'){netLost(NET.stage==='game'?'YOUR FRIEND LEFT THE GAME':'YOUR FRIEND LEFT');return;}
  if(m.t==='needR'){NET.rN=Math.max(NET.rN||0,2);NET.lov=undefined;return;}
  if(m.t==='rejoin'&&OLG&&NET.stage!=='game'&&m.tok){NET.gtok=m.tok;olNetGo();return;}
- if(m.t==='hb'){NET.rtt=m.rtt||0;netSend({t:'hbr',ts:m.ts});return;}
+ if(m.t==='hb'){NET.rtt=m.rtt||0;NET.gdl=m.dl!=null?+m.dl:NET.gdl;netSend({t:'hbr',ts:m.ts});return;}
  if(m.t==='pick'){if(!NET.lob)return;if(m.sk&&typeof m.sk==='object')NET.gsk=m.sk;NET.oldV=m.v!==NET_VER?(m.v||1):0;if(NET.oldV){NET.err=m.v>NET_VER?'YOU HAVE AN OLD VERSION OF THE GAME. TAP RELOAD.':'YOUR FRIEND HAS AN OLD VERSION OF THE GAME. THEY NEED TO CLOSE THE TAB AND OPEN THE GAME AGAIN.';}else if(/VERSION/.test(NET.err))NET.err='';if(m.tok)NET.gtok=m.tok;const h=NET.lob.h;if(m.team!==h.team&&TEAMS[m.team])NET.lob.g.team=m.team;NET.lob.g.uni=m.uni||0;netLobbySend();if(OLG){if(NET.oldV&&UI.scr==='olroom')render();olNetGo();return;}if(UI.scr==='online'||UI.scr==='olroom')render();return;}
  if(!netHost())return;
  if(m.t==='ans'){if(M.ov&&M.ov.net&&M.ov.gacts&&+m.q===M.ov.qid){const f=M.ov.gacts[+m.i];M.ov=null;if(f)f();}return;}
@@ -6375,7 +6386,7 @@ ACT.netAns=d=>{if(!netGuest())return;netSend({t:'ans',i:+d.i,q:+d.q});sfx('tick'
 function netGuestFrame(dt){
  const now=performance.now();
  /* connection health: heartbeat out, and if nothing comes back for 5 s, reconnect */
- NET.hbT+=dt;if(NET.hbT>1){NET.hbT=0;netSend({t:'hb',ts:Math.round(performance.now()),rtt:Math.round(NET.rtt)});}
+ NET.hbT+=dt;if(NET.hbT>1){NET.hbT=0;netSend({t:'hb',ts:Math.round(performance.now()),rtt:Math.round(NET.rtt),dl:Math.round(netDelay())});}
  if(NET.connOpen&&now-NET.lastRx>5000)netDrop();
  if(NET.rc){if(now>=NET.rc.next)netGuestRetry();if(now-NET.rc.t0>120000&&NET.rc.slow!==1){NET.rc.slow=1;}if(NET.rc.slow&&NET.rc.next-now<8000)NET.rc.next=now+8000;}
  NET.stT=(NET.stT||0)+dt;if(NET.stT>10){NET.stT=0;netsTouch();}
@@ -6399,6 +6410,8 @@ function netGuestFrame(dt){
 /* guest inputs: these game actions are sent to the host instead of changing the local copy */
 function netWrap(name,fn){const orig=window[name];if(typeof orig!=='function')return;window[name]=function(...a){if(netGuest())return fn(orig,...a);return orig.apply(this,a);};}
 function netEvWrap(name,mk){const orig=window[name];window[name]=function(...a){if(netHost())NET.ev.push(mk(...a));return orig.apply(this,a);};}
+function fairInit(){for(const n of ['snap','snapRun','throwBall','tuck','dive','applyRunSwipe','ctlTap','ballAct','kickRelease','chaserDive'])fairWrap(n);fairJoy();
+ for(const ev of ['pointerdown','pointermove','pointerup','keydown','keyup','click','touchstart','touchend'])window.addEventListener(ev,()=>{USER_EV=1;setTimeout(()=>{USER_EV=0;},0);},true);}   /* on for the rest of this event; the game loop also clears it */
 function netInit(){
  netWrap('snap',()=>{netSend({t:'snap'});});
  netWrap('snapRun',(o,v,n)=>{netSend({t:'runplay',v:v||'dive',n:n||'HB DIVE'});});
@@ -6410,7 +6423,10 @@ function netInit(){
  netWrap('applyRunSwipe',(o,c,cmd)=>{if(cmd==='forward')netSend({t:'dive'});else if(cmd&&cmd!=='tap')netSend({t:'swipe',c:cmd});});
  netWrap('throwBall',(o,ai)=>{   /* lag compensation: say which receiver you threw to and how old your view of the field is */
   const pup=NET.pup||[];let ri=-1,bd=7;pup.forEach((f,i)=>{if(f&&f.side==='O'&&f.role!=='QB'&&f.role!=='OL'){const d=Math.hypot(f.x-ai.tx,f.y-ai.ty);if(d<bd){bd=d;ri=i;}}});
-  netSend({t:'throw',tx:r2(ai.tx),ty:r2(ai.ty),bu:!!M.passBullet,r:ri,age:Math.round(NET.rtt/2+netDelay())});});
+  netSend({t:'throw',tx:r2(ai.tx),ty:r2(ai.ty),bu:!!M.passBullet,r:ri,age:Math.round(NET.rtt/2+netDelay())});
+  /* show the throw right away on your screen (the host's real ball takes over as soon as it arrives) */
+  try{const d=Math.hypot(ai.tx-ai.x0,ai.ty-ai.y0),T=Math.max(0.12,d/ai.v),F=makeFlight(ai.x0,ai.y0,PASS.REL_Z,ai.tx,ai.ty,PASS.CATCH_Z,T,ai.bullet?PASS.G:PASS.G_LOB);M.predBall={F,t:0,T:F.T,np:M.plays,at:performance.now()};if(M.qb)M.qb.throwT=0.3;sfx('kick');}catch(e){}
+  M.aim=null;M.input=null;});
  netWrap('ctlTap',()=>{netSend({t:'tap'});});
  netWrap('ballAct',(o,k)=>{netSend({t:'ball',k});pop(k==='catch'?'CATCH!':'SWAT!',M.ctl?M.ctl.x:M.los,M.ctl?M.ctl.y:26,k==='catch'?'#7dff8a':'#ff8a8a');});
  netWrap('switchCtl',()=>{netSend({t:'sw'});});
@@ -6502,12 +6518,12 @@ ACT.netBreak=()=>{if(OLG){netSend({t:'brk'});try{NET.conn&&NET.conn.close();}cat
  const keep=c;netReset();if(keep)netsPut(keep);
  M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('title');toast('GAME SAVED · TAP RESUME ONLINE GAME WHEN YOU\'RE BACK');};
 ACT.netsAsk=()=>netsBoot();
-netInit();
+netInit();fairInit();
 loadSkins();
 bpRegister();shopRegister();ACT.egg=eggTap;ACT.egg2=eggTap2;ACT.egg3=eggTap3;ACT.egg4=eggTap4;
 /* ---------- main loop ---------- */
 let lastT=performance.now();
-function loop(now){
+function loop(now){USER_EV=0;
  /* Real-time even on slow devices: a long frame is split into small steps instead of being capped
     (capping is what made the game run in slow motion when the iPad couldn't hold 30fps). */
  const fdt=Math.min(0.1,Math.max(0,(now-lastT)/1000));lastT=now;const ns=Math.max(1,Math.ceil(fdt/0.034)),dt=fdt/ns;
