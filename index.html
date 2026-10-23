@@ -2275,7 +2275,7 @@ document.addEventListener('click',e=>{
  if(e.detail!==0&&performance.now()-UI_PTR.t<700)return;
  const a=el.dataset.a;if(a==='mbg'&&e.target!==el)return;
  if(el.disabled||el.classList.contains('dk'))return;
- if(OL&&OL.lock&&a!=='mbg')return;
+ if(OL&&OL.lock&&a!=='mbg'){uiDefer(a,el);return;}
  sfx('tick');
  if(ACT[a])ACT[a](el.dataset,el,e);
 });
@@ -2284,6 +2284,12 @@ document.addEventListener('click',e=>{
    marked so the same action is not fired twice. Keyboard clicks still use the
    normal click handler above. */
 const UI_PTR={t:-1e9,down:null};
+/* online leagues: while the league is saving, a tap used to be dropped (press conference answers, CONTINUE...).
+   Now it waits for the save to finish (up to 10 s) and then runs, as long as you're still on the same screen. */
+let UI_DEFER=null;
+function uiDefer(a,el){const d=Object.assign({},el.dataset),scr=UI.scr,mod=UI.modal,t0=performance.now();UI_DEFER={a,d};sfx('tick');
+ const tick=()=>{if(!UI_DEFER||UI_DEFER.d!==d)return;if(OL&&OL.lock){if(performance.now()-t0<10000)setTimeout(tick,120);else UI_DEFER=null;return;}
+  UI_DEFER=null;if(UI.scr!==scr||UI.modal!==mod)return;if(ACT[a])ACT[a](d,el);};setTimeout(tick,120);}
 document.addEventListener('pointerdown',e=>{UI_PTR.down=e.target.closest&&e.target.closest('[data-a]');},true);
 document.addEventListener('pointerup',e=>{
  let el=e.target.closest&&e.target.closest('[data-a]');
@@ -2295,7 +2301,7 @@ document.addEventListener('pointerup',e=>{
  const a=el.dataset.a;if(a==='mbg'&&e.target!==el)return;
  if(el.disabled||el.classList.contains('dk'))return;
  el.__pgPointerHandled=true;UI_PTR.t=performance.now();
- if(OL&&OL.lock&&a!=='mbg')return;
+ if(OL&&OL.lock&&a!=='mbg'){uiDefer(a,el);return;}
  sfx('tick');
  if(ACT[a])ACT[a](el.dataset,el,e);
 },true);
