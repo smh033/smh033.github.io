@@ -307,9 +307,14 @@ function run(){
     const s=Math.max(s0,b.w/fw);
     const tw=Math.max(1,Math.round(b.w/s)),th=Math.max(1,Math.round(b.h/s));
     const ox=i*fw+Math.floor((fw-tw)/2),oy=fh-th; // centered, feet on bottom row
-    for(let ty=0;ty<th;ty++)for(let tx=0;tx<tw;tx++){
-      const col=blockColor(p,b.lab?(i=>b.lab[i]===b.g):(i=>mask[i]),W,b.x+tx*s,b.y+ty*s,s);
-      if(!col)continue;
+    /* shrink: a block is kept when a third of it is covered; then thin bits (arms, legs, hair) that fell
+       between blocks are bridged, so long skinny limbs don't come out broken */
+    const on=b.lab?(i=>b.lab[i]===b.g):(i=>mask[i]),C=new Array(tw*th),F=new Uint8Array(tw*th);
+    for(let ty=0;ty<th;ty++)for(let tx=0;tx<tw;tx++){const r=blockColor(p,on,W,b.x+tx*s,b.y+ty*s,s,1);C[ty*tw+tx]=r;if(r&&r[3]*3>=1)F[ty*tw+tx]=1;}
+    const at=(x,y)=>x>=0&&y>=0&&x<tw&&y<th&&F[y*tw+x]===1;
+    for(let ty=0;ty<th;ty++)for(let tx=0;tx<tw;tx++){const j=ty*tw+tx,r=C[j];if(F[j]||!r||r[3]<0.08)continue;
+      if((at(tx-1,ty)&&at(tx+1,ty))||(at(tx,ty-1)&&at(tx,ty+1))||(at(tx-1,ty-1)&&at(tx+1,ty+1))||(at(tx+1,ty-1)&&at(tx-1,ty+1))||(at(tx-1,ty)&&at(tx+1,ty+1))||(at(tx-1,ty)&&at(tx+1,ty-1))||(at(tx,ty-1)&&at(tx-1,ty+1))||(at(tx,ty-1)&&at(tx+1,ty+1)))F[j]=2;}
+    for(let ty=0;ty<th;ty++)for(let tx=0;tx<tw;tx++){const j=ty*tw+tx;if(!F[j])continue;const col=C[j];
       const k=((oy+ty)*out.width+ox+tx)*4;
       od.data[k]=col[0];od.data[k+1]=col[1];od.data[k+2]=col[2];od.data[k+3]=255;
     }
@@ -443,7 +448,7 @@ function evenBoxes(mask,W,H,n){
   const out=[];for(let i=0;i<n;i++){const b=tight(mask,W,H,Math.round(i*W/n),Math.round((i+1)*W/n));if(b)out.push(b)}return out;
 }
 // majority color of one source block (null = transparent)
-function blockColor(p,isOn,W,x0,y0,s){
+function blockColor(p,isOn,W,x0,y0,s,withCov){
   const xa=Math.floor(x0),ya=Math.floor(y0),xb=Math.max(xa+1,Math.floor(x0+s)),yb=Math.max(ya+1,Math.floor(y0+s));
   const step=Math.max(1,Math.floor((xb-xa)/6));
   let on=0,all=0;const cnt=new Map();
@@ -452,9 +457,9 @@ function blockColor(p,isOn,W,x0,y0,s){
     const k=(p[i*4]>>4)<<8|(p[i*4+1]>>4)<<4|(p[i*4+2]>>4);
     const e=cnt.get(k);if(e){e[0]++;e[1]+=p[i*4];e[2]+=p[i*4+1];e[3]+=p[i*4+2]}else cnt.set(k,[1,p[i*4],p[i*4+1],p[i*4+2]]);
   }
-  if(on*3<all)return null; // a third covered is enough, so thin hair strands survive the shrink
+  if(!on||(!withCov&&on*3<all))return null; // a third covered is enough, so thin hair strands survive the shrink
   let best=null;cnt.forEach(v=>{if(!best||v[0]>best[0])best=v});
-  return [Math.round(best[1]/best[0]),Math.round(best[2]/best[0]),Math.round(best[3]/best[0])];
+  return [Math.round(best[1]/best[0]),Math.round(best[2]/best[0]),Math.round(best[3]/best[0]),on/all];
 }
 function drawSrc(c,boxes){
   const s=$('src'),k=Math.min(1,1600/c.width);s.width=Math.round(c.width*k);s.height=Math.round(c.height*k);
