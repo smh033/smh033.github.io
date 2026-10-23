@@ -1405,7 +1405,7 @@ function loadSkins(){const rem=skinsRemote();
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
   for(const k of list){if(k.code&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* old codes are off everywhere now (the shop sells those skins from release) */if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
-  for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
+  for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}if(UI.scr!=='game')render();};
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
    im.src=k.png?k.png:'skins/'+tries[0]+'?v='+SKINS.ver;}
   if(UI.scr!=='game')render();}).catch(e=>{SKINS.err=String(e&&e.message||e);console.warn('skins.json could not be read',e);});}
@@ -2076,8 +2076,17 @@ function shrinkSheet(sh,fw,fh,n,tw,th){let m=SHR.get(sh);if(!m){m=new Map();SHR.
   for(let j=0;j<TW*th;j++)if(F[j]){q[j*4]=col[j*3];q[j*4+1]=col[j*3+1];q[j*4+2]=col[j*3+2];q[j*4+3]=255;}
   og.putImageData(od,0,0);out=o;}catch(e){out=null;}
  if(m.size>12)m.clear();m.set(key,out);return out;}
-var FIELDSZ=0;   /* on while drawing field players, so a skin's "size" (tall characters) only grows them on the field */
-function drawSkin(c,lk,o,fr,u){let sh=skinSheet(lk.spr,lk);if(!sh)return false;if(o.sil)sh=silSheet(sh,o.sil);const K=SKINS.list.find(x=>x.id===lk.spr)||{};let fw=(K.frame&&+K.frame[0])||SKINS.fw,fh=(K.frame&&+K.frame[1])||SKINS.fh,sc=(+K.scale||1)*(FIELDSZ?Math.min(1.25,Math.max(1,+K.size||1)):1),n=Math.max(1,Math.floor(sh.width/fw));
+var FIELDSZ=0;
+/* On the field every skin is sized by how tall its standing pose really is (sheets leave room above the head for
+   the catch pose), so each one stands a bit taller than a normal player (17 px vs 16). "size" sets it as a multiple
+   of a normal player instead: Slender Man is 1.5. */
+const SKIN_STAND=17,SKH=new Map();
+function skinFieldMul(id,K,fw,fh){let h=SKH.get(id);
+ if(h===undefined){h=0;try{const im=SKINS.img[id];if(im&&im.width){const c=document.createElement('canvas');c.width=fw;c.height=fh;const g=c.getContext('2d');g.drawImage(im,0,0,fw,fh,0,0,fw,fh);const d=g.getImageData(0,0,fw,fh).data;
+   let top=-1,bot=-1;for(let y=0;y<fh&&top<0;y++)for(let x=0;x<fw;x++)if(d[(y*fw+x)*4+3]>40){top=y;break;}for(let y=fh-1;y>=0&&bot<0;y--)for(let x=0;x<fw;x++)if(d[(y*fw+x)*4+3]>40){bot=y;break;}if(top>=0)h=bot-top+1;}}catch(e){h=0;}SKH.set(id,h);}
+ if(!h)return 1.2;const per=(+K.scale||1),want=K.size?16*Math.min(2,Math.max(0.8,+K.size)):SKIN_STAND;
+ return Math.min(2.2,Math.max(0.9,want/(h*per)));}   /* on while drawing field players, so a skin's "size" (tall characters) only grows them on the field */
+function drawSkin(c,lk,o,fr,u){let sh=skinSheet(lk.spr,lk);if(!sh)return false;if(o.sil)sh=silSheet(sh,o.sil);const K=SKINS.list.find(x=>x.id===lk.spr)||{};let fw=(K.frame&&+K.frame[0])||SKINS.fw,fh=(K.frame&&+K.frame[1])||SKINS.fh,sc=(+K.scale||1)*(FIELDSZ?skinFieldMul(lk.spr,K,fw,fh):1),n=Math.max(1,Math.floor(sh.width/fw));
  {let kk=1;try{const T=c.getTransform();kk=Math.hypot(T.a,T.b)||1;}catch(e){}const dpx=fw*sc*u*kk;if(dpx<fw*0.97&&dpx>=4){const tw=Math.round(dpx),th=Math.max(1,Math.round(fh*tw/fw)),sm=shrinkSheet(sh,fw,fh,n,tw,th);if(sm){sc=sc*fw/tw;sh=sm;fw=tw;fh=th;}}}   /* drawn smaller than the sheet: use a cleanly shrunk copy so thin arms/legs don't drop out */
  if(o.pk&&/^dSKELETON\d/.test(o.pk)){   /* skeleton dance: arms-up hops that flip side to side, a sway, a squat and a kick */
   const j=+o.pk.slice(9),F=[[8,1,-1,-0.12],[8,-1,-3,0.12],[8,1,-1,-0.12],[0,1,2,0],[8,-1,-1,0.12],[8,1,-3,-0.12],[8,-1,-1,0.12],[7,1,-2,0]][j%8],fi=Math.min(F[0],n-1),dw=fw*sc*u,dh=fh*sc*u;
@@ -2161,7 +2170,7 @@ function sprite(lk,o){
  const fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1,u=o.u||2;
  const key=lk.key+u+'|'+(o.face<0?0:1)+fr+(o.down?1:0)+(o.dive?1:0)+(o.ball?1:0)+(o.throw?1:0)+(o.glow?1:0)+(o.reach?1:0)+(o.oneh?1:0)+(o.hurdle?1:0)+(o.pk||'')+(lk.teamId!=null&&NFL_FIELD_LOGOS[lk.teamId]?'L':'');
  let out=SPC.get(key);if(out)return out;
- const W=36*u,H=24*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+ const W=48*u,H=36*u,mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
  const a=mk(),g=a.getContext('2d');FIELDSZ=1;try{drawMan(g,W/2,H-2*u,lk,Object.assign({},o,{u,shadow:false,fr}));}finally{FIELDSZ=0;}
  const sil=col=>{const b=mk(),gb=b.getContext('2d');gb.drawImage(a,0,0);gb.globalCompositeOperation='source-in';gb.fillStyle=col;gb.fillRect(0,0,W,H);return b;};
  out=mk();const go=out.getContext('2d');
@@ -2169,7 +2178,7 @@ function sprite(lk,o){
  const b=sil('#0a0a12');for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1]])go.drawImage(b,dx,dy);go.drawImage(a,0,0);
  if(SPC.size>3000)SPC.clear();SPC.set(key,out);return out;
 }
-function drawSpr(c,x,y,lk,o){const u=o.u||2;x=Math.round(x);y=Math.round(y);if(o.shadow!==false){c.fillStyle='rgba(0,0,0,.3)';c.fillRect(x-5*u,y-u,10*u,2*u);}c.drawImage(sprite(lk,o),x-18*u,y-22*u);}
+function drawSpr(c,x,y,lk,o){const u=o.u||2;x=Math.round(x);y=Math.round(y);if(o.shadow!==false){c.fillStyle='rgba(0,0,0,.3)';c.fillRect(x-5*u,y-u,10*u,2*u);}c.drawImage(sprite(lk,o),x-24*u,y-34*u);}
 const AVC={};
 function avatar(p,t,u,away){u=u||3;const lk=lookFor(p,t,away);const key=lk.key+u;if(!AVC[key]){const cc=document.createElement('canvas');cc.width=12*u;cc.height=17*u;drawMan(cc.getContext('2d'),6*u,16.5*u,lk,{u,shadow:false,face:1});AVC[key]=cc.toDataURL();}return`<img class="ava" src="${AVC[key]}" width="${12*u}" height="${17*u}" alt="">`;}
 const DIG={0:'111101101101111',1:'010110010010111',2:'111001111100111',3:'111001111001111',4:'101101111001001',5:'111100111001111',6:'111100111101111',7:'111001010010010',8:'111101111101111',9:'111101111001111'};
@@ -2310,7 +2319,7 @@ function pcard(p,t,o){
 SCR.title=()=>{
  if(!hasSave()){let best=0,bt=-1;for(let n=1;n<=SLOTS_N;n++){const s=slotInfo(n);if(s&&s.at>bt){bt=s.at;best=n;}}if(best)setSlot(best);}
  const sv=hasSave()?loadSave():null;
- const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-16,-8);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
+ const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-28,-32);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px" data-a="egg4">
   <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
   <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
@@ -5560,7 +5569,7 @@ function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K|
  cx.save();
  for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy);
   const spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));cx.globalAlpha=k*0.7*(1-(i-1)/(n+1));
-  cx.drawImage(trailTint(spr,SANDE[(i-1)%SANDE.length]),gx-18*u,gy-20*u);}
+  cx.drawImage(trailTint(spr,SANDE[(i-1)%SANDE.length]),gx-24*u,gy-34*u);}
  cx.restore();}
 /* "trail": "lightning": electric afterimages with bolts crackling between them */
 const BOLT=['#fff36b','#9be7ff','#ffffff'];
