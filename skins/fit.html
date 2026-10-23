@@ -108,7 +108,7 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
     <div class="row">
       <div><label>Name in game</label><input type="text" id="aName"></div>
       <div><label>Unlocked by</label><select id="aUnlock">
-        <option value="open">Everyone has it</option><option value="code">A code</option>
+        <option value="open">Everyone has it</option><option value="locked">Battle pass / reward only (locked)</option><option value="code">A code</option>
         <option value="egg1">Easter egg: tap FOOTBALL 7x</option><option value="egg2">Easter egg: tap RETRO 7x</option>
         <option value="egg3">Easter egg: tap the players 7x</option><option value="egg4">Easter egg: tap an empty spot 7x</option></select></div>
     </div>
@@ -206,7 +206,7 @@ async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp'
   const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity:'legendary'},'tung-tung':{price:250,rarity:'uncommon'},'john':{price:600,rarity:'epic'},'ninja':{price:800,rarity:'legendary'},'steve':{price:600,rarity:'epic'},'richard':{price:400,rarity:'rare'},'00-king':{price:700,rarity:'icon'}};   /* same as the game's: old code skins are in the shop */
   for(const r of d.skins){const i=list.findIndex(x=>x.id===r.id);if(r.hidden){if(i>=0)list.splice(i,1);continue;}if(i>=0)Object.assign(list[i],r,{src:'github + changed here'});else list.push(Object.assign({},r,{src:'added here'}));}
   for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id])k.shop=SHOP_DEFAULTS[k.id];if(k.code&&String(k.code).toLowerCase()!=='travvypatty'&&k.shop)k.code=null;if(k.shop)k.egg=null;}
-  L.innerHTML='';if(!list.length)L.textContent='NO SKINS YET';
+  SKALL=list;L.innerHTML='';if(!list.length)L.textContent='NO SKINS YET';
   for(const k of list){const row=document.createElement('div');row.className='sk';
    const nm=document.createElement('b');nm.textContent=String(k.name||k.id).toUpperCase();row.appendChild(nm);
    const t=document.createElement('span');t.className='tag';t.textContent=unlockOf(k)+(k.trail?' · '+k.trail:'')+' · '+k.src;row.appendChild(t);
@@ -215,7 +215,7 @@ async function skList(){const L=$('skList');L.textContent='LOADING...';$('listp'
    const x=document.createElement('button');x.className='sec';x.textContent='REMOVE';x.onclick=()=>skRemove(k);row.appendChild(x);L.appendChild(row);}
  }catch(e){L.textContent='CAN\'T REACH THE GAME SERVER: '+e.message;}}
 function openSettings(k,png){EDIT={id:k.id,png};$('setp').style.display='';$('setTitle').textContent=png?'ADD TO THE GAME':'EDIT '+String(k.name||k.id).toUpperCase();
- $('aName').value=String(k.name||k.id).toUpperCase();$('aUnlock').value=k.code?'code':k.egg?'egg'+k.egg:'open';$('aCode').value=k.code||'';$('aShow').value=k.codeShow||'';
+ $('aName').value=String(k.name||k.id).toUpperCase();$('aUnlock').value=k.code?'code':k.egg?'egg'+k.egg:(k.secret&&!(k.shop&&k.shop.price)&&!k.styleOf)?'locked':'open';$('aCode').value=k.code||'';$('aShow').value=k.codeShow||'';
  $('aTitle').value=k.eggTitle||'';$('aSub').value=k.eggSub||'';$('aTrail').value=k.trail||'';$('aShop').value=k.shop&&k.shop.price?'1':'';$('aCeleb').value=k.celeb||'';$('aSize').value=k.size?String(k.size):'';$('aCat').value=(k.shop&&k.shop.cat)||'';$('aStyle').value=k.styleOf||'';$('aPrice').value=k.shop&&k.shop.price||'';$('aRarity').value=(k.shop&&k.shop.rarity)||'rare';$('aMsg').textContent='';$('aGo').textContent=png?'ADD TO GAME':'SAVE CHANGES';$('setp').scrollIntoView({behavior:'smooth'});}
 async function skSave(){if(!EDIT)return;const m=$('aMsg'),u=$('aUnlock').value,code=$('aCode').value.trim();
  if(u==='code'&&!code){m.textContent='TYPE A CODE';return}
@@ -250,7 +250,7 @@ function init(){
   $('hip').addEventListener('input',()=>$('hipv').textContent=$('hip').value);
   $('toAdd').onclick=()=>{const out=$('out'),[fw,fh]=$('fsz').value.split('x').map(Number),id=($('sid').value||'my-skin').toLowerCase().replace(/[^a-z0-9-]+/g,'-');
    const png={png:out.toDataURL('image/png'),frame:[fw,fh],scale:+(12/fw).toFixed(4),tint:$('tint').value!=='false'?undefined:false};if(fw===12&&fh===16){delete png.frame;delete png.scale}
-   openSettings(LOADED&&LOADED.id===id?Object.assign({},LOADED,{name:$('sname').value}):{id,name:$('sname').value},png);};
+   const prev=(LOADED&&LOADED.id===id&&LOADED)||SKALL.find(x=>x.id===id);openSettings(prev?Object.assign({},prev,{name:$('sname').value}):{id,name:$('sname').value},png);};   /* same id as a skin already in the game: keep its settings */
   $('aGo').onclick=skSave;$('aCancel').onclick=()=>{EDIT=null;$('setp').style.display='none'};
   $('skReload').onclick=skList;$('skReset').onclick=skReset;skList();
   $('tol').addEventListener('input',()=>$('tolv').textContent=$('tol').value);
@@ -268,15 +268,17 @@ function runFix(cv,FW,FH,hip){const g=cv.getContext('2d'),A=g.getImageData(FW,0,
    const k=1-0.42*((y-sy)/Math.max(1,FH-1-sy)),s2=Math.round(cx+(x-cx)/k);if(s2>=0&&s2<FW&&src.data[px(0,s2,y)+3])copy(src,out,s2,y,x,y);}return out;};
  const F=[A,pass(A),A,pass(A)];   /* never mirrored, so the knees always bend the same way as the body */F.forEach((im,i)=>{g.clearRect((1+i)*FW,0,FW,FH);g.putImageData(im,(1+i)*FW,0);});}
 /* load a skin that's already in the game back into the fitter (to fix it and save it over itself) */
-let LOADED=null;
+let LOADED=null,REPL=null,SKALL=[];
 async function loadSkin(k){try{const src=k.png||('../skins/'+k.file+'?t='+Date.now());const im=new Image();im.crossOrigin='anonymous';
  im.onload=()=>{IMG=im;LOADED=k;$('sid').value=k.id;$('sname').value=String(k.name||k.id).toUpperCase();if(k.frame)$('fsz').value=k.frame[0]+'x'+k.frame[1];$('bgm').value='alpha';$('cut').value='even';
   $('opts').style.display='';$('srcp').style.display='';run();$('outp').scrollIntoView({behavior:'smooth'});msg('LOADED '+String(k.name||k.id).toUpperCase()+': FIX IT, THEN "ADD THIS SKIN TO THE GAME" SAVES IT OVER THE OLD ONE');};
  im.onerror=()=>msg('Could not load that skin image.',1);im.src=src;}catch(e){msg(String(e.message||e),1)}}
-function load(f){LOADED=null;
+function load(f){
   const base=f.name.replace(/\.[^.]*$/,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'my-skin';
-  /* every new image gets its own name (phone photos are long random ids: rename them in the boxes) */
-  $('sid').value=base;$('sname').value=base.replace(/-/g,' ').toUpperCase();
+  /* after tapping IMAGE on a skin, a new picture replaces that skin (same id, keeps its pass/shop/style settings);
+     otherwise every new image gets its own name (phone photos are long random ids: rename them in the boxes) */
+  if(LOADED&&$('sid').value===LOADED.id){REPL=LOADED;$('bgm').value='auto';$('cut').value='gaps';setTimeout(()=>msg('NEW IMAGE FOR '+String(LOADED.name||LOADED.id).toUpperCase()+': "ADD THIS SKIN TO THE GAME" REPLACES ITS SPRITE AND KEEPS ITS SETTINGS'),50);}
+  else{REPL=null;LOADED=null;$('sid').value=base;$('sname').value=base.replace(/-/g,' ').toUpperCase();}
   const im=new Image();
   im.onload=()=>{IMG=im;$('opts').style.display='';$('srcp').style.display='';run()};
   im.onerror=()=>msg('Could not open that image.',1);
