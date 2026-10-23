@@ -393,22 +393,23 @@ function figBoxes(mask,W,H,n){
   const parts=comps.filter(c=>c.area>=big*0.0004); // keep thin hair strands; far-away dust is dropped below
   const sorted=[...parts].sort((a,b)=>b.area-a.area);
   let seeds=sorted.filter(c=>c.area>=big*0.2);
-  const groups=seeds.map(c=>({ids:[c.id],x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,area:c.area,cx:c.cx}));
   const add=(g,c)=>{g.ids.push(c.id);g.x0=Math.min(g.x0,c.x0);g.x1=Math.max(g.x1,c.x1);g.y0=Math.min(g.y0,c.y0);g.y1=Math.max(g.y1,c.y1);g.cx=(g.cx*g.area+c.cx*c.area)/(g.area+c.area);g.area+=c.area};
   const dist=(g,c)=>Math.max(0,g.x0-c.x1,c.x0-g.x1)+Math.max(0,g.y0-c.y1,c.y0-g.y1)+Math.abs(g.cx-c.cx)*0.25;
-  // too few big pieces (a pose split in two)? promote the next biggest pieces
-  for(const c of sorted){if(groups.length>=n)break;if(!seeds.includes(c)&&c.area>=big*0.05){seeds.push(c);groups.push({ids:[c.id],x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,area:c.area,cx:c.cx})}}
-  const reach=H*0.12;for(const c of parts){if(seeds.includes(c))continue;let bg=null,bd=1e9;for(const g of groups){const d=dist(g,c);if(d<bd){bd=d;bg=g}}if(bd-Math.abs(bg.cx-c.cx)*0.25<=reach||c.area>=big*0.004)add(bg,c)}
-  // more groups than poses (a pose that came apart, or a sidekick drawn next to the character in every frame):
-  // keep the n biggest as the poses and hang every other group on the pose whose box it overlaps / sits closest to
-  if(groups.length>n){const order=[...groups].sort((a,b)=>b.area-a.area),anchors=order.slice(0,n),extra=order.slice(n);
-    const gap=(a,b)=>{const g=Math.max(a.x0-b.x1,b.x0-a.x1);return g>0?g:g/1000;};   /* overlapping boxes: more overlap wins */
-    for(const e of extra.sort((a,b)=>b.area-a.area)){let bg=anchors[0],bd=1e9;for(const a of anchors){const d=gap(a,e);if(d<bd){bd=d;bg=a}}
-      add(bg,{id:-1,area:e.area,x0:e.x0,x1:e.x1,y0:e.y0,y1:e.y1,cx:e.cx});bg.ids.pop();bg.ids.push(...e.ids);}
-    groups.length=0;groups.push(...anchors);}
+  /* sizes: a POSE is at least half a typical pose; a MID piece (a sidekick drawn next to the character in every frame,
+     a loose ball, a hand) is placed only after the poses are final; tiny bits hang on the nearest pose right away.
+     Two poses that touch come out as one big piece and are split further down. */
+  const sa=seeds.map(c=>c.area).sort((a,b)=>a-b),smed=sa.length?sa[sa.length>>1]:big;
+  seeds=seeds.filter(c=>c.area>=smed*0.3);
+  for(const c of sorted){if(seeds.length>=n)break;if(!seeds.includes(c)&&c.area>=smed*0.3)seeds.push(c);}
+  if(seeds.length>n){seeds.sort((a,b)=>b.area-a.area);seeds=seeds.slice(0,n);}
+  const groups=seeds.map(c=>({ids:[c.id],x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,area:c.area,cx:c.cx}));
+  const mids=[];const reach=H*0.12;
+  for(const c of parts){if(seeds.includes(c))continue;
+    if(c.area>=smed*0.08){mids.push(c);continue;}
+    let bg=null,bd=1e9;for(const g of groups){const d=dist(g,c);if(d<bd){bd=d;bg=g}}if(bg&&(bd-Math.abs(bg.cx-c.cx)*0.25<=reach||c.area>=big*0.004))add(bg,c)}
   groups.sort((a,b)=>a.cx-b.cx);
-  // relabel pixels to their group number
-  const map=new Int32Array(comps.length+1);groups.forEach((g,k)=>g.ids.forEach(id=>map[id]=k+1));
+  // relabel pixels to their group number (mid pieces get a temporary negative label)
+  const map=new Int32Array(comps.length+1);groups.forEach((g,k)=>g.ids.forEach(id=>map[id]=k+1));mids.forEach((c,m)=>map[c.id]=-(m+1));
   for(let i=0;i<W*H;i++)if(lab[i])lab[i]=map[lab[i]];
   let boxes=groups.map((g,k)=>({x:g.x0,y:g.y0,w:g.x1-g.x0+1,h:g.y1-g.y0+1,g:k+1,lab}));
   // poses that touch each other came out as one: split the widest box at its thinnest column until we have n
@@ -431,6 +432,13 @@ function figBoxes(mask,W,H,n){
     boxes.splice(bi,1,...[L,R].filter(Boolean));
   }
   boxes.sort((a,b)=>a.x+a.w/2-(b.x+b.w/2));
+  /* place the mid pieces: one per pose (a sidekick in every frame) -> left to right, one each; otherwise each goes to the
+     pose whose box it overlaps most / sits closest to */
+  if(mids.length&&boxes.length){const to=new Array(mids.length);
+    if(mids.length===boxes.length){const order=mids.map((c,m)=>m).sort((a,b)=>mids[a].cx-mids[b].cx);order.forEach((m,i)=>to[m]=boxes[i]);}
+    else mids.forEach((c,m)=>{let bb=boxes[0],bd=1e9;for(const bx of boxes){const g=Math.max(bx.x-c.x1,c.x0-(bx.x+bx.w-1)),d=g>0?g:g/1000;if(d<bd){bd=d;bb=bx}}to[m]=bb;});
+    for(let i=0;i<W*H;i++)if(lab[i]<0)lab[i]=to[-lab[i]-1].g;
+    boxes=boxes.map(bx=>{let x0=bx.x,x1=bx.x+bx.w-1,y0=bx.y,y1=bx.y+bx.h-1;mids.forEach((c,m)=>{if(to[m]===bx){x0=Math.min(x0,c.x0);x1=Math.max(x1,c.x1);y0=Math.min(y0,c.y0);y1=Math.max(y1,c.y1);}});return{x:x0,y:y0,w:x1-x0+1,h:y1-y0+1,g:bx.g,lab};});}
   return boxes;
 }
 function tightLab(lab,W,H,x0,x1,g){
