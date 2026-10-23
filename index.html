@@ -174,6 +174,7 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .pdr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;white-space:normal;line-height:1.5;width:100%}
 .fobar>.bt:not(.ico){flex:1 1 auto;min-width:0;font-size:7px;padding:7px 5px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bpbtn{display:inline-flex;align-items:center;gap:6px;border-color:#f07818!important;color:#ffd7a8}
+.bpwrap img{-webkit-user-drag:none;user-select:none}   /* mouse-drag scrolling: don't start dragging the picture */
 .bpwrap{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;width:100%;padding:4px 2px 8px;-webkit-overflow-scrolling:touch;touch-action:pan-x!important;cursor:grab}
 .bpcol{flex:0 0 66px;display:flex;flex-direction:column;gap:4px;align-items:stretch}
 .bpcol .tn{text-align:center;font-size:7px;padding:2px 0;background:#2a1640;border:1px solid #5a3a80}
@@ -1899,7 +1900,7 @@ function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
 /* mouse: drag the row sideways (touch scrolls natively) */
 function bpDrag(e,w){if(e.pointerType!=='mouse')return;const x0=e.clientX,s0=w.scrollLeft;let moved=false;
- const mv=ev=>{const dx=ev.clientX-x0;if(Math.abs(dx)>4)moved=true;w.scrollLeft=s0-dx*(w.scrollWidth/w.getBoundingClientRect().width>0?w.offsetWidth/w.getBoundingClientRect().width:1);};
+ const mv=ev=>{const dx=ev.clientX-x0;if(Math.abs(dx)>4){moved=true;UI_PTR.down=null;}   /* a drag isn't a tap on the card it started on */w.scrollLeft=s0-dx*(w.scrollWidth/w.getBoundingClientRect().width>0?w.offsetWidth/w.getBoundingClientRect().width:1);};
  const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);if(moved){const stop=ev=>{ev.stopPropagation();ev.preventDefault();window.removeEventListener('click',stop,true);};window.addEventListener('click',stop,true);setTimeout(()=>window.removeEventListener('click',stop,true),50);}};
  window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);}
 function bpSkinPrev(id){const K=SKINS.list.find(x=>x.id===id);if(!K||!SKINS.img[id])return'';const lk={spr:id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'bp'+id};
@@ -1985,7 +1986,7 @@ function dailyAfterGame(g){const d=dailyGet();let msgs=[];
  dailyPut(d);msgs.forEach((m,i)=>setTimeout(()=>toast(m),3300+i*2400));}
 function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
  return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
-function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=big?5:3,W=big?150:110,H=big?112:56;
+function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=big?8.5:3.4,W=big?150:110,H=big?144:57;   /* characters fill their cards */
  let src='';if(SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*2;cc.height=H*2;const g=cc.getContext('2d');g.scale(2,2);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();}   /* 2x for sharp cards */
  return`<div class="shc${big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
   <div class="shimg">${src?`<img src="${src}" width="${W}" height="${H}" style="image-rendering:pixelated">`:'<span class="s16">?</span>'}</div>
@@ -2013,7 +2014,7 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
    <div class="shbar"><button class="bt ${!cat?'y':''}" data-a="shopCat" data-v="" style="padding:4px 8px 3px">DAILY</button>${hw.length?`<button class="bt ${cat==='halloween'?'y':''}" data-a="shopCat" data-v="halloween" style="padding:4px 8px 3px;display:inline-flex;gap:4px;align-items:center">${hwPumpkin(1)} HALLOWEEN</button>`:''}<div class="sp"></div>${cat?'<span class="s7 yl">LIMITED TIME</span>':`<span class="s7 dim">NEW ITEMS IN</span><span class="s10" id="shopT">${shopLeft()}</span>`}</div>
    ${cat==='halloween'?`<div class="bpwrap scroll" id="shw" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)" style="gap:8px;justify-content:flex-start;align-items:flex-start">${hw.slice().sort((a,b)=>(+a.shop.price)-(+b.shop.price)).map(k=>shopCard(k,true)).join('')}</div>`
    :`<div class="row" style="gap:8px;align-items:stretch;justify-content:center">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>`}
-   <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY AND DON'T CHANGE HOW PLAYERS PLAY.</div>
+   <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY (NO GAMEPLAY CHANGES)</div>
   </div></div></div>`;};
 ACT.shop=()=>{if(!SKINS.ok)loadSkins();go('shop');};
 ACT.shopCat=d=>{UI.shopCat=d.v||'';render();};
@@ -2660,7 +2661,7 @@ function pregameHTML(g){
 ACT.adv=()=>{UI.modal=null;advanceWeek();resumeFlow();};
 ACT.simpo=()=>{UI.modal=null;while(L.phase==='PO'&&!userGame())advanceWeek();resumeFlow();};
 ACT.play=()=>{if(L.online&&!(UI.scr==='olroom'))return olPlay(false);const g=userGame();if(!g)return;const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);};
-ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});};
+ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});try{bpAfterGame(home?hs:as,home?as:hs,null,g,true,{});}catch(e){console.warn('pass',e);}};   /* simmed games pay a third */
 function simStats(us,th){
  const lu=lineup(L.user),ps={},S=p=>p?(ps[p.id]=ps[p.id]||{xp:0}):null,add=(p,k,v)=>{const s=S(p);if(s)s[k]=(s[k]||0)+v;};
  const tds=Math.floor(us/7),py=Math.round(rnd(140,300)*(0.7+us/60)),ry=Math.round(rnd(50,140));
