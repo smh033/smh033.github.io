@@ -5993,7 +5993,7 @@ function mockConn(code,role){const bc=new BroadcastChannel('rf-net-'+code),c={ha
  bc.onmessage=e=>{const d=e.data;if(!d||d.from===role||c.dead)return;if(d.hello&&role==='host'){netAccept(c);c.handlers.open&&c.handlers.open();bc.postMessage({from:role,hi:1});return;}
   if(d.hi&&role==='guest'){c.handlers.open&&c.handlers.open();return;}if(d.bye){c.handlers.close&&c.handlers.close();return;}if(d.o!==undefined)c.handlers.data&&c.handlers.data(d.o);};
  return{c,hello(){bc.postMessage({from:role,hello:1});}};}
-function netReset(){try{NET.conn&&NET.conn.close();}catch(e){}try{(NET.rsocks||[]).forEach(s=>s.close());}catch(e){}NET.rsocks=[];NET.rconns={};clearTimeout(NET.p2pT);NET.mode=null;NET.hp2p=false;NET.hrel=false;try{NET.peer&&NET.peer.destroy();}catch(e){}try{NET.mock&&NET.mock.c.close();}catch(e){}
+function netReset(){try{for(const k in NET.rconns||{})rtcStop(NET.rconns[k]);rtcStop(NET.conn);}catch(e){}try{NET.conn&&NET.conn.close();}catch(e){}try{(NET.rsocks||[]).forEach(s=>s.close());}catch(e){}NET.rsocks=[];NET.rconns={};clearTimeout(NET.p2pT);NET.mode=null;NET.hp2p=false;NET.hrel=false;try{NET.peer&&NET.peer.destroy();}catch(e){}try{NET.mock&&NET.mock.c.close();}catch(e){}
  Object.assign(NET,{on:false,role:null,peer:null,conn:null,connOpen:false,code:'',stage:'menu',status:'',lob:null,snap:null,pup:[],menu:false,lov:undefined,ovH:null,buf:[],wait:false,rc:null,cands:[],mock:null,rtt:0});}
 /* host: a new connection. In the lobby it's your friend; during a game it must prove it's the same friend (rejoin token) */
 function netAccept(c){if(NET.stage==='game'){NET.cands=(NET.cands||[]).filter(x=>!x.dead).slice(-5);NET.cands.push(c);netWire(c);return;}
@@ -6006,7 +6006,7 @@ function netWire(c){
   sfx('first');if(UI.scr==='online'||UI.scr==='olroom')render();});
  c.on('data',m=>{try{
   if(isCand()){if(m&&(m.t==='rejoin'||m.t==='pick')&&m.tok&&m.tok===NET.gtok){if(m.t==='pick'&&NET.startMsg)setTimeout(()=>{netSend(NET.startMsg);NET.lN=-1;NET.rN=2;NET.lov=undefined;},50);const old=NET.conn;NET.conn=c;for(const x of NET.cands)if(x!==c)try{x.close();}catch(e){}NET.cands=[];NET.connOpen=true;NET.on=true;if(old&&old!==c)try{old.close();}catch(e){}netResync();}return;}
-  if(c!==NET.conn)return;NET.lastRx=performance.now();NET.rxN=(NET.rxN||0)+1;if(NET.role==='host'&&NET.wait&&NET.stage==='game')netResync();
+  if(c!==NET.conn)return;if(m&&m.t==='rtc'){if(c.mode==='relay')rtcMsg(c,m);return;}NET.lastRx=performance.now();NET.rxN=(NET.rxN||0)+1;if(NET.role==='host'&&NET.wait&&NET.stage==='game')netResync();
   NET.role==='host'?netHostMsg(m):netGuestMsg(m);}catch(e){console.error('net msg',e);}});
  c.on('close',()=>{if(c===NET.conn)netDrop();});
  c.on('error',()=>{if(c===NET.conn)netDrop();});
@@ -6028,7 +6028,7 @@ function netLost(msg){netsClear();if(!NET.on&&NET.stage!=='lobby'&&NET.stage!=='
 const NET_CF='wss://retrofootball-relay.troypokyxle0524.workers.dev';
 const NET_BROKERS=(()=>{const q=(location.search.match(/[?&]mqtt=([^&]+)/)||[])[1];return q?decodeURIComponent(q).split(','):[...(NET_CF?['cf:'+NET_CF]:[]),'wss://mqtt.eclipseprojects.io:443/mqtt','wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt'];})();
 const NET_FORCE_RELAY=/[?&]relay(&|$)/.test(location.search),NET_RT='retrofootball1/';
-const netRelayOn=()=>!!(NET.conn&&NET.conn.mode==='relay');
+const netRelayOn=()=>!!(NET.conn&&NET.conn.mode==='relay')&&!rtcOn();
 /* a tiny MQTT 3.1.1 client (QoS 0) over a WebSocket */
 function mqttSock(url,onMsg,onUp,onDown){
  if(url.startsWith('cf:'))return cfSock(url.slice(3).replace(/\/$/,'')+'/r/'+NET.code,onMsg,onUp,onDown);
@@ -6062,8 +6062,36 @@ function cfSock(url,onMsg,onUp,onDown){const S={url,up:false,ws:null,dead:false,
  S.close=()=>{if(S.dead)return;S.dead=true;clearInterval(ping);try{S.ws&&S.ws.close();}catch(e){}};
  S.reopen=open;open();return S;}
 function relayConn(sock,topic,wrap){const c={mode:'relay',sock,handlers:{},on(ev,f){this.handlers[ev]=f;},
- send(o){if(!c.dead)sock.pub(topic,JSON.stringify(wrap({o})));},
- close(){if(c.dead)return;c.dead=true;sock.pub(topic,JSON.stringify(wrap({bye:1})));if(c.own)setTimeout(()=>sock.close(),300);}};return c;}
+ relaySend(o){if(!c.dead)sock.pub(topic,JSON.stringify(wrap({o})));},
+ send(o){if(c.dead)return;const r=c.rtc;if(r&&r.open&&r.dc&&r.dc.readyState==='open'&&r.dc.bufferedAmount<262144){try{const t=JSON.stringify(o);if(t.length<60000){r.dc.send(t);return;}}catch(e){}}c.relaySend(o);},   /* direct link when it's up, the relay otherwise */
+ close(){if(c.dead)return;rtcStop(c);c.dead=true;sock.pub(topic,JSON.stringify(wrap({bye:1})));if(c.own)setTimeout(()=>sock.close(),300);}};return c;}
+/* ---------- direct upgrade ----------
+   Connected through the relay? The two devices also try to open a direct WebRTC link, set up through
+   that same relay (so it doesn't need the PeerJS server). If it opens, everything goes over it
+   (same Wi-Fi: a few ms instead of a trip to the relay and back); if it drops, messages go back to the relay. */
+const RTC_ICE={iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun.cloudflare.com:3478']}]},RTC_OFF=/[?&]nortc/.test(location.search);
+function rtcStop(c){const r=c&&c.rtc;if(!r)return;c.rtc=null;try{r.dc&&r.dc.close();}catch(e){}try{r.pc.close();}catch(e){}}
+const rtcOn=()=>{const r=NET.conn&&NET.conn.rtc;return!!(r&&r.open&&r.dc&&r.dc.readyState==='open');};
+function rtcStart(c,init,sid){if(typeof RTCPeerConnection!=='function'||RTC_OFF)return null;rtcStop(c);let pc;try{pc=new RTCPeerConnection(RTC_ICE);}catch(e){return null;}
+ const r={pc,dc:null,open:false,sid:sid||Math.random().toString(36).slice(2,9),t0:performance.now(),q:[],rd:false};c.rtc=r;
+ const sig=(k,d)=>{if(!c.dead&&c.rtc===r)c.relaySend({t:'rtc',k,d,sid:r.sid});};
+ pc.onicecandidate=e=>{if(e.candidate)sig('ice',e.candidate.toJSON());};
+ const wire=dc=>{r.dc=dc;dc.onopen=()=>{if(c.rtc!==r)return;r.open=true;c.rtcN=0;};
+  dc.onmessage=e=>{if(c.rtc!==r||c.dead)return;let m;try{m=JSON.parse(e.data);}catch(err){return;}c.handlers.data&&c.handlers.data(m);};
+  dc.onclose=dc.onerror=()=>{if(c.rtc!==r)return;rtcStop(c);c.rtcNext=performance.now()+8000;};};
+ pc.onconnectionstatechange=()=>{if(c.rtc!==r)return;const st=pc.connectionState;if(st==='failed'||st==='closed'){rtcStop(c);c.rtcNext=performance.now()+15000;}};
+ if(init){wire(pc.createDataChannel('rf',{ordered:true}));pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>sig('offer',pc.localDescription.toJSON())).catch(()=>{if(c.rtc===r)rtcStop(c);});}
+ else pc.ondatachannel=e=>wire(e.channel);
+ return r;}
+function rtcMsg(c,m){let r=c.rtc;const flush=x=>{x.rd=true;for(const q of x.q)x.pc.addIceCandidate(q).catch(()=>{});x.q=[];};
+ if(m.k==='offer'){r=rtcStart(c,false,m.sid);if(!r)return;r.pc.setRemoteDescription(m.d).then(()=>r.pc.createAnswer()).then(a=>r.pc.setLocalDescription(a)).then(()=>{if(c.rtc!==r)return;c.relaySend({t:'rtc',k:'answer',d:r.pc.localDescription.toJSON(),sid:r.sid});flush(r);}).catch(()=>{if(c.rtc===r)rtcStop(c);});return;}
+ if(!r||r.sid!==m.sid)return;
+ if(m.k==='answer'){r.pc.setRemoteDescription(m.d).then(()=>flush(r)).catch(()=>{if(c.rtc===r)rtcStop(c);});return;}
+ if(m.k==='ice'&&m.d){if(r.rd)r.pc.addIceCandidate(m.d).catch(()=>{});else r.q.push(m.d);}}
+/* the guest starts the upgrade a moment after connecting, and tries again now and then if it didn't work */
+setInterval(()=>{const c=NET.conn;if(!c||c.mode!=='relay'||c.dead||!NET.connOpen)return;const now=performance.now();
+ if(c.rtc){if(!c.rtc.open&&now-c.rtc.t0>12000){rtcStop(c);c.rtcN=(c.rtcN||0)+1;c.rtcNext=now+Math.min(90000,15000*c.rtcN);}return;}
+ if(NET.role==='guest'&&now>=(c.rtcNext||(c.rtcNext=now+1500)))rtcStart(c,true);},1000);
 /* host: listen on every relay server we can reach */
 function netHostRelay(){const code=NET.code;NET.rsocks=(NET.rsocks||[]).concat(NET_BROKERS.map(url=>{
  const s=mqttSock(url,(topic,txt)=>{let m;try{m=JSON.parse(txt);}catch(e){return;}if(!m||!m.k||NET.code!==code)return;const R=NET.rconns||(NET.rconns={});
@@ -6458,7 +6486,7 @@ function netHostHud(){if(!netHost())return;if(NET.wait&&performance.now()-NET.wa
 /* PING = this device <-> the relay (what other games call ping). The old number was the full trip to your friend
    and back through the relay (two relay round trips), which always looked about twice as big. */
 function netPingDraw(){if(!(netHost()||netGuest()))return;
- {const n=performance.now();NET.fpsN=(NET.fpsN||0)+1;if(!NET.stT0||n-NET.stT0>=1000){NET.ups=NET.rxN||0;NET.fps=NET.fpsN;NET.rxN=0;NET.fpsN=0;NET.stT0=n;}}const sk=NET.conn&&NET.conn.sock,own=sk&&sk.ms?Math.round(sk.ms):0,r=own||Math.round((NET.rtt||0)/2),col=r<80?'#7dff8a':r<150?'#ffe94a':'#ff8a8a';const t=(netRelayOn()?(sk&&/^wss?:\/\/[^/]*workers\.dev|\/r\/[A-Z]{4}$/.test(sk.url)?'RELAY CF':'RELAY'):'DIRECT')+(r?' PING '+r+'MS':'')+(netGuest()?' · '+(NET.ups||0)+' UPD/S · '+(NET.fps||0)+' FPS':' · '+(NET.fps||0)+' FPS');   /* lag check: updates from the host per second, and frames per second */rect(2,2,t.length*6+8,11,'rgba(0,0,0,.6)');ctext(t,6,4,col,'left',6);}
+ {const n=performance.now();NET.fpsN=(NET.fpsN||0)+1;if(!NET.stT0||n-NET.stT0>=1000){NET.ups=NET.rxN||0;NET.fps=NET.fpsN;NET.rxN=0;NET.fpsN=0;NET.stT0=n;}}const sk=NET.conn&&NET.conn.sock&&!rtcOn()?NET.conn.sock:null,own=sk&&sk.ms?Math.round(sk.ms):0,r=own||Math.round((NET.rtt||0)/2),col=r<80?'#7dff8a':r<150?'#ffe94a':'#ff8a8a';const t=(netRelayOn()?(sk&&/^wss?:\/\/[^/]*workers\.dev|\/r\/[A-Z]{4}$/.test(sk.url)?'RELAY CF':'RELAY'):'DIRECT')+(r?' PING '+r+'MS':'')+(netGuest()?' · '+(NET.ups||0)+' UPD/S · '+(NET.fps||0)+' FPS':' · '+(NET.fps||0)+' FPS');   /* lag check: updates from the host per second, and frames per second */rect(2,2,t.length*6+8,11,'rgba(0,0,0,.6)');ctext(t,6,4,col,'left',6);}
 ACT.netReload=()=>{location.href=location.pathname+'?v='+Date.now();};   /* a fresh address skips the old cached copy */
 ACT.netEnd=()=>{if(OLG)olgClear(OLG.code);netSend({t:'bye'});netLost('GAME ENDED');};
 
