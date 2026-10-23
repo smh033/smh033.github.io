@@ -5731,11 +5731,14 @@ function drawKick(){
  drawSpr(cx,CW/2+30,346,hk,{u:3,face:-1});
  drawSpr(cx,CW/2-60+kr*40,350,lk,{u:4,face:1,run:k.st==='fly'&&k.t<0.25,t:k.t*3,glow:!!k.K});
  if(k.st==='aim'){const b=P(0,0,0);rect(b.x-6,b.y-12,12,9,'#000');rect(b.x-5,b.y-11,10,7,'#8a4818');rect(b.x-1,b.y-10,2,1,'#fff');}
+ /* online: the other player is lining up the kick. Say so (this screen used to just sit still and looked frozen) */
+ if(k.st==='aim'&&!own&&(netHost()||netGuest())){const dots='.'.repeat(1+Math.floor(performance.now()/400)%3),bx=CW/2-120;rect(bx,138,240,34,'rgba(0,0,20,.72)');
+  ctext(abbr(kt)+' IS LINING UP THE KICK'+dots,CW/2,149,'#ffe94a','center',8);ctext(netHost()&&k.guest?'WAITING FOR YOUR FRIEND TO SWIPE':'WAITING FOR THE HOST TO SWIPE',CW/2,162,'#fff','center',6);}
  ctext(k.kind==='xp'?'EXTRA POINT':k.d+' YARD FIELD GOAL',CW/2,24,'#fff','center',8);
  ctext('WIND '+Math.abs(M.wind)+' MPH',12,24,'#fff','left');
  if(M.wind){const dir=M.wind>0?1:-1,ax=120,ay=27;for(let i=0;i<5;i++)rect(ax+i*4*dir-(dir<0?16:0),ay,4,2,'#fff');rect(ax+20*dir-(dir<0?16:0)+(dir>0?-2:0),ay-2,2,6,'#fff');}
  const sw=k.sw;
- if(k.st==='aim'){
+ if(k.st==='aim'&&own){
   ctext(IS_MOBILE?'SWIPE UP TO KICK':'DRAG UP AND RELEASE TO KICK',CW/2,150,'#fff');ctext('FILL THE POWER BAR TO THE WHITE LINE',CW/2,162,'#fff');
   const need=kickNeed(),mx=606,my=110,mh=190;rect(mx-2,my-2,20,mh+4,'#000');rect(mx,my,16,mh,'#232a62');
   const tY=v=>my+mh-clamp(v/1.4,0,1)*mh;rect(mx,tY(1.4),16,tY(1.05)-tY(1.4),'rgba(255,92,92,.5)');
@@ -7850,6 +7853,18 @@ ACT.syncLink=async()=>{const el=document.getElementById('syncIn'),raw=String(el&
  setTimeout(()=>syncNow(false),1500);setInterval(()=>{if(syncGet()&&document.visibilityState!=='hidden')syncNow(false);},10000);
  document.addEventListener('visibilitychange',()=>{const st=syncGet();if(!st)return;if(document.visibilityState==='visible')setTimeout(()=>syncNow(false),500);else if(st.dirty)syncNow(false);});
  window.addEventListener('pagehide',()=>{const st=syncGet();if(st&&st.dirty)syncNow(false);});})();
+/* ---------- who's on the site: every open game says "here" to the relay every 20 s on a topic only the fitter
+   page listens to (nobody else receives anything). Nothing personal is sent: a random id for this tab and the screen. */
+(function siteHere(){if(/netmock|nofresh/.test(location.search)&&!/[?&]here/.test(location.search))return;
+ const id=Math.random().toString(36).slice(2,10),url=(()=>{const q=(location.search.match(/[?&]lghost=([^&]+)/)||[])[1];return q?decodeURIComponent(q).replace(/^http/,'ws').replace(/\/$/,''):NET_CF;})()+'/r/ZZON';
+ let ws=null,tm=null,back=2000;
+ const say=()=>{if(!ws||ws.readyState!==1||document.visibilityState==='hidden')return;const st=UI.scr==='game'&&M?(L&&L.net?'online game':L&&L.online?'league game':'game'):(UI.scr||'menu');
+  try{ws.send(JSON.stringify({p:'here',d:JSON.stringify({id,s:st,t:TEST_SITE?1:0})}));}catch(e){}};
+ const open=()=>{try{ws=new WebSocket(url);}catch(e){return;}
+  ws.onopen=()=>{back=2000;say();clearInterval(tm);tm=setInterval(say,20000);};
+  ws.onclose=()=>{clearInterval(tm);ws=null;setTimeout(open,back);back=Math.min(back*2,120000);};ws.onerror=()=>{};ws.onmessage=()=>{};};
+ setTimeout(open,3000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')say();});})();
+
 olmBoot();
 setTimeout(()=>{srvSync().finally(()=>{try{dailyLogin();}catch(e){}});},800);   /* daily bonus by the website's date */
 if(UI.scr==='title'&&!UI.modal)netsBoot();

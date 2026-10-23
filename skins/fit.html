@@ -34,6 +34,7 @@ pre{background:#0c0f15;border:1px solid var(--line);border-radius:6px;padding:10
 <div id="locked">404 · not found</div>
 <div id="app">
   <h1>SPRITE SHEET FITTER</h1>
+  <div class="panel" id="onl" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><b style="font-size:22px" id="onN">…</b><span>PEOPLE ON THE SITE RIGHT NOW</span><span class="tag" id="onD"></span></div>
   <div class="panel">
     <div class="drop" id="drop">Tap to pick an image, or drop one here<br><span class="small">any size · the AI's output is fine</span></div>
     <input type="file" id="file" accept="image/*" hidden>
@@ -485,6 +486,16 @@ function drawSrc(c,boxes){
   boxes.forEach(b=>x.strokeRect(b.x*k,b.y*k,b.w*k,b.h*k));
 }
 gate();
+
+/* live player counter: listens to the "here" messages every open game sends to the relay */
+(function(){const base=SKB.replace(/\/sk$/,'').replace(/^http/,'ws')+'/r/ZZON',seen=new Map();let ws=null;
+ const draw=()=>{const now=Date.now();for(const[k,v]of seen)if(now-v.at>50000)seen.delete(k);const all=[...seen.values()],main=all.filter(v=>!v.t),by={};
+  for(const v of main)by[v.s]=(by[v.s]||0)+1;$('onN').textContent=main.length;
+  $('onD').textContent=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,n])=>n+' '+k).join(' · ')+(all.length-main.length?' · test site: '+(all.length-main.length):'');};
+ const open=()=>{ws=new WebSocket(base);ws.onopen=()=>ws.send(JSON.stringify({s:'here'}));
+  ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m&&m.id){seen.set(m.id,{at:Date.now(),s:String(m.s||'menu').toUpperCase(),t:m.t});draw();}}catch(x){}};
+  ws.onclose=()=>setTimeout(open,3000);};
+ open();setInterval(()=>{draw();try{ws&&ws.readyState===1&&ws.send('{"ping":1}');}catch(e){}},5000);})();
 </script>
 </body>
 </html>
