@@ -3688,17 +3688,45 @@ const STYLES={
 const STYLE_N=Object.keys(STYLES);
 function teamHash(t){const s=T(t).abbr+(T(t).nick0||T(t).nickname);let h=7;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%99991;return h;}
 function teamStyle(t){const S=L&&seatOf(t);if(S&&S.style)return S.style;return STYLE_N[teamHash(t)%STYLE_N.length];}
+/* ---------- generated playbooks ----------
+   Every team gets its own book: no two teams share a play. All sensible route combinations (top WR, bottom WR,
+   TE, RB) are listed in a fixed order, shuffled once with a fixed seed and dealt out in equal hands, one hand per
+   team slot; the team keeps the plays in its hand that fit its style. Every play gets a name nobody else has.
+   Runs work the same way (each team's runs have their own names). No trick plays. The same league gives the
+   same books on every device (online games send play names). */
+const RDEEP={go:1,post:1,corner:1,fade:1,seam:1,wheel:1,leak:1,comeback:0.5,dig:0.5};
+const RLAB={go:'GO',slant:'SLANT',out:'OUT',in:'IN',post:'POST',corner:'CORNER',curl:'CURL',comeback:'COMEBACK',hitch:'HITCH',qout:'SPEED OUT',dig:'DIG',fade:'FADE',seam:'SEAM',drag:'DRAG',flat:'FLAT',wheel:'WHEEL',check:'CHECK',angle:'ANGLE',swing:'SWING',leak:'LEAK'};
+const PB_WORDS=['BLAZE','STORM','VIPER','THUNDER','GHOST','RAZOR','COMET','TITAN','NOVA','FURY','COBRA','RAVEN','ROCKET','JET','TORNADO','PHANTOM','ARROW','BOLT','CYCLONE','DAGGER','EAGLE','FALCON','GRIZZLY','HAMMER','ICE','JACKAL','KNIGHT','LASER','MUSTANG','NITRO','ORBIT','PANTHER','QUAKE','RANGER','SABER','TALON','URANUS','VORTEX','WOLF','XRAY','YETI','ZEPHYR','APEX','BANDIT','CANNON','DRAGON','ECLIPSE','FLASH','GLACIER','HAWK','INFERNO','JAGUAR','KRAKEN','LIGHTNING','METEOR','NEON','OUTLAW','PYTHON','REBEL','SHADOW','TURBO','VENOM','WARP','ZENITH','ATLAS','BISON','CHROME','DIESEL','EMBER','FROST','GRANITE','HYDRA','IRON','JOKER','KODIAK','LYNX','MAGMA','NINJA','ONYX','PIRATE','RHINO','SPARTAN','TIDE','ULTRA','VALOR','WIZARD','BLITZ','CRUSH','DYNAMO','EXPRESS','FORGE','GALAXY','HURRICANE','IMPACT','JOLT','KILLSWITCH','LEGEND','MAVERICK','NEBULA','OMEGA','PULSE','RIOT','SURGE','TEMPEST','UPROAR','VOLT','WILDFIRE','AVALANCHE','BREAKER','COMMANDO','DELTA','ENIGMA','FIREBALL','GAMBIT','HAVOC','INVADER','JUGGERNAUT'];
+const RUN_KIND=[['dive',['DIVE','INSIDE ZONE','TRAP','SLAM','PLUNGE','WEDGE','BLAST']],['toss',['TOSS','STRETCH','SWEEP','PITCH','OUTSIDE ZONE','TOSS CRACK']],['draw',['DRAW','DELAY','SHOTGUN DRAW','SLOW DRAW']],['qb',['QB DRAW','QB KEEPER','QB SNEAK','QB SPIN']],['power',['POWER','COUNTER','POWER O','COUNTER TREY','PULL']]];
+let PB_ALL=null;
+function pbBuild(n){
+ if(PB_ALL&&PB_ALL.n>=n)return PB_ALL;
+ const W=Object.keys(RT.WR),TE=Object.keys(RT.TE),RB=Object.keys(RT.RB),combos=[];
+ for(const a of W)for(const b of W)for(const c of TE)for(const d of RB){
+  const rs=[a,b,c,d],deep=rs.reduce((v,r)=>v+(RDEEP[r]||0),0),short=4-deep;
+  if(deep<1||short<1)continue;                   /* something deep and something short on every play */
+  if(a===b&&!['go','slant','hitch','curl','post'].includes(a))continue;
+  if((c==='seam'&&(a==='post'||b==='post')&&a!=='go'&&b!=='go'))continue;   /* two routes into the same deep middle */
+  combos.push(rs);}
+ const rr=seedRand('playbooks-v1');for(let i=combos.length-1;i>0;i--){const j=Math.floor(rr()*(i+1));[combos[i],combos[j]]=[combos[j],combos[i]];}
+ const N=Math.max(32,n),hand=Math.floor(combos.length/N),books=[],used=new Set();
+ const nameFor=(rs,t,k)=>{const lab=rs[0]===rs[1]?'DOUBLE '+RLAB[rs[0]]:RLAB[rs[0]]+' '+RLAB[rs[1]];let nm='';
+  for(let z=0;z<PB_WORDS.length&&!nm;z++){const w=PB_WORDS[(t*hand+k*7+z)%PB_WORDS.length],c=w+' '+lab;if(!used.has(c))nm=c;}
+  if(!nm){let z=2;while(used.has(lab+' '+z))z++;nm=lab+' '+z;}used.add(nm);return nm;};
+ for(let t=0;t<N;t++){const mine=combos.slice(t*hand,(t+1)*hand).map((rs,k)=>{const nm=nameFor(rs,t,k);const deep=rs.reduce((v,r)=>v+(RDEEP[r]||0),0);
+   PLAYS[nm]={k:'pass',r:rs,gen:1,deep};return nm;});
+  const runs=[];for(const[v,names]of RUN_KIND){for(let q=0;q<2;q++){const base=names[(t+q*3)%names.length];let nm='';for(let z=0;z<PB_WORDS.length&&!nm;z++){const c=PB_WORDS[(t*11+z+q*5+v.length)%PB_WORDS.length]+' '+base;if(!used.has(c))nm=c;}if(!nm){let z=2;while(used.has(base+' '+z))z++;nm=base+' '+z;}used.add(nm);PLAYS[nm]={k:'run',v,gen:1};runs.push(nm);}}
+  books.push({pass:mine,runs});}
+ return PB_ALL={n:N,books};}
 const PB_CACHE={};
 function playbook(t){
- const st=STYLES[teamStyle(t)]||STYLES.BALANCED,h=teamHash(t),key=t+'|'+teamStyle(t);if(PB_CACHE[key])return PB_CACHE[key];
- const nz=n=>{let x=h*31+7;for(let i=0;i<n.length;i++)x=(x*33+n.charCodeAt(i))%100003;return (x%1000)/1000;};   // per-team shuffle
- const sc=n=>{const p=PLAYS[n];let v=0;for(const g of st.tags)if(p.tg.includes(g))v+=1.4;return v+nz(n)*2.2;};
- const np=st.np||10,nr=15-np;
- const pass=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='pass').sort((a,b)=>sc(b)-sc(a)).slice(0,np);
- const rsc=n=>{const i=st.rv.indexOf(PLAYS[n].v);return (i<0?-3:-i)+nz(n)*1.6;};
- const runs=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='run').sort((a,b)=>rsc(b)-rsc(a)).slice(0,nr);
- const tr=Object.keys(PLAYS).filter(n=>PLAYS[n].k==='trick'&&PLAYS[n].slot===t%TRICKS.length);
- return PB_CACHE[key]=[...pass,...tr,...runs];
+ const st=STYLES[teamStyle(t)]||STYLES.BALANCED,nT=Math.max(32,(L&&L.teams&&L.teams.length)||32),key=t+'|'+teamStyle(t)+'|'+nT;if(PB_CACHE[key])return PB_CACHE[key];
+ const B=pbBuild(nT).books[((t%nT)+nT)%nT];
+ const want=st.tags.includes('air')||st.tags.includes('vert')?2.4:st.tags.includes('short')||st.tags.includes('wc')?1.2:1.8;   /* how much deep a play should have for this style */
+ const np=Math.min(12,(st.np||10)+1),nr=16-np;
+ const pass=B.pass.slice().sort((a,b)=>Math.abs(PLAYS[a].deep-want)-Math.abs(PLAYS[b].deep-want)||(a<b?-1:1)).slice(0,np);
+ const runs=B.runs.slice().sort((a,b)=>{const ia=st.rv.indexOf(PLAYS[a].v),ib=st.rv.indexOf(PLAYS[b].v);return (ia<0?9:ia)-(ib<0?9:ib)||(a<b?-1:1);}).slice(0,nr);
+ return PB_CACHE[key]=[...pass,...runs];
 }
 /* ---------- trick plays ----------
    The ball goes through a short chain of pitches/handoffs (drawn as a flying ball), then either the
@@ -4130,7 +4158,7 @@ function defSelectAt(px,py,rad){let best=null,bd=rad||18;for(const f of M.D){con
 function dragPre(dt){const f=M.dragD;if(!f||!ptr.down||M.input!=='dctl'){M.dragD=null;return;}if(ptr.moved<4)return;
  const p=scrToField(ptr.x,ptr.y);if(!M.dragOff)M.dragOff={x:f.x-p.x,y:f.y-p.y};   /* keep the grab point under the finger */
  const minX=M.los+(f.role==='DL'?0.9:1.2),nx=clamp(p.x+M.dragOff.x,minX,Math.min(119,M.los+30)),ny=clamp(p.y+M.dragOff.y,1,52.3),dx=nx-f.x,dy=ny-f.y;
- f.x=nx;f.y=ny;f.vx=f.vy=0;f.moved=true;if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
+ f.x=nx;f.y=ny;f.vx=f.vy=0;f.moved=true;/* zone stays put (like Madden): his line points to its centre */
  preAnim(f,dx,dy,dt);}
 /* ---------- defense joystick ----------
    Bottom-left of the screen whenever you're on defense. Push it to run your highlighted
@@ -4151,7 +4179,7 @@ function joyVec(){if(!(ptr.down&&M.input==='joy'))return null;let dx=ptr.x-JOY.o
 function joyPre(dt){const v=joyVec(),f=M.ctl;if(!v||!f||!v.m)return;
  const sp=9*v.m,nx=clamp(f.x+v.x*(M.dir<0?-1:1)*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
  f.x=nx;f.y=ny;f.moved=true;
- if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}
+ /* zone stays put (like Madden): his line points to its centre */
  preAnim(f,dx,dy,dt);}
 /* running legs for a defender you're moving before the snap */
 function preAnim(f,dx,dy,dt){const sp=Math.hypot(dx,dy)/Math.max(dt,1e-3);if(sp<0.3)return;f.mv=true;f.preMv=true;f.t+=dt*(0.35+Math.min(sp,9)*0.17);if(Math.abs(dx)>0.002)f.face=dx>0?1:-1;}
@@ -4396,6 +4424,7 @@ function setupPlay(){
  const lb=[mkF(od.LB[0],'D','LB',los+4.6,by-3.6),mkF(od.LB[1],'D','LB',los+4.6,by+3.8)];
  const c1=mkF(od.DB[0],'D','DB',los+rnd(1.6,6),w1.y),c2=mkF(od.DB[1],'D','DB',los+rnd(1.6,6),w2.y),sf=mkF(od.DB[2],'D','S',Math.min(119,los+rnd(13,17)),by+rnd(-4,4));
  c1.man=w1;c2.man=w2;lb[1].man=te;lb[0].man=rb;
+ {const r=Math.random();sf.help=r<0.3?w1:r<0.6?w2:r<0.85?te:null;}   /* the safety helps one receiver per play (or sits deep middle), so no single receiver is doubled every snap */
  if(Math.random()<0.10+diffLvl()*0.08)lb[0].blitz=true;
  for(const f of[c1,c2,lb[0],lb[1],sf])f.acc=10+A(f,'cov')*1.3;
  M.O=[...ol,te,w1,w2,rb,qb];M.D=[...dl,...lb,c1,c2,sf];
@@ -4927,10 +4956,11 @@ function upDef(f,dt){
  if(f.role==='S'){
   // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
   // running vertically against a slower linebacker - instead of just floating in the middle.
-  let r=null,best=-1;for(const o of M.O){if(o.role!=='WR'&&o.role!=='TE')continue;const dfd=M.D.find(d=>d.man===o);
-   const open=!dfd||dfd.role==='LB'||d2(dfd,o)>2.2;const sc=(o.x-M.los)+(open?8:0)+(o.role==='TE'&&o.x>M.los+8?6:0);if(o.x>M.los+6&&sc>best){best=sc;r=o;}}
-  if(!r){for(const o of M.O)if((o.role==='WR'||o.role==='TE')&&(!r||o.x>r.x))r=o;}
-  const lock=r&&r.x>M.los+8;const tx=r?(lock?Math.max(r.x+3+r.vx*0.3,M.los+9):Math.max(r.x+6,M.los+13,f.x-0.5)):M.los+13,   /* never let a vertical get behind him */ty=r?(lock?r.y+r.vy*0.25:lerp(26.67,r.y,0.6)):26.67;
+  /* he helps the receiver picked for this play once that man goes deep; otherwise he stays deep middle, over the top of everyone */
+  let r=null;const h=f.help&&M.O.includes(f.help)?f.help:null;if(h&&h.x>M.los+7)r=h;
+  if(!r&&!h){let best=-1;for(const o of M.O){if(o.role!=='WR'&&o.role!=='TE')continue;const dfd=M.D.find(d=>d.man===o);const open=!dfd||d2(dfd,o)>3.5;const sc=(o.x-M.los)+(open?6:0);if(o.x>M.los+12&&open&&sc>best){best=sc;r=o;}}}   /* center field: only jumps a man who has actually beaten his defender */
+  let deep=M.los+13;for(const o of M.O)if((o.role==='WR'||o.role==='TE')&&o.x+5>deep)deep=o.x+5;
+  const lock=!!r;const tx=lock?Math.max(r.x+3+r.vx*0.3,M.los+9):Math.max(deep,f.x-0.5),ty=lock?r.y+r.vy*0.25:lerp(26.67,h?h.y:26.67,0.35);
   steer(f,Math.min(tx,119),ty,f.spd*(lock?1:0.95),lock?f.acc:16,dt);return;}
  /* once the fake is over, whoever is covering the trick passer (or is close to him) attacks him */
  if(M.play==='pass'&&!M.thrown&&M.trick&&M.trick.stage==='ready'&&M.qb&&M.qb.role!=='QB'&&!(M.trick.fool>0)&&M.pt-(M.trick.readyAt||0)>0.35){const q=M.qb;if(f.man===q||d2(f,q)<6.5){steer(f,q.x,q.y,f.spd*0.95,f.acc+6,dt);return;}}
@@ -4949,7 +4979,8 @@ function upDef(f,dt){
   if(parked){steer(f,Math.min(m.x+0.7,119.5),m.y,f.spd*0.85,f.acc*0.8,dt);return;}
   /* your defenders (defense mode) close back on a receiver who has gotten behind them */
   const trail=M.def&&m.x>f.x-0.3&&d2(f,m)<5?1.09:1;
-  steer(f,Math.min(m.x+m.vx*0.1+(M.def?cush*0.6:cush),119.5),m.y+m.vy*0.1,f.spd*0.97*trail,f.acc,dt);return;}
+  const te=m.role==='TE'&&f.role==='LB',sp=te?Math.max(f.spd,m.spd*1.1):f.spd,ac=te?Math.max(f.acc,21):f.acc,ld=te?0.04:0.1;   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free) */
+  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:1),119.5),m.y+m.vy*ld,sp*0.97*trail,ac,dt);return;}
  steer(f,f.x,f.y,0,10,dt);
 }
 function doCatch(f,bp){
@@ -5493,7 +5524,8 @@ function drawDefArt(){
  for(const pass of[0,1])for(const f of M.D){const sx=wx(f.x),sy=wy(f.y)-4,mine=f===M.ctl;
   if(f.zone){const zx=wx(f.zone.x),zy=wy(f.zone.y),rx=5.5*PXY,ry=5*PYY;
    if(!pass){cx.fillStyle='rgba(60,160,255,.18)';cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.fill();}
-   else{cx.strokeStyle=mine?'#ffe94a':'rgba(120,200,255,.95)';cx.lineWidth=2;cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.stroke();ln(sx,sy,zx,zy,mine?'#ffe94a':'#78c8ff',2,[3,3]);}}
+   else{const col=mine?'#ffe94a':'rgba(120,200,255,.95)';cx.strokeStyle=col;cx.lineWidth=2;cx.beginPath();cx.ellipse(zx,zy,rx,ry,0,0,Math.PI*2);cx.stroke();ln(sx,sy,zx,zy,mine?'#ffe94a':'#78c8ff',2,[3,3]);
+    cx.fillStyle='#0a0a12';cx.beginPath();cx.arc(zx,zy,4,0,Math.PI*2);cx.fill();cx.fillStyle=col;cx.beginPath();cx.arc(zx,zy,2.6,0,Math.PI*2);cx.fill();}}   /* the zone's spot: it stays put and his line points at it */
   else if(f.blitz||f.role==='DL'){const tx=wx(f.role==='DL'?M.los-2.5:q.x+1),ty=f.role==='DL'?sy:wy(q.y);
    ln(sx,sy,tx,ty,pass?(mine?'#ffe94a':'#ff4d4d'):'#2a0000',pass?3:5);if(pass)head(sx,sy,tx,ty,mine?'#ffe94a':'#ff4d4d',6);}
   else if(f.man){const tx=wx(f.man.x),ty=wy(f.man.y)-4;ln(sx,sy,tx,ty,pass?(mine?'#ffe94a':'#ffd23a'):'#2a2000',pass?2:4,[4,3]);}
@@ -6108,7 +6140,7 @@ function rctlMove(f,dt){M.rAt=M.pt;const v=M.rjoy;
  if(f.eng){if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  steer(f,clamp(f.x+v.x*5,-1,121),clamp(f.y+v.y*5,0,53.3),f.spd*(0.35+0.68*v.m),f.acc+12,dt);}
 function rctlPre(dt){const v=M.rjoy,f=M.rctl;if(!f)return;const sp=6.5*v.m,nx=clamp(f.x+v.x*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
- f.x=nx;f.y=ny;f.moved=true;if(f.zone){f.zone.x=clamp(f.zone.x+dx,M.los+1,119);f.zone.y=clamp(f.zone.y+dy,3,50);}preAnim(f,dx,dy,dt);}
+ f.x=nx;f.y=ny;f.moved=true;/* zone stays put (like Madden): his line points to its centre */preAnim(f,dx,dy,dt);}
 function netSwitch(){const t=M.carrier||(M.ball&&M.ball.F?{x:M.ball.F.x1,y:M.ball.F.y1}:M.qb);if(!t)return;let best=null,bd=1e9;for(const f of M.D){if(f===M.rctl||f.stun>0||(f.down>0&&!(f.dive>0)))continue;const d=Math.hypot(f.x-t.x,f.y-t.y);if(d<bd){bd=d;best=f;}}if(best){M.rctl=best;M.rkey=best.key;}}
 function netThrow(tx,ty,bu){const q=M.qb;if(!q)return;M.passBullet=!!bu;let best=null;const gx0=wx(tx)-wx(q.x),gy0=wy(ty)-wy(q.y),l0=Math.hypot(gx0,gy0)||1;
  for(let pull=PASS.PULL_MIN;pull<=PASS.PULL_MAX+10;pull+=3){const a={sx:320,sy:200,cx:320-gx0/l0*pull,cy:200-gy0/l0*pull};const ai=aimInfo(a);if(ai.run)continue;const e=Math.hypot(ai.tx-tx,ai.ty-ty);if(!best||e<best.e)best={e,ai};}
