@@ -399,9 +399,13 @@ function figBoxes(mask,W,H,n){
   // too few big pieces (a pose split in two)? promote the next biggest pieces
   for(const c of sorted){if(groups.length>=n)break;if(!seeds.includes(c)&&c.area>=big*0.05){seeds.push(c);groups.push({ids:[c.id],x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,area:c.area,cx:c.cx})}}
   const reach=H*0.12;for(const c of parts){if(seeds.includes(c))continue;let bg=null,bd=1e9;for(const g of groups){const d=dist(g,c);if(d<bd){bd=d;bg=g}}if(bd-Math.abs(bg.cx-c.cx)*0.25<=reach||c.area>=big*0.004)add(bg,c)}
-  // more pose groups than wanted: merge the two closest (a pose that came apart)
-  while(groups.length>n){let bi=0,bj=1,bd=1e9;for(let i=0;i<groups.length;i++)for(let j=i+1;j<groups.length;j++){const d=Math.abs(groups[i].cx-groups[j].cx);if(d<bd){bd=d;bi=i;bj=j}}
-    const gj=groups[bj];gj.ids.forEach((id,k)=>{});add(groups[bi],{id:-1,area:gj.area,x0:gj.x0,x1:gj.x1,y0:gj.y0,y1:gj.y1,cx:gj.cx});groups[bi].ids.pop();groups[bi].ids.push(...gj.ids);groups.splice(bj,1)}
+  // more groups than poses (a pose that came apart, or a sidekick drawn next to the character in every frame):
+  // keep the n biggest as the poses and hang every other group on the pose whose box it overlaps / sits closest to
+  if(groups.length>n){const order=[...groups].sort((a,b)=>b.area-a.area),anchors=order.slice(0,n),extra=order.slice(n);
+    const gap=(a,b)=>{const g=Math.max(a.x0-b.x1,b.x0-a.x1);return g>0?g:g/1000;};   /* overlapping boxes: more overlap wins */
+    for(const e of extra.sort((a,b)=>b.area-a.area)){let bg=anchors[0],bd=1e9;for(const a of anchors){const d=gap(a,e);if(d<bd){bd=d;bg=a}}
+      add(bg,{id:-1,area:e.area,x0:e.x0,x1:e.x1,y0:e.y0,y1:e.y1,cx:e.cx});bg.ids.pop();bg.ids.push(...e.ids);}
+    groups.length=0;groups.push(...anchors);}
   groups.sort((a,b)=>a.cx-b.cx);
   // relabel pixels to their group number
   const map=new Int32Array(comps.length+1);groups.forEach((g,k)=>g.ids.forEach(id=>map[id]=k+1));
