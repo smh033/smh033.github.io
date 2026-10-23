@@ -1875,7 +1875,7 @@ function showAmerica(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;re
 /* ---------- BATTLE BPASS: Candy Corn are earned by playing, the premium track is bought with them ----------
    Each played game: +tokens and +pass XP (more for a win and touchdowns; a simmed game pays a third).
    Rewards: free and premium track per tier; skins unlock when you claim them. Kept on this device. */
-const BPASS={id:'haunted-2026',name:'HAUNTED SEASON',tiers:30,xp:150,cost:500,
+const BPASS={id:'haunted-2026',name:'HAUNTED SEASON',tiers:30,xp:250,cost:500,
  rewards:[
   {t:1,tr:'p',skin:'nikki'},{t:2,tr:'f',tok:20},{t:3,tr:'p',tok:40},{t:4,tr:'f',tok:20},{t:5,tr:'p',tok:40},{t:6,tr:'f',tok:25},
   {t:8,tr:'f',skin:'slenderman'},{t:9,tr:'p',tok:50},{t:10,tr:'f',tok:30},{t:12,tr:'p',skin:'freddy'},{t:13,tr:'f',tok:30},{t:15,tr:'p',tok:60},
@@ -1891,7 +1891,7 @@ function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)retu
  const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
  const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?1/3:1;
  const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
- const tok=SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round((100+(win?50:0)+15*td)*k),t0=bpTier(b);
+ const tok=SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (7,500 XP) is about 80 games */
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
  setTimeout(()=>toast('+'+tok+' CANDY CORN · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
  if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}}
