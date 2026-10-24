@@ -5648,7 +5648,7 @@ function drawLogoLayer(sh,maxY){
 const TRAIL_TINT=new WeakMap(),SANDE=['#00f0ff','#ff2bd6','#ffe600','#7cff4d','#b05cff'];
 function trailTint(c,col){let m=TRAIL_TINT.get(c);if(!m){m=new Map();TRAIL_TINT.set(c,m);}let t=m.get(col);if(t)return t;
  t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);g.globalCompositeOperation='source-atop';g.globalAlpha=0.82;g.fillStyle=col;g.fillRect(0,0,t.width,t.height);m.set(col,t);return t;}
-function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail!=='sandevistan')return;
+function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail==='glitch')return glitchTrail(st,sx,sy);if(K.trail!=='sandevistan')return;
  const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
  const o=st.o,u=o.u||2,n=5,T=0.075,k=Math.min(1,(sp-2.5)/4);
  cx.save();
@@ -5670,10 +5670,30 @@ function boltTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
   if(Math.random()<0.6){const[x,y]=path[1+((Math.random()*(path.length-2))|0)]||path[0];cx.globalAlpha=k*0.8;cx.strokeStyle='#fff36b';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-6-Math.random()*8,y+(Math.random()-0.5)*16);cx.lineTo(x-12-Math.random()*8,y+(Math.random()-0.5)*20);cx.stroke();}}   /* a little side fork */
  if(Math.random()<0.5){const[x,y]=pts[(Math.random()*pts.length)|0];cx.globalAlpha=k;cx.fillStyle='#fff36b';for(let i=0;i<5;i++)cx.fillRect(x+(Math.random()-0.5)*18,y+(Math.random()-0.5)*18,2,2);}
  cx.restore();}
+/* "trail": "glitch": a corrupted-signal run. Torn, colour-split afterimages flicker behind the runner,
+   stray pixel blocks fall off, and every so often the runner herself glitches for a split second */
+const GLITCH=['#ff2bd6','#00f0ff','#ff8a00'],GLITCH_T=new Map();
+function glitchSlices(src,x,y,amp){const h=src.height,w=src.width;let yy=0;while(yy<h){const bh=Math.min(h-yy,Math.max(3,(Math.random()*h*0.2)|0)),off=Math.random()<0.45?Math.round((Math.random()-0.5)*amp):0;
+  cx.drawImage(src,0,yy,w,bh,x+off,y+yy,w,bh);yy+=bh;}}
+function glitchTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;const o=st.o,u=o.u||2,n=4,T=0.07,k=Math.min(1,(sp-2.5)/4);
+ cx.save();
+ for(let i=n;i>=1;i--){if(Math.random()<0.2)continue;   /* dropped frames: the trail flickers */
+  const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy),spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T})),a=k*0.62*(1-(i-1)/(n+1));
+  cx.globalAlpha=a;glitchSlices(trailTint(spr,GLITCH[0]),gx-24*u-2,gy-34*u,9*u);
+  cx.globalAlpha=a*0.8;glitchSlices(trailTint(spr,GLITCH[1]),gx-24*u+2,gy-34*u,9*u);}
+ cx.globalAlpha=k;for(let j=0;j<5;j++){if(Math.random()<0.45)continue;const i=1+((Math.random()*n)|0);   /* loose pixel blocks */
+  cx.fillStyle=GLITCH[(Math.random()*3)|0];cx.fillRect(Math.round(wx(st.x-st.vx*i*T)+(Math.random()-0.5)*18),Math.round(wy(st.y-st.vy*i*T)-st.jy-6-Math.random()*30),2+((Math.random()*6)|0),1+((Math.random()*2)|0));}
+ cx.restore();}
+function glitchNow(st){if(!st.lk||!st.lk.spr||!st.o.run||Math.hypot(st.vx,st.vy)<2.5)return false;const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='glitch')return false;
+ const now=performance.now(),key=st.lk.key||st.lk.spr;let g=GLITCH_T.get(key);if(!g){g={until:0,next:now+300+Math.random()*700};GLITCH_T.set(key,g);}
+ if(now>=g.next){g.until=now+70+Math.random()*90;g.next=now+450+Math.random()*900;}return now<g.until;}
+function glitchSelf(st,sx,sy){const o=st.o,u=o.u||2,spr=sprite(st.lk,o),x=sx-24*u,y=sy-st.jy-34*u;cx.save();
+ cx.globalAlpha=0.75;cx.drawImage(trailTint(spr,GLITCH[0]),x-3,y);cx.drawImage(trailTint(spr,GLITCH[1]),x+3,y);   /* colour split */
+ cx.globalAlpha=1;glitchSlices(spr,x,y,12*u);cx.restore();}
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
  if(st.lk&&st.lk.spr&&st.o.run)skinTrail(st,sx,sy);
- if(st.lk&&st.lk.spr&&SKINS.img[st.lk.spr]&&HIK>1)drawSkinHi(sx,sy-st.jy,st.lk,st.o);else drawSpr(cx,sx,sy-st.jy,st.lk,st.o);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
+ if(glitchNow(st))glitchSelf(st,sx,sy);else if(st.lk&&st.lk.spr&&SKINS.img[st.lk.spr]&&HIK>1)drawSkinHi(sx,sy-st.jy,st.lk,st.o);else drawSpr(cx,sx,sy-st.jy,st.lk,st.o);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
  if(st.star&&!st.dn&&M.phase!=='kick')miniStar(sx,sy-40-st.jy);}
 function drawPlayers(){
  const all=[...M.O,...M.D].sort((a,b)=>a.y-b.y),holder=curHolder();
