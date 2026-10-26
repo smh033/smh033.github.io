@@ -69,7 +69,9 @@ export class Room {
    nothing changed since version N, so polling is cheap. PUT ?v=N saves only if the stored version is
    still N (0 = create), otherwise 409 with the current version: the coach merges and tries again.
    ?me=TEAM marks that coach as on the site; x-on lists who was seen in the last 25 seconds. */
-const CHUNK = 512 * 1024, MAX = 12 * 1024 * 1024;
+/* MAX: biggest file one save may hold (leagues and the whole skin store, which keeps every skin's picture).
+   48 MB stays well inside Cloudflare's 100 MB request body and 128 MB Durable Object memory limits. */
+const CHUNK = 512 * 1024, MAX = 48 * 1024 * 1024;
 export class League {
   constructor(state) { this.state = state; this.seen = {}; }
   online(me) {
