@@ -230,11 +230,6 @@ const SHOP_ON=TEST_SITE||(()=>{try{return localStorage.getItem('rf_rel')==='1';}
   if(rel){const go=()=>{if(typeof UI!=='undefined'&&UI.scr==='title'&&!document.querySelector('.modal'))location.reload();else setTimeout(go,15000);};go();}});
  setTimeout(chk,300);setInterval(()=>{if(document.visibilityState!=='hidden')chk();},60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')chk();});})();
 const HALLOWEEN=(()=>{const q=(location.search.match(/[?&]halloween=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===9;})();if(HALLOWEEN)document.body.classList.add('hw');
-/* HALLOWEEN FIELD (every game, online too): pumpkins along both sidelines, a skeleton chain crew and purple weather until
-   midnight Eastern on November 1, by the website's clock (NOW()), so changing the device's date can't keep it going.
-   ?halloween=1 or ?halloween=0 forces it on/off for testing. To remove it, delete this line and every hwField() check. */
-const HW_START=Date.parse('2026-10-01T00:00:00-04:00'),HW_END=Date.parse('2026-11-01T00:00:00-04:00'),HW_Q=(location.search.match(/[?&]halloween=([01])/)||[])[1];
-const hwField=()=>HW_Q?HW_Q==='1':NOW()>=HW_START&&NOW()<HW_END;
 /* =====================================================================
    RETRO FOOTBALL — core: data, players, rosters, league, sim, offseason
    ===================================================================== */
@@ -2179,8 +2174,6 @@ function drawMan(c,x,y,lk,o){
  r(sk,5,5,3,1);
  r(H,4,0,4,1);r(H,3,1,6,1);r(H,2,2,7,2);r(H,3,4,5,1);r(lk.stripe,4,0,3,1);r(shade(H,40),4,1,2,1);r(shade(H,-45),4,2,1,1);
  r(sk,7,2,2,2);r('#111',8,2,1,1);if(lk.nohelm){r(sk,7,4,2,1);r(sk,9,2,1,2);r(shade(sk,-30),9,3,1,1);}else{const MK=lk.mask||'#d3d7dd';r(MK,9,2,1,3);r(MK,7,4,3,1);}   /* no facemask once the helmet's gone */
- if(lk.skel){const B=lk.skin,K='#111';r(K,6,2,2,2);r(K,9,3,1,1);r(K,7,4,1,1);r(K,9,4,1,1);   /* skull: eye socket, nose, teeth gap */
-  r(B,5,6,1,4);r(B,3,7,5,1);r(B,4,9,3,1);r(B,4,10,5,1);}   /* spine, ribs, pelvis */
  if(o.pose)armP(1,o.pose.ra);
  else if(o.dive){r(J,2,4,2,2);r(J,8,4,2,2);r(sk,2,1,2,3);r(sk,8,1,2,3);if(o.ball){r('#7a3d12',3,-2,5,2);r('#fff',5,-2,1,1);}}
  else if(o.oneh){/* one-handed snag: right arm stretched high with the ball, left arm out for balance */r(J,8,3,2,3);r(sk,9,0,1,3);r(sk,10,-1,1,1);r('#7a3d12',9,-3,3,2);r('#fff',10,-3,1,1);r(J,2,6,1,2);r(sk,0,6,2,1);}
@@ -3922,7 +3915,7 @@ function startMatch(g,uAway){applyCustomTeam();
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
  const lab=L.college?'COLLEGE FOOTBALL':L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+myWk():(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
- const wxTxt=hwField()?'PURPLE HAZE':M.wx==='dome'?'INDOORS':M.wx==='snow'?'SNOW':M.wx==='rain'?'RAIN':'CLEAR SKIES';
+ const wxTxt=M.wx==='dome'?'INDOORS':M.wx==='snow'?'SNOW':M.wx==='rain'?'RAIN':'CLEAR SKIES';
  const UR=teamRatings(L.user),OR=teamRatings(op);
  ovMsg(lab,`<div class="row ctr" style="gap:14px;align-items:center;margin:2px 0 6px"><div class="col" style="align-items:center;gap:4px">${avatar(null,L.user,3,!home)}<span style="${fitS(teamName(L.user),10,190)}">${esc(teamName(L.user).toUpperCase())}</span><span>${stars(UR.offS,'o xs')} ${stars(UR.defS,'d xs')}</span></div><span class="s16">${home?'VS':'AT'}</span><div class="col" style="align-items:center;gap:4px">${avatar(null,op,3,home)}<span style="${fitS(T(op).name,10,190)}">${esc(T(op).name.toUpperCase())}</span><span>${stars(OR.offS,'o xs')} ${stars(OR.defS,'d xs')}</span></div></div>
   ${M.night?'<div class="cyt">'+M.night+' · UNDER THE LIGHTS</div>':''}${M.rival?'<div class="yl blink">'+(L.phase==='PO'?'PLAYOFFS':T(g.h).di===T(g.a).di?'DIVISION RIVALRY':'HOME CROWD')+' · STADIUM PULSE</div>':''}<div class="s7">${wxTxt}${M.wind?' · WIND '+Math.abs(M.wind)+' MPH':''} · ${esc(abbr(op))} PLAYBOOK: ${teamStyle(op)}</div>
@@ -5441,7 +5434,6 @@ function drawReplay(){
  const same=f0.ps.length===f1.ps.length,list=f0.ps.map((a,k)=>{const b=same?f1.ps[k]:a;return{x:mix(a.x,b.x),y:mix(a.y,b.y),jy:Math.round(mix(a.jy,b.jy)),lk:a.lk,star:a.star,dn:u<0.5?a.dn:b.dn,o:u<0.5?a.o:b.o};}).sort((a,b)=>a.y-b.y);
  for(const st of list)drawPS(st);
  if(M.night)nightFX();
- if(hwField())hwWeather();
  const bl=(a,b)=>a&&b?{x:mix(a.x,b.x),y:mix(a.y,b.y),z:mix(a.z,b.z)}:a;
  const b=bl(f0.b,f1.b);if(b)drawBallAt(b.x,b.y,b.z,M.rp.t*28);const lo=bl(f0.lo,f1.lo);if(lo)drawBallAt(lo.x,lo.y,lo.z,(f0.lo||{}).sp||0);
  // replay banner along the bottom (the scoreboard owns the top)
@@ -5590,13 +5582,11 @@ function stadiumBeat(dt){
    chain poles marking the start of the series and the first-down line. They walk to their
    new spots after every play. */
 const CREW_LK=(()=>{const lk={helm:'#111111',stripe:'#111111',jersey:'#ff8a1a',trim:'#111111',pants:'#1c1c1c',socks:'#1c1c1c',skin:SKIN[2]};lk.key='crew';return lk;})();
-/* Halloween: the crew are skeletons (bone skull, ribs and legs on a black body; see lk.skel in drawMan) */
-const SKEL_LK=(()=>{const B='#ece6d2',K='#141414';const lk={helm:B,stripe:B,jersey:K,trim:K,pants:K,socks:B,skin:B,nohelm:true,skel:true};lk.key='skelcrew';return lk;})();
 function upChain(dt){if(!M||!M.O||!M.O.length)return;if(M.conv){if(M.chain){M.chain.mv={};M.chain.t+=dt;}return;} /* NFL: chain crew stays put during PAT/2pt tries */const goal=M.fdX>=110;
  const T={box:M.los,a:goal?M.los:M.fdX-10,b:goal?M.los:M.fdX};M.chain=M.chain||{box:T.box,a:T.a,b:T.b,t:0};const C=M.chain;C.t+=dt;C.mv={};
  for(const k of['box','a','b']){const d=T[k]-C[k];if(Math.abs(d)>0.05){C[k]+=Math.sign(d)*Math.min(Math.abs(d),6*dt);C.mv[k]=true;}}}
 function drawChain(){const C=M.chain;if(!C||M.play==='ret'||M.phase==='kick')return;const y=FB+13,goal=M.fdX>=110;
- const guy=(x,k)=>{const sx=wx(x);if(sx<-20||sx>CW+20)return;drawSpr(cx,sx,y,hwField()?SKEL_LK:CREW_LK,{u:1,face:M.dir,run:!!C.mv[k],t:C.t,shadow:true});};
+ const guy=(x,k)=>{const sx=wx(x);if(sx<-20||sx>CW+20)return;drawSpr(cx,sx,y,CREW_LK,{u:1,face:M.dir,run:!!C.mv[k],t:C.t,shadow:true});};
  if(!goal){const xa=wx(C.a),xb=wx(C.b);for(let x=Math.min(xa,xb);x<Math.max(xa,xb);x+=4)rect(x,y-7,2,1,'#c0c4cc');}       // the 10-yard chain
  for(const k of goal?['box']:['a','b','box']){const sx=wx(C[k]);if(sx<-20||sx>CW+20)continue;
   rect(sx+3,y-24,1,22,'#dcdcdc');                                                                                          // pole
@@ -5636,22 +5626,11 @@ function drawField(){
    for(const[a,b]of segs)L(a,b,6,'#000');for(const[a,b]of segs)L(a,b,3,'#ffd23a');
    L(P(ex,yb,2),P(ex,yb,14),5,'#000');L(P(ex,yb,2),P(ex,yb,14),3,'#e0e0e0');                           // padding at the base
    for(const y of[y1,y2]){const t=P(ex,y,h2);cx.fillStyle='#ff5c5c';cx.fillRect(Math.round(t[0])-1,Math.round(t[1])-5,4,3);}}}  // wind flags
- if(hwField())drawHwSidelines();else if(M.wx==='snow')rect(0,FT,CW,FH,'rgba(255,255,255,.14)');else if(M.wx==='rain')rect(0,FT,CW,FH,'rgba(20,30,60,.16)');
+ if(M.wx==='snow')rect(0,FT,CW,FH,'rgba(255,255,255,.14)');else if(M.wx==='rain')rect(0,FT,CW,FH,'rgba(20,30,60,.16)');
  const showLines=M.phase==='pre'||M.phase==='live'||M.phase==='dead';
  if(showLines&&M.play!=='ret'&&M.O.length){rect(wx(M.los)-1,FT,2,FH,'rgba(60,120,255,.95)');if(M.fdX<110&&!M.conv)rect(wx(M.fdX)-1,FT,2,FH,'rgba(255,230,0,.95)');
   drawChain();}
 }
-/* Halloween: jack-o'-lanterns every 10 yards along both sidelines, plus a purple tint on the turf */
-function drawHwPumpkin(x,y){const O='#f07818',D='#b8500a',G='#ffd23a';
- rect(x-4,y-7,9,7,'#000');rect(x-5,y-6,11,5,'#000');rect(x-4,y-6,9,5,O);rect(x-3,y-7+1,7,6,O);rect(x-1,y-6,1,5,D);rect(x+1,y-6,1,5,D);
- rect(x,y-9,2,3,'#000');rect(x,y-9,1,2,'#3c7a1e');rect(x-3,y-5,2,1,G);rect(x+2,y-5,2,1,G);rect(x-2,y-3,5,1,G);rect(x-1,y-2,1,1,G);rect(x+1,y-2,1,1,G);}
-function drawHwSidelines(){rect(0,FT,CW,FH,'rgba(110,40,170,.2)');
- for(let yd=5;yd<=115;yd+=10){const sx=wx(yd);if(sx<-10||sx>CW+10)continue;drawHwPumpkin(sx,FT-3);drawHwPumpkin(sx,FB+12);}}
-/* Halloween purple weather: a violet wash, drifting purple motes and low fog banks. Worked out from M.tt alone, so it
-   needs no per-frame state and looks the same in live play, replays and on an online guest. */
-function hwWeather(){const t=M.tt||0;rect(0,0,CW,CH,'rgba(80,16,140,.16)');
- for(let i=0;i<4;i++){const w=260,x=((i*190+t*(10+i*4))%(CW+w)+CW+w)%(CW+w)-w,y=FT+40+i*62+Math.sin(t*0.4+i)*6;rect(x,y,w,10,'rgba(170,110,240,.12)');rect(x+30,y-4,w-60,4,'rgba(170,110,240,.09)');}
- for(let i=0;i<70;i++){const s=0.6+(i*37%9)/10,x=((i*97.3+t*(8+s*10))%CW+CW)%CW,y=((i*53.7+t*30*s)%CH+CH)%CH;rect(Math.round(x+Math.sin(t*1.3+i)*5),Math.round(y),2,2,i%3?'rgba(196,130,255,.8)':'rgba(140,70,255,.85)');}}
 function arrowTo_(x0,y0,x1,y1,col){const a=Math.atan2(y1-y0,x1-x0);cx.fillStyle=col;cx.beginPath();cx.moveTo(x1+Math.cos(a)*4,y1+Math.sin(a)*4);cx.lineTo(x1+Math.cos(a+2.4)*6,y1+Math.sin(a+2.4)*6);cx.lineTo(x1+Math.cos(a-2.4)*6,y1+Math.sin(a-2.4)*6);cx.closePath();cx.fill();}
 function drawRoutes(){
  cx.lineJoin='miter';cx.lineCap='square';
@@ -5829,7 +5808,7 @@ function drawTarget(){
 }
 function drawFX(){
  for(const p of M.pops){const sx=clamp(wx(p.x),70,CW-70),sy=wy(p.y)-52-p.a*26-(p.row||0)*13;cx.globalAlpha=clamp(1.4-p.a,0,1);ctext(p.t,sx,sy,p.col);cx.globalAlpha=1;}
- if(hwField())hwWeather();else for(const p of M.parts){if(M.wx==='snow')rect(p.x,p.y,2,2,'rgba(255,255,255,.85)');else rect(p.x,p.y,1,6,'rgba(180,200,255,.5)');}
+ for(const p of M.parts){if(M.wx==='snow')rect(p.x,p.y,2,2,'rgba(255,255,255,.85)');else rect(p.x,p.y,1,6,'rgba(180,200,255,.5)');}
  for(const c of M.conf)rect(c.x,c.y,3,3,c.c);
 }
 function drawDriveBall(){const o=M.ov,s=o.i>0?o.lines[o.i-1].s:o.s0,sx=wx(110-s),sy=wy(26.67);rect(sx-4,sy-3,9,6,'#000');rect(sx-3,sy-2,7,4,'#8a4818');rect(sx,sy-2,1,1,'#fff');}
