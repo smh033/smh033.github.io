@@ -913,7 +913,7 @@ function aiRelease(t,refill){
    Like the NFL: trades are open in the offseason and up to week 9, then locked
    until the season ends. Other teams also trade with each other. */
 const TRADE_DEADLINE=9;
-function tradesOpen(){if(L.draft&&!L.draft.done&&L.phase==='OFF')return false;   /* not mid-draft: the pick order is being used */
+function tradesOpen(){   /* open during the draft too: picks in the draft being held can be traded (see DRAFT-DAY TRADES) */
  return L.phase==='OFF'||L.phase==='FOUND'||(L.phase==='REG'&&myWk()<=TRADE_DEADLINE);}
 function aiTrade(){
  const ids=L.teams.map(t=>t.id).filter(t=>!isHuman(t));
@@ -2888,7 +2888,35 @@ function trVal(p){if(!p)return 0;const o=ovr(p)+(p.age<=26?Math.max(0,p.pot-ovr(
 const PICK_V=[Math.pow(5.1,2.2),Math.pow(3.9,2.2),Math.pow(2.8,2.2)];
 /* Other teams' draft picks for this season (everyone starts with one per round; trades move them). */
 function aiPk(t){L.aiPicks=L.aiPicks||{};return L.aiPicks[t]||(L.aiPicks[t]=[1,1,1]);}
-function trEval(t,give,get,pk,gpk){gpk=gpk||[0,0,0];
+/* DRAFT-DAY TRADES: while a draft is on you can also trade picks in THIS draft, alone or in an online franchise.
+   A human team's picks are its remaining picks (single player: L.draft.rounds/left; online: its entries left in the
+   shared pick queue L.draft.q). Each computer team has one pick per round left, tracked in L.draft.ai so the same
+   pick can't be handed over twice. A pick that changes hands is used by its new team when that round comes; one
+   given away while you're on the clock is used by the other team right away. */
+const inDraft=()=>!!(L&&L.draft&&!L.draft.done&&!L.draft.recruit&&!L.cfbTeams);
+function drAi(t){const D=L.draft;D.ai=D.ai||{};return D.ai[t]||(D.ai[t]=[1,1,1]);}
+function drHas(t){const D=L.draft;if(!isHuman(t))return drAi(t).map((n,i)=>i<D.round?0:Math.max(0,n));
+ if(!D.q)return[0,1,2].map(i=>i<D.round?0:i===D.round?D.left:(D.rounds[i]||0));
+ const a=[0,0,0];for(let i=D.qi;i<D.q.length;i++){const it=D.q[i];if(it.t===t)a[it.r]+=i===D.qi&&D.left>0?D.left:it.n;}return a;}
+function dkAdd(t,r,n){if(!n)return;const D=L.draft;
+ if(!isHuman(t)){drAi(t)[r]+=n;return;}
+ if(!D.q){D.rounds[r]=(D.rounds[r]||0)+n;if(r===D.round)D.left+=n;return;}
+ const cur=D.q[D.qi];if(cur&&cur.t===t&&cur.r===r){cur.n+=n;D.left=(D.left>0?D.left:cur.n-n)+n;return;}
+ let at=D.qi+1;for(let i=D.qi+1;i<D.q.length;i++)if(D.q[i].r===r)at=i;   /* just before that round's closing computer picks */
+ D.q.splice(at,0,{t,n,r});}
+function dkTake(t,r,n,toAi){if(!n)return;const D=L.draft;   /* toAi: a computer team gets it, so it uses the pick when it comes up */
+ if(!isHuman(t)){drAi(t)[r]-=n;return;}
+ if(!D.q){D.rounds[r]-=n;if(r===D.round)for(let k=0;k<n&&!D.done;k++)draftPick(null);return;}   /* single player: the other team is always a computer */
+ let left=n;for(let i=D.q.length-1;i>D.qi&&left>0;i--){const it=D.q[i];if(it.t!==t||it.r!==r)continue;const k=Math.min(left,it.n);it.n-=k;left-=k;if(toAi)D.q.splice(i+1,0,{ai:k,r});if(!it.n)D.q.splice(i,1);}
+ const cur=D.q[D.qi];if(left>0&&cur&&cur.t===t&&cur.r===r){if(!(D.left>0))D.left=cur.n;const k=Math.min(left,D.left);D.left-=k;cur.n-=k;if(toAi)draftAI(k);if(D.left<=0){D.left=0;D.qi++;olDraftRun();}}}
+/* moves this draft's picks for a trade (dk: from -> to, gdk: to -> from). Picks a computer team gives up bring two
+   more prospects into the pool so the extra picks have players to choose from. */
+function dkSwap(from,to,dk,gdk){const D=L.draft;
+ for(let i=0;i<3;i++){dkTake(from,i,dk[i]||0,!isHuman(to));dkTake(to,i,gdk[i]||0,!isHuman(from));}
+ for(let i=0;i<3;i++){dkAdd(to,i,dk[i]||0);dkAdd(from,i,gdk[i]||0);}
+ const fromAi=(isHuman(from)?0:dk.reduce((a,b)=>a+b,0))+(isHuman(to)?0:gdk.reduce((a,b)=>a+b,0));
+ if(!D.done)for(let k=0;k<fromAi*2;k++){const p=genProspect();addPlayer(p);D.pool.push(p.id);}}
+function trEval(t,give,get,pk,gpk,dk,gdk){gpk=gpk||[0,0,0];dk=dk||[0,0,0];gdk=gdk||[0,0,0];pk=pk.map((n,i)=>n+dk[i]);gpk=gpk.map((n,i)=>n+gdk[i]);
  const G=give.map(P).filter(Boolean),R=get.map(P).filter(Boolean);
  let vIn=G.reduce((s,p)=>s+trVal(p),0)+pk.reduce((s,n,i)=>s+n*PICK_V[i],0),vOut=0;
  const theirs=rosterOf(t);
@@ -2902,47 +2930,64 @@ function trEval(t,give,get,pk,gpk){gpk=gpk||[0,0,0];
 function trOpen(o){const t0=o.t!=null?o.t:(L.user+1)%32,back=UI.scr==='player'?'roster':UI.scr==='trade'?'roster':UI.scr;go('trade',{t:t0===L.user?(t0+1)%32:t0,give:o.give||[],get:[],pk:[0,0,0],gpk:[0,0,0],back});}
 ACT.trOpen=d=>{UI.modal=null;trOpen({give:d.id?[+d.id]:[]});};
 SCR.trade=()=>{
- const s=UI.sub,t=s.t;s.gpk=s.gpk||[0,0,0];const E=trEval(t,s.give,s.get,s.pk,s.gpk),mine=plist(L.user),theirs=plist(t),thv=olPk(t),hum=L.seats&&isHuman(t);
+ const s=UI.sub,t=s.t;s.gpk=s.gpk||[0,0,0];s.dk=s.dk||[0,0,0];s.gdk=s.gdk||[0,0,0];const dr=inDraft(),E=trEval(t,s.give,s.get,s.pk,s.gpk,s.dk,s.gdk),mine=plist(L.user),theirs=plist(t),thv=olPk(t),hum=L.seats&&isHuman(t);
  const gpks=[0,1,2].map(i=>`<span class="chip ${s.gpk[i]?'on':''}" data-a="trGPk" data-i="${i}" ${thv[i]>s.gpk[i]||s.gpk[i]?'':'style="opacity:.4"'}>R${i+1}${s.gpk[i]>1?' x'+s.gpk[i]:''}</span>`).join('');
  const row=(p,sel,act)=>`<tr class="clk${sel?' me':''}" data-a="${act}" data-id="${p.id}"><td>${sel?'&#9632;':'&nbsp;'}</td><td class="${sideOf(p.pos)==='D'?'rdt':sideOf(p.pos)==='K'?'yl':'cyt'}">${p.pos}</td><td style="max-width:118px;overflow:hidden;text-overflow:ellipsis">${esc(pname(p).toUpperCase())}</td><td class="c">${p.age}</td><td>${stars(starsOf(p),'xs')}</td><td class="r">${p.sal.toFixed(0)}M</td></tr>`;
  const have=L.picks||[1,1,1];
  const pks=[0,1,2].map(i=>`<span class="chip ${s.pk[i]?'on':''}" data-a="trPk" data-i="${i}" ${have[i]>s.pk[i]||s.pk[i]?'':'style="opacity:.4"'}>R${i+1}${s.pk[i]>1?' x'+s.pk[i]:''}</span>`).join('');
  const pkHave=a=>a.map((n,i)=>n?'R'+(i+1)+(n>1?'×'+n:''):'').filter(Boolean).join(' ')||'NONE';
+ const dChips=(sel,av,act)=>[0,1,2].map(i=>`<span class="chip ${sel[i]?'on':''}" data-a="${act}" data-i="${i}" ${av[i]>sel[i]||sel[i]?'':'style="opacity:.4"'}>R${i+1}${sel[i]>1?' x'+sel[i]:''}</span>`).join('');
+ const dRow=(sel,av,act)=>dr?`<div class="row ctr" style="gap:4px;padding:3px 0 0;flex-wrap:wrap"><span class="s7 yl">THIS DRAFT (${pkHave(av)})</span>${dChips(sel,av,act)}</div>`:'',nxt=dr?'NEXT YEAR':'PICKS',any=s.give.length||s.get.length||s.pk.some(x=>x)||s.gpk.some(x=>x)||s.dk.some(x=>x)||s.gdk.some(x=>x);
  const pct=hum?100:clamp(E.ratio*100,0,100),col=hum?'var(--yl)':E.ok?'var(--gr)':E.ratio>0.8?'var(--yl)':'var(--rd)';
- const msg=!s.give.length&&!s.get.length&&!s.pk.some(x=>x)&&!s.gpk.some(x=>x)?'PICK PLAYERS ON BOTH SIDES':!E.rosOk?'YOUR ROSTER WOULD BE OVER '+rmax():!E.capOk?'OVER YOUR SALARY CAP':hum?'COACH '+((seatOf(t)||{}).coach||'')+' DECIDES · THE OFFER WAITS FOR THEM':E.ok?'THEY WILL ACCEPT':E.ratio>0.8?'CLOSE · ADD A LITTLE MORE':'THEY WANT MORE';
- return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('TRADE')}</div><div class="coin">CAP ${fmtM(L.cap-E.cap)}</div></div>${L.phase==='REG'?`<div class="s7 ${myWk()>=TRADE_DEADLINE-1?'yl':'dim'}" style="text-align:center;margin-top:-4px">TRADE DEADLINE: AFTER WEEK ${TRADE_DEADLINE}${myWk()===TRADE_DEADLINE?' · LAST WEEK TO TRADE':''}</div>`:''}
+ const msg=!any?'PICK PLAYERS ON BOTH SIDES':!E.rosOk?'YOUR ROSTER WOULD BE OVER '+rmax():!E.capOk?'OVER YOUR SALARY CAP':hum?'COACH '+((seatOf(t)||{}).coach||'')+' DECIDES · THE OFFER WAITS FOR THEM':E.ok?'THEY WILL ACCEPT':E.ratio>0.8?'CLOSE · ADD A LITTLE MORE':'THEY WANT MORE';
+ return`<div class="screen"><div class="row">${coinBox()}<div class="grow">${ttl('TRADE')}</div><div class="coin">CAP ${fmtM(L.cap-E.cap)}</div></div>${dr?`<div class="s7 yl" style="text-align:center;margin-top:-4px">DRAFT DAY · ROUND ${L.draft.round+1} · TRADE PICKS IN THIS DRAFT OR NEXT YEAR'S</div>`:''}${L.phase==='REG'?`<div class="s7 ${myWk()>=TRADE_DEADLINE-1?'yl':'dim'}" style="text-align:center;margin-top:-4px">TRADE DEADLINE: AFTER WEEK ${TRADE_DEADLINE}${myWk()===TRADE_DEADLINE?' · LAST WEEK TO TRADE':''}</div>`:''}
  <div class="row stretch grow" style="gap:8px">
-  <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GIVE · ${esc(abbr(L.user))}</span><div class="scroll grow"><table class="tbl s7">${mine.map(p=>row(p,s.give.includes(p.id),'trG')).join('')}</table></div>${L.cfbTeams?'':`<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(have)})</span>${pks}</div>`}</div>
+  <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GIVE · ${esc(abbr(L.user))}</span><div class="scroll grow"><table class="tbl s7">${mine.map(p=>row(p,s.give.includes(p.id),'trG')).join('')}</table></div>${L.cfbTeams?'':`${dRow(s.dk,dr?drHas(L.user):[0,0,0],'trDk')}<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">${nxt} (${pkHave(have)})</span>${pks}</div>`}</div>
   <div class="box col" style="flex:1;min-width:0;padding:11px 4px 3px"><span class="lbl">YOU GET</span>
    <div class="row" style="gap:4px;margin-bottom:3px"><button class="bt ico" data-a="trT" data-d="-1">&lt;</button><div class="grow" style="text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(teamName(t).toUpperCase())} <span class="dim">${recStr(t)}</span></div><button class="bt ico" data-a="trT" data-d="1">&gt;</button></div>
-   <div class="scroll grow"><table class="tbl s7">${theirs.map(p=>row(p,s.get.includes(p.id),'trR')).join('')}</table></div>${L.cfbTeams?'':`<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">PICKS (${pkHave(thv)})</span>${gpks}</div>`}</div>
+   <div class="scroll grow"><table class="tbl s7">${theirs.map(p=>row(p,s.get.includes(p.id),'trR')).join('')}</table></div>${L.cfbTeams?'':`${dRow(s.gdk,dr?drHas(t):[0,0,0],'trGDk')}<div class="row ctr" style="gap:4px;padding:3px 0 2px;flex-wrap:wrap"><span class="s7 dim">${nxt} (${pkHave(thv)})</span>${gpks}</div>`}</div>
  </div>
  <div class="row" style="gap:8px"><button class="bt ico" data-a="trBack">${ICON.back}</button>
   <div class="col grow" style="gap:3px"><div class="bar" style="height:10px"><i style="width:${pct}%;background:${col}"></i></div><span class="s7 ${(E.ok||hum)&&E.rosOk&&E.capOk?'grt':'dim'}">${msg}</span></div>
-  <button class="bt y" data-a="trGo" ${E.rosOk&&E.capOk&&(s.give.length||s.get.length||s.pk.some(x=>x)||s.gpk.some(x=>x))?'':'disabled'}>${hum?'SEND OFFER':'PROPOSE TRADE'}</button></div>${hum?'':''}</div>`;};
+  <button class="bt y" data-a="trGo" ${E.rosOk&&E.capOk&&any?'':'disabled'}>${hum?'SEND OFFER':'PROPOSE TRADE'}</button></div>${hum?'':''}</div>`;};
 const trTog=(a,id)=>{const i=a.indexOf(id);if(i>=0)a.splice(i,1);else a.push(id);};
 ACT.trG=d=>{trTog(UI.sub.give,+d.id);UI.keepScroll=true;render();};
 ACT.trR=d=>{trTog(UI.sub.get,+d.id);UI.keepScroll=true;render();};
 ACT.trPk=d=>{const i=+d.i,have=(L.picks||[1,1,1])[i],s=UI.sub;s.pk[i]=s.pk[i]>=have?0:s.pk[i]+1;render();};
 ACT.trGPk=d=>{const i=+d.i,s=UI.sub,have=olPk(s.t)[i];s.gpk=s.gpk||[0,0,0];s.gpk[i]=s.gpk[i]>=have?0:s.gpk[i]+1;render();};
-ACT.trT=d=>{const s=UI.sub;let t=s.t;do{t=(t+ +d.d+32)%32;}while(t===L.user);s.t=t;s.get=[];s.gpk=[0,0,0];render();};
+ACT.trDk=d=>{if(!inDraft())return;const i=+d.i,s=UI.sub,have=drHas(L.user)[i];s.dk=s.dk||[0,0,0];s.dk[i]=s.dk[i]>=have?0:s.dk[i]+1;render();};
+ACT.trGDk=d=>{if(!inDraft())return;const i=+d.i,s=UI.sub,have=drHas(s.t)[i];s.gdk=s.gdk||[0,0,0];s.gdk[i]=s.gdk[i]>=have?0:s.gdk[i]+1;render();};
+ACT.trT=d=>{const s=UI.sub;let t=s.t;do{t=(t+ +d.d+32)%32;}while(t===L.user);s.t=t;s.get=[];s.gpk=[0,0,0];s.gdk=[0,0,0];render();};
 ACT.trBack=()=>go(UI.sub.back||'roster');
 ACT.trGo=()=>{
- const s=UI.sub,t=s.t;s.gpk=s.gpk||[0,0,0];const E=trEval(t,s.give,s.get,s.pk,s.gpk);if(!E.rosOk||!E.capOk)return;
+ const s=UI.sub,t=s.t;s.gpk=s.gpk||[0,0,0];s.dk=s.dk||[0,0,0];s.gdk=s.gdk||[0,0,0];if(!inDraft()){s.dk=[0,0,0];s.gdk=[0,0,0];}const E=trEval(t,s.give,s.get,s.pk,s.gpk,s.dk,s.gdk);if(!E.rosOk||!E.capOk)return;
+ {const m=inDraft()?drHas(L.user):[0,0,0],th=inDraft()?drHas(t):[0,0,0];if(s.dk.some((n,i)=>n>m[i])||s.gdk.some((n,i)=>n>th[i]))return toast('THAT PICK IS ALREADY GONE');}
  if(!tradesOpen())return toast('TRADE DEADLINE HAS PASSED (AFTER WEEK '+TRADE_DEADLINE+')');
  if(L.seats&&isHuman(t))return olOffer(s);
  if(!E.ok){sfx('bad');return toast(E.ratio>0.8?abbr(t)+' SAY NO · ALMOST THERE':abbr(t)+' REJECT THE OFFER');}
+ /* online franchise: a trade with this draft's picks goes through the league server (the draft order is shared) */
+ const dkAny=s.dk.some(x=>x)||s.gdk.some(x=>x);
+ if(L.online&&dkAny){const o={give:s.give.slice(),get:s.get.slice(),pk:s.pk.slice(),gpk:s.gpk.slice(),dk:s.dk.slice(),gdk:s.gdk.slice()};let why='';
+  return olTx(()=>{why=trAiDo(t,o);}).then(ok=>{if(ok&&!why){sfx('coin');toast('TRADE ACCEPTED!');s.give=[];s.get=[];s.pk=[0,0,0];s.gpk=[0,0,0];s.dk=[0,0,0];s.gdk=[0,0,0];}else toast(why||'TRADE DIDN\'T SAVE · TRY AGAIN');render();});}
+ trAiDo(t,s);sfx('coin');save();toast('TRADE ACCEPTED!');s.give=[];s.get=[];s.pk=[0,0,0];s.gpk=[0,0,0];s.dk=[0,0,0];s.gdk=[0,0,0];render();};
+/* a trade the computer team has agreed to. Returns '' or why it can't go through (online, against fresh league data). */
+function trAiDo(t,s){
  const G=s.give.map(P).filter(Boolean),R=s.get.map(P).filter(Boolean);
+ if(G.some(p=>p.team!==L.user)||R.some(p=>p.team!==t))return'A PLAYER IS NO LONGER ON THAT TEAM';
+ if(s.dk.some(x=>x)||s.gdk.some(x=>x)){if(!inDraft())return'THE DRAFT IS OVER';const m=drHas(L.user),th=drHas(t);if(s.dk.some((n,i)=>n>m[i])||s.gdk.some((n,i)=>n>th[i]))return'THAT PICK IS ALREADY GONE';}
  for(const p of G){p.team=t;p.bench=false;p.bk=false;p.mor=clamp(p.mor-5,0,100);}
  for(const p of R){p.team=L.user;p.bk=false;p.mor=clamp(p.mor+5,0,100);p.yrs=Math.max(1,p.yrs);}
  {const ap=aiPk(t);s.pk.forEach((n,i)=>{L.picks[i]-=n;ap[i]+=n;});s.gpk.forEach((n,i)=>{L.picks[i]+=n;ap[i]-=n;});}
+ /* this draft's picks: picks you get are yours to use when that round comes; a pick you give away in the round
+    you're on the clock in is used by them right away (the draft moves on like a skipped pick) */
+ if(inDraft())dkSwap(L.user,t,s.dk,s.gdk);
  // the other team trims back to a full roster and fills any holes
  const rr=rosterOf(t);if(rr.length>rmax()){const st=starterSet(t);rr.filter(x=>!st.has(x.id)).sort((a,b)=>ovr(a)-ovr(b)).slice(0,rr.length-rmax()).forEach(x=>{x.team=-1;x.yrs=1;});}
  fillAIRoster(t);
- const nmL=a=>a.map(p=>p.pos+' '+fullname(p)),gv=[...nmL(G),...s.pk.map((n,i)=>n?n+'x RND '+(i+1)+' PICK':'').filter(Boolean)].join(', ')||'NOTHING';
- const gt=[...nmL(R),...s.gpk.map((n,i)=>n?n+'x RND '+(i+1)+' PICK':'').filter(Boolean)].join(', ')||'NOTHING';
+ const nmL=a=>a.map(p=>p.pos+' '+fullname(p)),dkL=(a,now)=>a.map((n,i)=>n?n+'x '+(now?'THIS YEAR ':'')+'RND '+(i+1)+' PICK':'').filter(Boolean),gv=[...nmL(G),...dkL(s.dk,1),...dkL(s.pk)].join(', ')||'NOTHING';
+ const gt=[...nmL(R),...dkL(s.gdk,1),...dkL(s.gpk)].join(', ')||'NOTHING';
  news('TRADE WITH '+T(t).name+': '+abbr(L.user)+' get '+gt+' for '+gv+'.');
- sfx('coin');save();toast('TRADE ACCEPTED!');s.give=[];s.get=[];s.pk=[0,0,0];s.gpk=[0,0,0];render();};
+ return'';}
 ACT.pTrade2=()=>{const p=P(UI.sub.id),r=tradePlayer(p);if(!r)return;sfx('coin');save();UI.modal=null;toast('TRADED FOR A ROUND '+r+' PICK');go('roster');};
 ACT.pRename=()=>{const p=P(UI.sub.id);modal(`<div class="mp" style="width:380px">${ttl('RENAME',true)}<div>FIRST NAME</div><input class="txt" id="rnF" maxlength="12" value="${esc(p.fn.toUpperCase())}"><div>LAST NAME</div><input class="txt" id="rnL" maxlength="14" value="${esc(p.ln.toUpperCase())}"><div class="row end"><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="pRename2">SAVE</button></div></div>`);};
 ACT.pRename2=()=>{const p=P(UI.sub.id),f=($('#rnF').value||'').trim(),l=($('#rnL').value||'').trim();const cap=x=>x.charAt(0).toUpperCase()+x.slice(1).toLowerCase();if(f)p.fn=cap(f);if(l)p.ln=cap(l);save();closeModal();};
@@ -3215,7 +3260,7 @@ SCR.draft=()=>{
  const rows=pool.map(p=>`<tr><td><span class="${sideOf(p.pos)==='D'?'rdt':sideOf(p.pos)==='K'?'yl':'cyt'}">${p.pos}</span></td><td>${esc(pname(p).toUpperCase())}</td><td class="c">${p.age}</td><td>${stars(p.scout[0],'xs')}${p.scout[1]>p.scout[0]?' - '+stars(p.scout[1],'xs'):''}</td><td class="c">${p.potg}</td><td class="r">${D.done||(D.q&&!olMyPick())?'':`<button class="bt" style="padding:3px 6px 2px" data-a="dpick" data-id="${p.id}">DRAFT</button>`}</td></tr>`).join('');
  const mine=rosterOf(L.user).sort((a,b)=>POSL.indexOf(a.pos)-POSL.indexOf(b.pos)).map(p=>`<div class="row" style="gap:4px"><span style="width:20px">${p.pos}</span><span class="grow" style="overflow:hidden">${esc(p.ln.toUpperCase())}</span>${stars(starsOf(p),'xs')}</div>`).join('');
  const log=D.log.slice(0,14).map(x=>{const p=P(x.id);return p?`<div style="white-space:nowrap;overflow:hidden">${x.t===L.user?'<span class="yl">':''}R${x.r} ${abbr(x.t)}: ${p.pos} ${esc(p.ln.toUpperCase())} ${x.t===L.user?'</span>':''}</div>`:'';}).join('');
- const pk=(D.q?(D.rd[L.user]||[0,0,0]):D.rounds).join(' - ');
+ const pk=(inDraft()?drHas(L.user):D.q?(D.rd[L.user]||[0,0,0]):D.rounds).join(' - ');
  return`<div class="screen">
  <div class="row">${coinBox()}<div class="grow">${ttl(D.founding?'DRAFT':L.year+' DRAFT')}</div><div class="coin">PICKS ${pk}</div></div>
  <div class="row ctr" style="gap:12px">${D.done?'<span class="yl">DRAFT COMPLETE</span>':D.q&&!olMyPick()?`<span class="blink">ROUND ${D.round+1} · ${esc(abbr(D.cur))} (COACH ${esc((seatOf(D.cur)||{}).coach||'')}) IS ON THE CLOCK</span>`:`<span class="yl blink">ROUND ${D.round+1} · YOU ARE ON THE CLOCK</span><span>PICK ${(D.q?D.slots[L.user]:D.slot)+1} · ${D.left} LEFT THIS ROUND</span>`}<span class="dim">${D.pool.length} PLAYERS LEFT</span></div>
@@ -3227,7 +3272,7 @@ SCR.draft=()=>{
    ${box('TAKEN BY TEAMS',`<div class="col s7 scroll" style="gap:3px;max-height:98px">${log||'<div class="dim">-</div>'}</div>`,'padding:10px 6px 5px;flex:1')}
   </div>
  </div>
- <div class="row"><span class="s7 dim">SCOUTING IS A GUESS: TRUE STARS SHOW AFTER YOU PICK. AFTER EVERY ROUND OTHER TEAMS TAKE PLAYERS.</span><div class="sp"></div>${D.done?'<button class="bt y big" data-a="dfin">FINISH &gt;</button>':D.q&&!olMyPick()?'<button class="bt" data-a="go" data-s="olcoaches">COACHES</button>':'<button class="bt" data-a="dskip">SKIP (AUTO PICK)</button>'}</div></div>`;
+ <div class="row"><span class="s7 dim">SCOUTING IS A GUESS: TRUE STARS SHOW AFTER YOU PICK. AFTER EVERY ROUND OTHER TEAMS TAKE PLAYERS.</span><div class="sp"></div>${D.done?'<button class="bt y big" data-a="dfin">FINISH &gt;</button>':D.q&&!olMyPick()?`${inDraft()?'<button class="bt" data-a="trOpen">TRADE</button>':''}<button class="bt" data-a="go" data-s="olcoaches">COACHES</button>`:`${inDraft()?'<button class="bt" data-a="trOpen">TRADE</button>':''}<button class="bt" data-a="dskip">SKIP (AUTO PICK)</button>`}</div></div>`;
 };
 ACT.dff=d=>{UI.sub.f=d.f;render();};
 ACT.dpick=d=>{const p=P(+d.id);if(!p||!L.draft||L.draft.done)return;needSpotThen(()=>{if(!L.draft||L.draft.pool.indexOf(p.id)<0)return;if(L.online)return olDraftTx(p.id);draftPick(p);sfx('coin');save();
@@ -7257,12 +7302,13 @@ function olgBoot(){if(OL||UI.scr!=='title'||UI.modal)return;const a=olgAll(),c=O
 /* ---------- trades between coaches: an offer waits until the other coach says yes or no ---------- */
 function olPk(t){const S=L.seats&&isHuman(t)&&seatOf(t);return S?(S.picks||[1,1,1]):aiPk(t);}
 function olOffers(){return(L&&L.trades)||[];}
-function olOffer(s){const t=s.t,o={id:Date.now()*100+ri(0,99),from:L.user,to:t,give:s.give.slice(),get:s.get.slice(),pk:s.pk.slice(),gpk:(s.gpk||[0,0,0]).slice(),st:'open',yr:L.year};
- olTx(()=>{L.trades=olOffers().filter(x=>x.st==='open'||x.yr>=L.year-1).slice(-40);L.trades.push(o);}).then(ok=>{if(!ok)return;sfx('coin');toast('OFFER SENT TO COACH '+((seatOf(t)||{}).coach||abbr(t)));s.give=[];s.get=[];s.pk=[0,0,0];s.gpk=[0,0,0];render();});}
+function olOffer(s){const t=s.t,o={id:Date.now()*100+ri(0,99),from:L.user,to:t,give:s.give.slice(),get:s.get.slice(),pk:s.pk.slice(),gpk:(s.gpk||[0,0,0]).slice(),dk:(s.dk||[0,0,0]).slice(),gdk:(s.gdk||[0,0,0]).slice(),st:'open',yr:L.year};
+ olTx(()=>{L.trades=olOffers().filter(x=>x.st==='open'||x.yr>=L.year-1).slice(-40);L.trades.push(o);}).then(ok=>{if(!ok)return;sfx('coin');toast('OFFER SENT TO COACH '+((seatOf(t)||{}).coach||abbr(t)));s.give=[];s.get=[];s.pk=[0,0,0];s.gpk=[0,0,0];s.dk=[0,0,0];s.gdk=[0,0,0];render();});}
 function olTradeCheck(o){
  if(!tradesOpen()||(L.phase==='REG'&&Math.max(olWkOf(o.from),olWkOf(o.to))>TRADE_DEADLINE))return'THE TRADE DEADLINE HAS PASSED';if(!isHuman(o.from)||!isHuman(o.to))return'A COACH IS NO LONGER IN THE LEAGUE';
  const G=o.give.map(P),R=o.get.map(P);if(G.some(p=>!p||p.team!==o.from)||R.some(p=>!p||p.team!==o.to))return'A PLAYER IS NO LONGER ON THAT TEAM';
  const pf=olPk(o.from),pt=olPk(o.to);if(o.pk.some((n,i)=>n>pf[i])||o.gpk.some((n,i)=>n>pt[i]))return'A DRAFT PICK IS NO LONGER THERE';
+ if((o.dk||[]).some(x=>x)||(o.gdk||[]).some(x=>x)){if(!inDraft())return'THE DRAFT IS OVER';const df=drHas(o.from),dt=drHas(o.to);if(o.dk.some((n,i)=>n>df[i])||o.gdk.some((n,i)=>n>dt[i]))return'A DRAFT PICK IS NO LONGER THERE';}
  const roomOf=(t,out,inn)=>mainN(t)-out.filter(p=>!p.bk).length+inn.length<=rmax()+bkFreeN(t)+out.filter(p=>p.bk).length;
  if(!roomOf(o.from,G,R)||!roomOf(o.to,R,G))return'A ROSTER WOULD GO OVER '+rmax()+' PLAYERS (PLUS BACKUPS)';
  const sal=a=>a.reduce((x,p)=>x+p.sal,0);
@@ -7274,8 +7320,9 @@ function olTradeDo(o){const G=o.give.map(P),R=o.get.map(P);
  bkAuto(o.from);bkAuto(o.to);
  olAs(o.from,()=>{o.pk.forEach((n,i)=>{L.picks[i]-=n;});o.gpk.forEach((n,i)=>{L.picks[i]+=n;});});
  olAs(o.to,()=>{o.gpk.forEach((n,i)=>{L.picks[i]-=n;});o.pk.forEach((n,i)=>{L.picks[i]+=n;});});
- o.st='done';news('COACH TRADE: '+abbr(o.from)+' get '+olTradeTxt(o.get,o.gpk)+' from '+abbr(o.to)+' for '+olTradeTxt(o.give,o.pk)+'.');}
-function olTradeTxt(ids,pk){const a=ids.map(P).map(p=>p?p.pos+' '+fullname(p):'?').concat((pk||[]).map((n,i)=>n?n+'x RND '+(i+1)+' PICK':'').filter(Boolean));return a.join(', ')||'NOTHING';}
+ if(inDraft()&&((o.dk||[]).some(x=>x)||(o.gdk||[]).some(x=>x)))dkSwap(o.from,o.to,o.dk,o.gdk);
+ o.st='done';news('COACH TRADE: '+abbr(o.from)+' get '+olTradeTxt(o.get,o.gpk,o.gdk)+' from '+abbr(o.to)+' for '+olTradeTxt(o.give,o.pk,o.dk)+'.');}
+function olTradeTxt(ids,pk,dk){const a=ids.map(P).map(p=>p?p.pos+' '+fullname(p):'?').concat((dk||[]).map((n,i)=>n?n+'x THIS YEAR RND '+(i+1)+' PICK':'').filter(Boolean),(pk||[]).map((n,i)=>n?n+'x RND '+(i+1)+' PICK':'').filter(Boolean));return a.join(', ')||'NOTHING';}
 /* answer (yes/no) or take back an offer */
 ACT.olTrA=d=>{const id=+d.id;olTx(()=>{const o=olOffers().find(x=>x.id===id&&x.st==='open'&&x.to===L.user);if(!o)return;const e=olTradeCheck(o);if(e){o.st='void';o.why=e;return;}olTradeDo(o);})
  .then(()=>{const o=olOffers().find(x=>x.id===id);if(o&&o.st==='done'){sfx('coin');toast('TRADE DONE!');}else if(o&&o.st==='void')toast('TRADE CAN\'T GO THROUGH: '+o.why);render();});};
@@ -7283,7 +7330,7 @@ ACT.olTrN=d=>{const id=+d.id;olTx(()=>{const o=olOffers().find(x=>x.id===id&&x.s
 SCR.oltrades=()=>{if(!olLive())return SCR.olmenu();
  const mine=olOffers().filter(x=>x.to===L.user||x.from===L.user).slice().reverse().slice(0,20);
  const lab={open:'WAITING',done:'<span class="grt">DONE</span>',no:'<span class="rdt">DECLINED</span>',off:'<span class="dim">TAKEN BACK</span>',void:'<span class="rdt">COULDN\'T GO THROUGH</span>'};
- const card=o=>{const inc=o.to===L.user,them=inc?o.from:o.to,get=inc?olTradeTxt(o.give,o.pk):olTradeTxt(o.get,o.gpk),give=inc?olTradeTxt(o.get,o.gpk):olTradeTxt(o.give,o.pk);
+ const card=o=>{const inc=o.to===L.user,them=inc?o.from:o.to,get=inc?olTradeTxt(o.give,o.pk,o.dk):olTradeTxt(o.get,o.gpk,o.gdk),give=inc?olTradeTxt(o.get,o.gpk,o.gdk):olTradeTxt(o.give,o.pk,o.dk);
   const btn=o.st!=='open'?'':inc?`<button class="bt" data-a="olTrN" data-id="${o.id}">DECLINE</button><button class="bt y" data-a="olTrA" data-id="${o.id}">ACCEPT</button>`:`<button class="bt" data-a="olTrN" data-id="${o.id}">TAKE BACK</button>`;
   return`<div class="box col" style="gap:4px;padding:11px 8px 6px"><span class="lbl">${inc?'FROM':'TO'} ${esc(abbr(them))} · COACH ${esc((seatOf(them)||{}).coach||'')}</span>
   <div class="s7" style="line-height:1.8"><span class="grt">YOU GET:</span> ${esc(get.toUpperCase())}<br><span class="rdt">YOU GIVE:</span> ${esc(give.toUpperCase())}</div>
