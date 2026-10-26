@@ -3484,8 +3484,8 @@ ACT.off5=()=>{bkAuto(L.user,true);if(mainN(L.user)>rmax())return toast('TOO MANY
    AUDIO
    ===================================================================== */
 {const _off=SCR.off;SCR.off=()=>{const h=_off();const O=L&&L.off;
- if(!O||O.step==='sum'||L.cfbTeams||!tradesOpen()||/olwait|WAITING FOR/.test(h&&h.slice(0,400)||''))return h;
- /* offseason trades: players and draft picks, any time before and after the draft */
+ if(!O||O.step==='sum'||L.cfbTeams||!tradesOpen()||inDraft()||/olwait|WAITING FOR/.test(h&&h.slice(0,400)||''))return h;
+ /* offseason trades: players and draft picks before and after the draft (during it, the draft screen has its own TRADE button) */
  const btn=`<button class="bt" data-a="trOpen" style="position:absolute;right:10px;top:10px;z-index:4">TRADE</button>`;
  return h.replace(/<\/div>\s*$/,btn+'</div>');};}
 let AC=null,NOISE=null;
@@ -4037,7 +4037,7 @@ function boxHTML(){tallyQ();const ot=M.qs[4][0]||M.qs[4][1]||M.qtr>=5,cols=ot?[0
   K&&line('KICKING',`${N(K)} · ${K[1].fgm||0}/${K[1].fga} FG`)].filter(Boolean).join('');
  const team=[line('PASSING',`${ts.cmp||0}/${ts.att||0} · ${ts.pyd||0} YDS`),line('RUSHING',`${ts.ryd||0} YDS`),line('TOTAL',`${(ts.pyd||0)+(ts.ryd||0)} YDS · ${ts.td||0} TD`),
   line('TURNOVERS',ts.to||0),line('SACKS',`${sum('sck')} FOR · ${sum('sacked')} AGAINST`)].join('');
- return`<div class="mp" style="gap:6px">${ttl('BOX SCORE',true)}<div style="overflow:auto;min-height:0;display:flex;flex-direction:column;gap:6px">${qt}${M.simmed?'<div class="s7 dim">REST OF THE GAME WAS SIMULATED</div>':''}
+ return`<div class="mp" style="gap:6px">${ttl('BOX SCORE',true)}<div class="scroll" style="display:flex;flex-direction:column;gap:6px">${qt}${M.simmed?'<div class="s7 dim">REST OF THE GAME WAS SIMULATED</div>':''}
   <div class="s7 yl">${esc(teamName(L.user).toUpperCase())} · TEAM</div><table class="bxs">${team}</table>${ld?`<div class="s7 yl">${esc(abbr(L.user))} LEADERS</div><table class="bxs">${ld}</table>`:''}</div>
   <div class="row ctr" style="gap:8px"><button class="bt big" data-a="gBox">BACK</button><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div></div>`;}
 ACT.gBox=()=>{if(M&&M.ov)M.box=!M.box;};
@@ -4081,7 +4081,7 @@ SCR.ach=()=>{const a=achGet(),n=ACH.filter(x=>a.u[x.id]).length;
   return`<div class="achc${on?' on':''}"><div class="row" style="gap:6px"><span class="${on?'yl':''}" style="font-size:9px">${on?'🏆':'🔒'} ${esc(x.n)}</span><div class="grow"></div>${PASS_ON?`<span class="s7" style="white-space:nowrap">${CUR(1)} ${x.cc}</span>`:''}</div><span class="s7 dim" style="line-height:1.5">${esc(x.d)}</span>${pr}</div>`;}).join('');
  return`<div class="screen"><div class="row"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button><div class="grow">${ttl('ACHIEVEMENTS')}</div><div style="width:32px"></div></div>
  <div class="s7 dim" style="text-align:center;margin:4px 0">${n} / ${ACH.length} UNLOCKED · ${a.gp} GAMES · ${a.w} WINS · ${a.td} TDS</div>
- <div class="grow" style="overflow:auto;min-height:0"><div class="achg">${cards}</div></div></div>`;};
+ <div class="grow scroll"><div class="achg">${cards}</div></div></div>`;};
 function gameOver(){
  if(M.prac)return pracEnd();
  try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd});}catch(e){console.warn('pass',e);}
