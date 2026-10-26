@@ -132,6 +132,8 @@ input.txt{font:inherit;font-size:10px;background:var(--nv);border:2px solid #fff
 .gban small{display:block;font-size:8px;margin-top:5px}
 .gov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,30,.45);pointer-events:auto;z-index:20}
 .gov .mp{width:470px}
+.bxs{width:100%;border-collapse:collapse;font-size:8px}.bxs td{padding:2px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,.18)}.bxs td.l{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}.bxs tr.h td{color:var(--dim);font-size:7px}.bxs td.v{text-align:left;font-size:7px;line-height:1.4}
+.achg{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}.achc{border:2px solid rgba(255,255,255,.35);padding:6px 7px 5px;display:flex;flex-direction:column;gap:4px;opacity:.6}.achc.on{border-color:var(--yl2);opacity:1}
 .pbp{font-size:7px;line-height:1.9;height:118px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
 .pbp div{border-bottom:1px solid rgba(255,255,255,.18);animation:fin .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bracket{display:flex;gap:5px;align-items:stretch}.bracket .rd{display:flex;flex-direction:column;justify-content:space-around;gap:4px;flex:1}
@@ -2368,7 +2370,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}</div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -3956,7 +3958,7 @@ const canFG=()=>M.phase==='pre'&&!M.conv&&inFG()&&(M.down===4||M.qtr>=5||((M.qtr
 const canKneel=()=>M.phase==='pre'&&!M.conv&&M.qtr>=4&&M.sc[0]>M.sc[1]&&M.clock<=160;
 
 function clockCheck(next){
- if(M.clock>0)return next();
+ tallyQ();if(M.clock>0)return next();
  const q=M.qtr,ql=L.settings.qlen;
  if(q===1||q===3){M.qtr++;M.clock=Math.max(15,M.clock+ql);banner('END OF '+(q===1?'1ST':'3RD')+' QUARTER','','#fff',1.6);return next();}
  if(q===2)return halftime();
@@ -3974,13 +3976,83 @@ function overtime(){
  M.qtr=Math.max(5,M.qtr+1);M.clock=L.settings.qlen;M.to=2;M.O=[];M.D=[];const us=Math.random()<0.5;
  ovMsg(M.qtr===5?'OVERTIME':'ANOTHER OT',`TIED ${M.sc[0]}-${M.sc[1]} · NEXT SCORE WINS<br>${us?'YOU WIN THE TOSS AND RECEIVE':esc(T(M.op).name.toUpperCase())+' RECEIVE'}`,[['KICK OFF',()=>kickoffTo(us?'us':'them'),'y']]);
 }
+/* ---------- BOX SCORE ----------
+   Points by quarter: every frame, and before any quarter change or the final whistle, a change in the score is credited
+   to the quarter being played (all overtime periods share the OT column). Also keeps the biggest deficit (COMEBACK KID). */
+function tallyQ(){if(!M||!M.sc)return;if(!M.qs){M.qs=[[0,0],[0,0],[0,0],[0,0],[0,0]];M.qsT=[0,0];M.maxDn=0;}
+ const q=clamp(M.qtr||1,1,5)-1;for(const i of[0,1]){const d=M.sc[i]-M.qsT[i];if(d){M.qs[q][i]+=d;M.qsT[i]=M.sc[i];}}
+ M.maxDn=Math.max(M.maxDn,M.sc[1]-M.sc[0]);}
+/* your players' game stats added up from M.ps (only your side is tracked play by play) */
+function boxStats(){const mine=new Map(rosterOf(L.user).map(p=>[p.id,p])),R=[];
+ for(const id in M.ps){const p=mine.get(isNaN(+id)?id:+id)||mine.get(id);if(p)R.push([p,M.ps[id]]);}
+ const sum=k=>R.reduce((v,[,x])=>v+(x[k]||0),0),top=f=>R.filter(r=>f(r[1])>0).sort((a,b)=>f(b[1])-f(a[1]))[0];
+ return{R,sum,top};}
+function boxHTML(){tallyQ();const ot=M.qs[4][0]||M.qs[4][1]||M.qtr>=5,cols=ot?[0,1,2,3,4]:[0,1,2,3],{sum,top}=boxStats(),ts=M.ts||{};
+ const row=(t,i)=>`<tr><td class="l">${esc(abbr(t))}</td>${cols.map(c=>`<td>${M.qs[c][i]}</td>`).join('')}<td class="yl">${M.sc[i]}</td></tr>`;
+ const qt=`<table class="bxs"><tr class="h"><td class="l">TEAM</td>${cols.map(c=>`<td>${c<4?c+1:'OT'}</td>`).join('')}<td>T</td></tr>${row(L.user,0)}${row(M.op,1)}</table>`;
+ const line=(lab,v)=>`<tr><td class="l dim">${lab}</td><td class="v">${v}</td></tr>`,N=r=>esc(pname(r[0]).toUpperCase());
+ const P=top(x=>x.pyd||0),Ru=top(x=>x.ryd||0),Rc=top(x=>x.wyd||0),D=top(x=>(x.tkl||0)+(x.sck||0)*3+(x.dint||0)*4),K=top(x=>x.fga||0);
+ const ld=[P&&line('PASSING',`${N(P)} · ${P[1].cmp||0}/${P[1].att||0} · ${P[1].pyd} YDS · ${P[1].ptd||0} TD${P[1].pint?' · '+P[1].pint+' INT':''}`),
+  Ru&&line('RUSHING',`${N(Ru)} · ${Ru[1].car||0} CAR · ${Ru[1].ryd} YDS${Ru[1].rtd?' · '+Ru[1].rtd+' TD':''}`),
+  Rc&&line('RECEIVING',`${N(Rc)} · ${Rc[1].rec||0} REC · ${Rc[1].wyd} YDS${Rc[1].wtd?' · '+Rc[1].wtd+' TD':''}`),
+  D&&line('DEFENSE',`${N(D)} · ${D[1].tkl||0} TKL${D[1].sck?' · '+D[1].sck+' SCK':''}${D[1].dint?' · '+D[1].dint+' INT':''}`),
+  K&&line('KICKING',`${N(K)} · ${K[1].fgm||0}/${K[1].fga} FG`)].filter(Boolean).join('');
+ const team=[line('PASSING',`${ts.cmp||0}/${ts.att||0} · ${ts.pyd||0} YDS`),line('RUSHING',`${ts.ryd||0} YDS`),line('TOTAL',`${(ts.pyd||0)+(ts.ryd||0)} YDS · ${ts.td||0} TD`),
+  line('TURNOVERS',ts.to||0),line('SACKS',`${sum('sck')} FOR · ${sum('sacked')} AGAINST`)].join('');
+ return`<div class="mp" style="gap:6px">${ttl('BOX SCORE',true)}<div style="overflow:auto;min-height:0;display:flex;flex-direction:column;gap:6px">${qt}${M.simmed?'<div class="s7 dim">REST OF THE GAME WAS SIMULATED</div>':''}
+  <div class="s7 yl">${esc(teamName(L.user).toUpperCase())} · TEAM</div><table class="bxs">${team}</table>${ld?`<div class="s7 yl">${esc(abbr(L.user))} LEADERS</div><table class="bxs">${ld}</table>`:''}</div>
+  <div class="row ctr" style="gap:8px"><button class="bt big" data-a="gBox">BACK</button><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div></div>`;}
+ACT.gBox=()=>{if(M&&M.ov)M.box=!M.box;};
+/* ---------- ACHIEVEMENTS ----------
+   Checked at the final whistle of every game you play (not practice or fully simmed games). Unlocks and career totals live
+   in rf_ach, so Sync Devices carries them; each one pays its candy corn once while the pass is live. */
+const ACH_KEY='rf_ach';
+const ACH=[
+ {id:'win1',n:'FIRST WIN',d:'WIN A GAME',cc:25,t:G=>G.win},
+ {id:'shut',n:'SHUTOUT',d:'WIN WITHOUT ALLOWING A POINT',cc:75,t:G=>G.win&&G.op===0},
+ {id:'blow',n:'BLOWOUT',d:'WIN BY 35 OR MORE',cc:50,t:G=>G.win&&G.my-G.op>=35},
+ {id:'comeb',n:'COMEBACK KID',d:'WIN AFTER TRAILING BY 14+',cc:75,t:G=>G.win&&G.dn>=14},
+ {id:'ot',n:'OVERTIME HERO',d:'WIN IN OVERTIME',cc:50,t:G=>G.win&&G.ot},
+ {id:'air',n:'AIR RAID',d:'300+ PASSING YARDS IN A GAME',cc:50,t:G=>G.pyd>=300},
+ {id:'grnd',n:'GROUND AND POUND',d:'150+ RUSHING YARDS IN A GAME',cc:50,t:G=>G.ryd>=150},
+ {id:'tds',n:'TD MACHINE',d:'5+ TOUCHDOWNS IN A GAME',cc:50,t:G=>G.td>=5},
+ {id:'hat',n:'HAT TRICK',d:'ONE PLAYER RUNS OR CATCHES 3 TDS',cc:50,t:G=>G.p3},
+ {id:'p6',n:'PICK SIX',d:'RETURN AN INTERCEPTION FOR A TD',cc:50,t:G=>G.p6},
+ {id:'sack',n:'SACK ATTACK',d:'4+ SACKS IN A GAME',cc:50,t:G=>G.sck>=4},
+ {id:'hawk',n:'BALLHAWK',d:'3+ INTERCEPTIONS IN A GAME',cc:50,t:G=>G.int>=3},
+ {id:'clean',n:'CLEAN SHEET',d:'WIN WITH NO TURNOVERS',cc:25,t:G=>G.win&&G.to===0},
+ {id:'onl',n:'ONLINE VICTOR',d:'WIN AN ONLINE GAME',cc:50,t:G=>G.win&&G.online},
+ {id:'champ',n:'CHAMPION',d:'WIN THE CHAMPIONSHIP GAME',cc:150,t:G=>G.win&&G.champ},
+ {id:'g10',n:'ROOKIE',d:'PLAY 10 GAMES',cc:25,c:'gp',goal:10},
+ {id:'g50',n:'VETERAN',d:'PLAY 50 GAMES',cc:100,c:'gp',goal:50},
+ {id:'w25',n:'WINNER',d:'WIN 25 GAMES',cc:100,c:'w',goal:25},
+ {id:'td100',n:'CENTURY',d:'SCORE 100 TOUCHDOWNS',cc:100,c:'td',goal:100}];
+function achGet(){let a=null;try{a=JSON.parse(localStorage.getItem(ACH_KEY)||'null');}catch(e){}a=a&&typeof a==='object'?a:{};a.u=a.u||{};a.gp=a.gp||0;a.w=a.w||0;a.td=a.td||0;return a;}
+function achPut(a){try{localStorage.setItem(ACH_KEY,JSON.stringify(a));}catch(e){}}
+function achAfterGame(){if(!M||M.prac||M.simmed||M.achDone)return[];M.achDone=true;
+ const{R,sum}=boxStats(),ts=M.ts||{},my=M.sc[0],op=M.sc[1];
+ const G={my,op,win:my>op,dn:M.maxDn||0,ot:M.qtr>=5,pyd:ts.pyd||0,ryd:ts.ryd||0,td:ts.td||0,to:ts.to||0,p6:!!M.p6,sck:sum('sck'),int:sum('dint'),
+  p3:R.some(([,x])=>(x.rtd||0)+(x.wtd||0)>=3),online:!!(L&&L.net),champ:!!(L&&L.phase==='PO'&&M.g&&M.g.conf==='SB')};
+ const a=achGet();a.gp++;if(G.win)a.w++;a.td+=G.td;const got=[];
+ for(const x of ACH){if(a.u[x.id])continue;if(x.c?a[x.c]>=x.goal:x.t(G)){a.u[x.id]=Date.now();got.push(x);}}
+ achPut(a);if(got.length){const cc=got.reduce((v,x)=>v+x.cc,0);if(PASS_ON)bpTokAdd(cc);
+  setTimeout(()=>toast('🏆 ACHIEVEMENT'+(got.length>1?'S':'')+': '+got.map(x=>x.n).join(', ')+(PASS_ON?' · +'+cc+' CANDY CORN':'')),2400);}
+ return got;}
+SCR.ach=()=>{const a=achGet(),n=ACH.filter(x=>a.u[x.id]).length;
+ const cards=ACH.map(x=>{const on=!!a.u[x.id],pr=x.c&&!on?`<span class="s7 dim">${Math.min(a[x.c],x.goal)} / ${x.goal}</span>`:'';
+  return`<div class="achc${on?' on':''}"><div class="row" style="gap:6px"><span class="${on?'yl':''}" style="font-size:9px">${on?'🏆':'🔒'} ${esc(x.n)}</span><div class="grow"></div>${PASS_ON?`<span class="s7" style="white-space:nowrap">${CUR(1)} ${x.cc}</span>`:''}</div><span class="s7 dim" style="line-height:1.5">${esc(x.d)}</span>${pr}</div>`;}).join('');
+ return`<div class="screen"><div class="row"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button><div class="grow">${ttl('ACHIEVEMENTS')}</div><div style="width:32px"></div></div>
+ <div class="s7 dim" style="text-align:center;margin:4px 0">${n} / ${ACH.length} UNLOCKED · ${a.gp} GAMES · ${a.w} WINS · ${a.td} TDS</div>
+ <div class="grow" style="overflow:auto;min-height:0"><div class="achg">${cards}</div></div></div>`;};
 function gameOver(){
  if(M.prac)return pracEnd();
  try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd});}catch(e){console.warn('pass',e);}
- olmSave('final');
- M.phase='ov';const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1];
+ olmSave('final');tallyQ();
+ let ach=[];try{ach=achAfterGame();}catch(e){console.warn('ach',e);}
+ M.phase='ov';M.box=false;const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1],canBox=!(L&&L.net);
  if(W)boom();else sfx('bad');
- M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div><button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div>`,acts:[finishMatch]};
+ const achTxt=ach.length?`<div class="s7 yl" style="line-height:1.7">🏆 ${ach.map(a=>esc(a.n)).join(' · ')}</div>`:'';
+ M.ov={html:()=>M.box?boxHTML():`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div>${achTxt}<div class="row ctr" style="gap:8px">${canBox?'<button class="bt big" data-a="gBox">BOX SCORE</button>':''}<button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div></div>`,acts:[finishMatch]};
 }
 function finishMatch(){if(L&&L.net)netsClear();if(L&&L.online&&!L.exh)olmClear();if(M&&M.olg&&L&&L.net)return olHostEnd();if(L&&L.net){const R=M.sc.slice(),op=M.op,u=L.user;NET.last=abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op);NET.glast=abbr(op)+' '+R[1]+' - '+R[0]+' '+abbr(u);netSend({t:'end',last:NET.glast});M=null;L=null;NET.stage='lobby';go('online');netLobbySend();return;}if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
@@ -4085,7 +4157,7 @@ function simOppDrive(s0){
    const r=Math.random(),sk=clamp(0.065-edge*0.09,0.02,0.13),ip=clamp(0.027-edge*0.045,0.008,0.065),cp=clamp(0.64+edge*0.6+STY.cp,0.42,0.86);
    if(r<sk){y=-ri(3,9);const d=pd('sack');credit(d,'sck',10);credit(d,'tkl',0);t=nmo(QB)+' SACKED BY '+nmd(d)+' ('+y+')';cls='good';}
    else if(r<sk+ip){const d=pd('int');credit(d,'dint',14);t='INTERCEPTED! '+nmd(d)+' PICKS OFF '+nmo(QB);s=Math.min(99,s+ri(5,25));
-    if(Math.random()<0.06){res='pick6';head='PICK SIX!';push(t+' · TOUCHDOWN!',()=>{M.sc[0]+=6;M.ts.td++;},'good');}
+    if(Math.random()<0.06){res='pick6';head='PICK SIX!';push(t+' · TOUCHDOWN!',()=>{M.sc[0]+=6;M.ts.td++;M.p6=true;},'good');}
     else{const ret=ri(0,18);s=Math.max(1,s-ret);res='int';head='INTERCEPTION!';push(t+(ret?' · RETURNED '+ret+' YDS':''),null,'good');}
     clk-=6;break;}
    else if(r<sk+ip+cp){y=Math.round(clamp(passY(edge)*(1+STY.deep),-1,75));const w=pick(TG);t=nmo(QB)+' TO '+nmo(w)+' FOR '+y;if(s+y<100)credit(pd('tkl'),'tkl',3);}
@@ -4453,7 +4525,7 @@ function resolveDef(){
   if(x<10){if(M.caughtInEZ)return clockCheck(()=>oppDrive(25,['TOUCHBACK']));M.sc[0]+=2;endDefDrive();if(M.qtr>=5)return gameOver();return clockCheck(()=>ourReturn(true));}
   return clockCheck(()=>oppDrive(clamp(Math.round(x)-10,1,99),[]));}
  if(M.play==='intret'){
-  if(k==='pick6'){M.sc[0]+=6;M.ts.td++;endDefDrive();return patChoice();}
+  if(k==='pick6'){M.sc[0]+=6;M.ts.td++;M.p6=true;endDefDrive();return patChoice();}
   const x=r.x;endDefDrive();return clockCheck(()=>x>=110?userBall(30,'INTERCEPTION · TOUCHBACK'):userBall(120-x,'INTERCEPTION!'));}
  if(k==='int'){const x=r.x;endDefDrive();return clockCheck(()=>x>=110?userBall(30,'INTERCEPTION · TOUCHBACK'):userBall(120-x,'INTERCEPTION!'));}
  if(k==='td'&&netHost()){M.sc[1]+=6;return netGuestPAT();}   /* online: your friend kicks the PAT or goes for two */
@@ -5432,7 +5504,7 @@ function upCam(dt){
 }
 function step(dt){
  if(M.slowmo>0){M.slowmo-=dt;dt*=0.38;}
- M.tt+=dt;if(warmQ.length)stepWarm();upChain(dt);stadiumBeat(dt);
+ M.tt+=dt;tallyQ();if(warmQ.length)stepWarm();upChain(dt);stadiumBeat(dt);
  for(const c of M.conf){c.x+=c.vx*dt;c.y+=c.vy*dt;c.vy+=60*dt;c.l-=dt;}M.conf=M.conf.filter(c=>c.l>0&&c.y<CH+10);
  for(const p of M.pops)p.a+=dt;M.pops=M.pops.filter(p=>p.a<1.1);
  if(M.shake>0)M.shake=Math.max(0,M.shake-dt*14);if(M.hype>0)M.hype-=dt;if(M.banT>0)M.banT-=dt;
