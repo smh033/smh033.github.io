@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Connection Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* Retro Football connection test: finds out where online lag comes from on a network (school Wi-Fi etc.) */
+:root{--bg:#0b0d1c;--panel:#1b2350;--line:#fff;--dim:#aab3e6;--yl:#ffd23a;--gr:#7dff8a;--rd:#ff7a70}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font-family:"Press Start 2P",monospace;font-size:10px;line-height:1.8;padding:16px}
+main{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:16px;margin:4px 0;text-align:center;color:var(--yl)}
+p{margin:0}.dim{color:var(--dim)}.gr{color:var(--gr)}.rd{color:var(--rd)}.yl{color:var(--yl)}
+.box{border:2px solid var(--line);background:var(--panel);padding:10px 12px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.15)}.row:last-child{border:0}
+.row span:last-child{text-align:right}
+button{font:inherit;font-size:11px;color:#000;background:var(--yl);border:2px solid #fff;padding:10px 14px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#verdict p{margin-bottom:8px}#verdict p:last-child{margin:0}
+</style>
+</head>
+<body>
+<main>
+<h1>CONNECTION TEST</h1>
+<p class="dim" style="text-align:center">RUN THIS ON THE WI-FI THAT LAGS. IT TAKES ABOUT 15 SECONDS.</p>
+<div class="btns"><button id="go">START TEST</button><button id="copy" disabled>COPY RESULTS</button></div>
+<div class="box" id="res"><div class="row"><span class="dim">NOT RUN YET</span><span></span></div></div>
+<div class="box" id="verdict" hidden></div>
+<p class="dim" style="text-align:center"><a href="index.html" style="color:var(--dim)">BACK TO THE GAME</a></p>
+</main>
+<script>
+'use strict';
+const RELAY='https://retrofootball-relay.troypokyxle0524.workers.dev',WSS=RELAY.replace('https:','wss:');
+const $=s=>document.querySelector(s),R={};
+const med=a=>{const b=a.slice().sort((x,y)=>x-y);return b.length?b[Math.floor(b.length/2)]:null;};
+const spread=a=>a.length?Math.max(...a)-Math.min(...a):null;
+const ms=v=>v==null?'—':Math.round(v)+' MS';
+const col=v=>v==null?'dim':v<80?'gr':v<150?'yl':'rd';
+function show(){const rows=[
+  ['CLOUDFLARE CITY',R.colo?R.colo+(R.city?' · '+R.city.toUpperCase():''):R.whereErr?'NEEDS RELAY UPDATE':'…'],
+  ['NETWORK',R.org?String(R.org).toUpperCase():R.whereErr?'—':'…'],
+  ['GAME ROOM CITY',R.roomColo||(R.whereErr?'—':'…')],
+  ['WEB REQUEST PING',ms(R.http),col(R.http)],
+  ['GAME CONNECTION PING',ms(R.ws),col(R.ws)],
+  ['GAME PING JUMPS BY',ms(R.wsJit),col(R.wsJit==null?null:R.wsJit*1.5)],
+  ['DIRECT LINK (UDP)',R.udp==null?'…':R.udp?'<span class="gr">ALLOWED</span>':'<span class="rd">BLOCKED</span>']];
+ $('#res').innerHTML=rows.map(([k,v,c])=>`<div class="row"><span class="dim">${k}</span><span class="${c||''}">${v}</span></div>`).join('');}
+/* 1. where: Cloudflare city, the network (ISP or web filter) traffic leaves through, and where a game room runs */
+async function where(){const code=Array.from({length:4},()=>String.fromCharCode(65+Math.floor(Math.random()*26))).join('');
+ try{const r=await fetch(RELAY+'/where?r='+code,{cache:'no-store'});if(!r.ok)throw 0;const j=await r.json();
+  R.colo=j.colo;R.city=j.city;R.org=j.org;R.roomColo=j.room&&j.room.colo;R.cfRtt=j.rtt;}catch(e){R.whereErr=true;}show();return code;}
+/* 2. ping with ordinary web requests (what websites use) */
+async function httpPing(){const t=[];for(let i=0;i<8;i++){const t0=performance.now();try{await fetch(RELAY+'/?p='+Math.random(),{cache:'no-store'});t.push(performance.now()-t0);}catch(e){}}
+ t.shift();R.http=med(t);show();}
+/* 3. ping over a live game connection (the same WebSocket the game uses) */
+function wsPing(code){return new Promise(res=>{const t=[];let ws,t0=0,n=0,done=false;const end=()=>{if(done)return;done=true;try{ws.close();}catch(e){}R.ws=med(t);R.wsJit=t.length>2?spread(t.slice().sort((a,b)=>a-b).slice(0,-1)):null;show();res();};
+ try{ws=new WebSocket(WSS+'/r/'+code);}catch(e){return end();}
+ const send=()=>{if(n++>=12)return end();t0=performance.now();try{ws.send('{"ping":1}');}catch(e){end();}};
+ ws.onopen=()=>send();ws.onmessage=e=>{if(e.data==='{"pong":1}'&&t0){const v=performance.now()-t0;if(n>1)t.push(v);t0=0;setTimeout(send,250);}};
+ ws.onerror=ws.onclose=()=>end();setTimeout(end,12000);});}
+/* 4. can this device reach the internet over UDP? (needed for the direct device-to-device link) */
+function udpCheck(){return new Promise(res=>{let pc,srflx=false;const end=()=>{try{pc&&pc.close();}catch(e){}R.udp=srflx;show();res();};
+ try{pc=new RTCPeerConnection({iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun.cloudflare.com:3478']}]});}catch(e){R.udp=false;show();return res();}
+ pc.createDataChannel('t');pc.onicecandidate=e=>{if(e.candidate&&/ typ srflx/.test(e.candidate.candidate))srflx=true;if(!e.candidate)end();};
+ pc.createOffer().then(o=>pc.setLocalDescription(o)).catch(end);setTimeout(end,5000);});}
+function verdict(){const out=[],ws=R.ws,http=R.http;
+ if(ws==null)out.push('<span class="rd">THE GAME CONNECTION COULDN\'T OPEN.</span> THIS NETWORK BLOCKS LIVE CONNECTIONS (WEBSOCKETS), SO ONLINE GAMES CAN\'T WORK ON IT.');
+ else if(ws<80)out.push('<span class="gr">THE CONNECTION TO THE GAME SERVER IS FAST.</span> IF GAMES STILL LAG, RUN THIS ON YOUR FRIEND\'S DEVICE TOO.');
+ else if(http!=null&&ws>http*1.6+40)out.push('<span class="rd">THE NETWORK IS SLOWING DOWN LIVE GAME CONNECTIONS.</span> NORMAL WEB REQUESTS ARE '+ms(http)+' BUT THE GAME CONNECTION IS '+ms(ws)+'. THAT IS USUALLY THE SCHOOL WEB FILTER HOLDING UP LIVE TRAFFIC.');
+ else out.push('<span class="yl">EVERYTHING ON THIS NETWORK TAKES A LONG TRIP</span> ('+ms(http)+' EVEN FOR NORMAL WEB REQUESTS), SO THE DELAY IS BEFORE THE GAME SERVER, NOT IN IT.');
+ if(R.colo&&R.roomColo&&R.colo!==R.roomColo)out.push('YOUR TRAFFIC REACHES CLOUDFLARE IN '+R.colo+' BUT GAME ROOMS RUN IN '+R.roomColo+'.');
+ if(R.udp===false)out.push('DIRECT DEVICE-TO-DEVICE LINKS ARE BLOCKED HERE, SO EVERY GAME GOES THROUGH THE SERVER.');
+ else if(R.udp)out.push('DIRECT LINKS CAN GET OUT, SO TWO DEVICES MAY BE ABLE TO CONNECT TO EACH OTHER DIRECTLY.');
+ out.push('<span class="dim">TAP COPY RESULTS AND SEND THEM SO THE GAME CAN BE TUNED FOR THIS NETWORK.</span>');
+ $('#verdict').innerHTML=out.map(x=>`<p>${x}</p>`).join('');$('#verdict').hidden=false;}
+$('#go').onclick=async()=>{$('#go').disabled=true;$('#copy').disabled=true;$('#verdict').hidden=true;for(const k in R)delete R[k];show();
+ const code=await where();await httpPing();await wsPing(code);await udpCheck();verdict();$('#go').disabled=false;$('#go').textContent='RUN AGAIN';$('#copy').disabled=false;};
+$('#copy').onclick=()=>{const t='RETRO FOOTBALL CONNECTION TEST\n'+[...document.querySelectorAll('#res .row')].map(r=>r.innerText.replace(/\n/g,': ')).join('\n')+(R.cfRtt?'\nCLOUDFLARE TCP RTT: '+R.cfRtt+' MS':'')+'\nDEVICE: '+navigator.userAgent;
+ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('#copy').textContent='COPIED!';setTimeout(()=>$('#copy').textContent='COPY RESULTS',1500);}).catch(()=>prompt('COPY THIS:',t));};
+</script>
+</body>
+</html>

@@ -15,6 +15,14 @@ const SKIN_KEY_HASH = '708fb806a1bc6cb0bdb5b7b779712007d8b9143f2f9fd20e9b5d58401
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    /* connection test (nettest.html): which Cloudflare city and network this request came through, and where a
+       game room for ?r=CODE runs. Lets a slow school network show whether the delay is the network or the relay. */
+    if (url.pathname === '/where') {
+      const cf = req.cf || {}, r = url.searchParams.get('r');let room = null;
+      if (r && /^[A-Z]{4}$/.test(r)) { try { room = await (await env.ROOMS.get(env.ROOMS.idFromName(r)).fetch('https://room/where')).json(); } catch (e) {} }
+      return new Response(JSON.stringify({ colo: cf.colo, city: cf.city, region: cf.region, country: cf.country, org: cf.asOrganization, asn: cf.asn, rtt: cf.clientTcpRtt, room }),
+        { headers: Object.assign({ 'content-type': 'application/json', 'cache-control': 'no-store' }, CORS) });
+    }
     /* skins added from the fitter page: anyone can read them, only the fitter key can change them */
     if (url.pathname === '/sk') {
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -39,7 +47,11 @@ export default {
 };
 export class Room {
   constructor(state) { this.state = state; }
-  async fetch() {
+  async fetch(req) {
+    if (new URL(req.url).pathname === '/where') {   /* the Cloudflare city this room runs in (for the connection test) */
+      if (!this.colo) { try { this.colo = ((await (await fetch('https://www.cloudflare.com/cdn-cgi/trace')).text()).match(/colo=(\w+)/) || [])[1]; } catch (e) {} }
+      return new Response(JSON.stringify({ colo: this.colo || null }), { headers: { 'content-type': 'application/json' } });
+    }
     const [client, server] = Object.values(new WebSocketPair());
     this.state.acceptWebSocket(server);
     server.serializeAttachment({ subs: [] });
