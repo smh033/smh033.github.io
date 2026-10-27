@@ -198,6 +198,8 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .shq{flex:1;background:none;border:0;color:#8fa6d0;font:inherit;font-size:7px;padding:5px 2px;cursor:pointer}.shq.on{background:#ffe600;color:#1a1400}
 .shc .shpr{background:#0c1430;padding:3px;line-height:1;display:flex;align-items:center;justify-content:center;gap:4px;font-size:9px}
 .shc:hover{filter:brightness(1.12)}
+.shsec{font-size:12px;font-style:italic;letter-spacing:1px;padding:2px 2px 0;text-shadow:2px 2px 0 #0a1430;flex-shrink:0}
+.shgrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;flex-shrink:0;padding-bottom:4px}
 .shnote{background:rgba(10,20,50,.6);padding:5px 8px 4px;font-size:7px;text-align:center}
 </style>
 </head>
@@ -1423,7 +1425,7 @@ function loadSkins(){const gen=SKINS.gen=(SKINS.gen||0)+1;let rem;if(SKINS.newer
   if(R&&Array.isArray(R.skins))for(const r of R.skins){if(!r||!r.id)continue;const i=list.findIndex(x=>x.id===r.id);
    if(r.hidden){if(i>=0)list.splice(i,1);continue;}
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
-  for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.code&&k.shop&&k.shop.price&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* a skin sold in the shop can't also be had with a code (the old codes); skins with only a code keep it */if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
+  for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&!k.shop.cat&&SHOP_SECTION_OF[k.id])k.shop.cat=SHOP_SECTION_OF[k.id];if(k.code&&k.shop&&k.shop.price&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* a skin sold in the shop can't also be had with a code (the old codes); skins with only a code keep it */if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
   for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{if(gen!==SKINS.gen)return;   /* an older picture finishing late never paints over the new one */SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}SHOPC.clear();clearTimeout(SKINS.rt);SKINS.rt=setTimeout(()=>{if(UI.scr!=='game')render();},150);};   /* one redraw after a batch of pictures, not one per picture */
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
@@ -1968,6 +1970,11 @@ ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NO
 const SHOP_DEFAULTS={'ck':{price:400,rarity:'rare'},'zero-two':{price:800,rarity:'legendary'},'tung-tung':{price:250,rarity:'uncommon'},'john':{price:600,rarity:'epic'},
  'ninja':{price:800,rarity:'legendary'},'steve':{price:600,rarity:'epic'},'richard':{price:400,rarity:'rare'},
  '00-king':{price:700,rarity:'icon',show:'rap'}};
+/* shop sections: rows that sit under the daily items on the DAILY page (like Fortnite's shop), always in stock.
+   A skin joins one by having "shop": {..., "cat": "<cat>"} in the fitter; the ids here are in their section by default.
+   Skins in a section don't show up in the daily rotation. */
+const SHOP_SECTIONS=[{cat:'gaming',name:'GAMING',ids:['sonic','shadow','crashbandicoot','robloxnoob','dva','john','steve']}];
+const SHOP_SECTION_OF={};for(const S of SHOP_SECTIONS)for(const id of S.ids)SHOP_SECTION_OF[id]=S.cat;
 const RARITY={uncommon:['#3f9a2e','#7ad04f','UNCOMMON'],rare:['#1d6fd0','#4fb4ff','RARE'],epic:['#7a2fc2','#c56bff','EPIC'],legendary:['#c8641a','#ffb347','LEGENDARY'],icon:['#0a7d86','#3ff0e6','ICON SERIES']};
 const dayKey=(d=new Date(NOW()))=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 function seedRand(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0)/4294967296;};}
@@ -2045,7 +2052,11 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
   <div class="col" style="flex:1;gap:6px;min-width:0">
    <div class="shbar"><button class="bt ${!cat?'y':''}" data-a="shopCat" data-v="" style="padding:4px 8px 3px">DAILY</button>${hw.length?`<button class="bt ${cat==='halloween'?'y':''}" data-a="shopCat" data-v="halloween" style="padding:4px 8px 3px;display:inline-flex;gap:4px;align-items:center">${hwPumpkin(1)} HALLOWEEN</button>`:''}<div class="sp"></div>${cat?'<span class="s7 yl">LIMITED TIME</span>':`<span class="s7 dim">NEW ITEMS IN</span><span class="s10" id="shopT">${shopLeft()}</span>`}</div>
    ${cat==='halloween'?`<div class="bpwrap scroll" id="shw" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)" style="gap:8px;justify-content:flex-start;align-items:flex-start">${hw.slice().sort((a,b)=>(+a.shop.price)-(+b.shop.price)).map(k=>shopCard(k,true)).join('')}</div>`
-   :`<div class="row" style="gap:8px;align-items:stretch;justify-content:center">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>`}
+   :`<div class="col scroll" style="flex:1;gap:8px">
+    <div class="shsec">FEATURED</div>
+    <div class="row" style="gap:8px;align-items:stretch;justify-content:center;flex-shrink:0">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>
+    ${SHOP_SECTIONS.map(S=>{const p=shopPool(S.cat).sort((a,b)=>(+a.shop.price)-(+b.shop.price)||(a.id<b.id?-1:1));return p.length?`<div class="shsec">${esc(S.name)}</div><div class="shgrid">${p.map(k=>shopCard(k,true)).join('')}</div>`:'';}).join('')}
+   </div>`}
    <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY (NO GAMEPLAY CHANGES)</div>
   </div></div></div>`;};
 ACT.shop=()=>{if(!SKINS.ok)loadSkins();else skinsRecheck();go('shop');};
