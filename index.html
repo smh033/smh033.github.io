@@ -277,9 +277,9 @@ const NFL_LOGO_ESPN_SLUGS={LA:'lar',WAS:'wsh'};
 const NFL_FIELD_LOGOS=Object.create(null);
 const NFL_FIELD_LOGO_PENDING=new Set();
 const NFL_FIELD_LOGO_FAILED=new Set();
-const CUST_LOGO={team:null,src:null};
+const CUST_LOGO={};   /* team -> uploaded logo: yours, plus the other coaches' in an online league */
 function loadFieldLogo(teamId){
- if(CUST_LOGO.team===teamId&&CUST_LOGO.src){const im=NFL_FIELD_LOGOS[teamId];return im&&im.complete&&im.naturalWidth?im:null;}   /* your own uploaded logo */
+ if(CUST_LOGO[teamId]){const im=NFL_FIELD_LOGOS[teamId];return im&&im.complete&&im.naturalWidth?im:null;}   /* an uploaded logo */
  if(NFL_FIELD_LOGOS[teamId]&&NFL_FIELD_LOGOS[teamId].complete&&NFL_FIELD_LOGOS[teamId].naturalWidth)return NFL_FIELD_LOGOS[teamId];
  if(NFL_FIELD_LOGO_PENDING.has(teamId)||NFL_FIELD_LOGO_FAILED.has(teamId))return null;
  const team=TEAMS[teamId];if(!team)return null;
@@ -515,12 +515,13 @@ function applyCustomTeam(){
  const c=L&&L.custom,u=L?L.user:null,t=u!=null?TEAMS[u]:null;
  if(c&&t){if(c.city)t.city=c.city;if(c.nick)t.nickname=c.nick;t.name=t.city+' '+t.nickname;}
  if(L&&L.seats)for(const k in L.seats){const o=L.seats[k].custom,tt=TEAMS[+k];if(+k===u||!o||!tt)continue;if(o.city)tt.city=o.city;if(o.nick)tt.nickname=o.nick;tt.name=tt.city+' '+tt.nickname;}
- const src=c&&c.logo||null,team=src?u:null;
- if(CUST_LOGO.team===team&&CUST_LOGO.src===src)return;
- const old=CUST_LOGO.team;if(old!=null){delete NFL_FIELD_LOGOS[old];NFL_FIELD_LOGO_FAILED.delete(old);for(const k in LOGO_MINI)if(k.startsWith(old+'|'))delete LOGO_MINI[k];}
- CUST_LOGO.team=team;CUST_LOGO.src=src;
- if(team!=null){for(const k in LOGO_MINI)if(k.startsWith(team+'|'))delete LOGO_MINI[k];const im=new Image();im.onload=()=>{for(const k in LOGO_MINI)if(k.startsWith(team+'|'))delete LOGO_MINI[k];if(M&&M.fieldCvs)M.fieldCvs=[];};im.src=src;NFL_FIELD_LOGOS[team]=im;}
- if(M&&M.fieldCvs)M.fieldCvs=[];
+ /* uploaded logos: yours, and in an online league every other coach's too (their seat carries it), so both players see both */
+ const want={};if(c&&c.logo&&u!=null)want[u]=c.logo;
+ if(L&&L.seats)for(const k in L.seats){const o=L.seats[k].custom;if(+k!==u&&o&&o.logo&&TEAMS[+k])want[+k]=o.logo;}
+ const mini=t=>{for(const k in LOGO_MINI)if(k.startsWith(t+'|'))delete LOGO_MINI[k];};let ch=false;
+ for(const t in CUST_LOGO)if(CUST_LOGO[t]!==want[t]){delete CUST_LOGO[t];delete NFL_FIELD_LOGOS[t];NFL_FIELD_LOGO_FAILED.delete(+t);mini(t);ch=true;}
+ for(const t in want)if(CUST_LOGO[t]!==want[t]){const src=CUST_LOGO[t]=want[t];mini(t);const im=new Image();im.onload=()=>{mini(t);if(M&&M.fieldCvs)M.fieldCvs=[];};im.src=src;NFL_FIELD_LOGOS[t]=im;ch=true;}
+ if(ch&&M&&M.fieldCvs)M.fieldCvs=[];
 }
 function teamCol(t){const c=custOf(t);if(c&&c.c1)return{c1:c.c1,c2:c.c2};return{c1:T(t).c1,c2:T(t).c2};}
 const abbr=t=>{const c=custOf(t);return c&&c.abbr?c.abbr:T(t).abbr;};
@@ -5758,7 +5759,7 @@ function drawLogoLayer(sh,maxY){
   if(o.face<0)m=m.scale(-1,1);
   m=m.translate(-6*u,-16*u+bob);if(o.pose)m=m.translate((o.pose.dx||0)*u,(o.pose.dy||0)*u);return m;};
  const boxes=Q.map(q=>{const o=q.o||{},u=o.u||2;return{x0:q.sx-5*u,x1:q.sx+5*u,y0:q.sy-(o.down?7:15)*u,y1:q.sy};});
- for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||lk.nohelm||(lk.spr&&SKINS.img[lk.spr]))continue;/* custom skins: no team logo */if(L&&lk.teamId===L.user&&L.custom&&L.custom.helmLogo===false)continue;
+ for(let i=0;i<Q.length;i++){const q=Q[i],o=q.o||{},lk=q.lk;if(!lk||lk.teamId==null||lk.nohelm||(lk.spr&&SKINS.img[lk.spr]))continue;/* custom skins: no team logo */if(L&&(custOf(lk.teamId)||{}).helmLogo===false)continue;
   const u=o.u||2,S=4.2*u,m=mat(q),c=m.transformPoint(new DOMPoint(4.2*u,2.6*u));
   if(maxY!=null&&c.y+S/2>maxY)continue;
   /* hidden if a player drawn in front covers the helmet */
