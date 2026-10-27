@@ -192,7 +192,7 @@ body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middl
 .shbox{background:#13244a;border:2px solid #2d4f8a}.shhd{background:#2d4f8a;padding:5px 6px 4px;font-size:8px}
 .shbar{display:flex;align-items:center;gap:8px;background:#2d4f8a;padding:6px 8px 5px}
 .shc{display:flex;flex-direction:column;width:110px;background:radial-gradient(circle at 50% 35%,var(--c2),var(--c1) 70%);border:2px solid var(--c2);cursor:pointer;box-shadow:0 3px 0 rgba(0,0,30,.5)}
-.shc.big{width:150px;flex:0 0 150px}.shc .shimg{display:flex;align-items:flex-end;justify-content:center;flex:1}
+.shc.big{width:150px;flex:0 0 150px}.shc.sec{width:100px;flex:0 0 100px}.shc .shimg{display:flex;align-items:flex-end;justify-content:center;flex:1}
 .shc .shnm{background:rgba(10,20,50,.72);padding:4px 3px 3px;text-align:center;display:flex;flex-direction:column;gap:3px}
 .ccn{display:inline-block;image-rendering:pixelated;vertical-align:middle;flex:none}.cct{line-height:1;display:inline-block;padding-top:1px}.ccr{display:inline-flex;align-items:center;gap:5px}
 .shq{flex:1;background:none;border:0;color:#8fa6d0;font:inherit;font-size:7px;padding:5px 2px;cursor:pointer}.shq.on{background:#ffe600;color:#1a1400}
@@ -2025,11 +2025,11 @@ function dailyAfterGame(g){const d=dailyGet();let msgs=[];
 function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
  return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
 const SHOPC=new Map();
-function shopCard(k,big){const R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=big?8.5:3.4,W=big?150:110,H=big?144:57;   /* characters fill their cards */
+function shopCard(k,big){const sec=big==='sec',R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=sec?5.6:big?8.5:3.4,W=sec?100:big?150:110,H=sec?96:big?144:57;   /* characters fill their cards; 'sec' = section cards, 4 to a row */
  let src=SHOPC.get(k.id+'|'+u)||'';if(!src&&SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*3;cc.height=H*3;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();SHOPC.set(k.id+'|'+u,src);}   /* 3x for sharp cards (ultra-HD skins keep their detail); drawn once, then reused */
- return`<div class="shc${big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
+ return`<div class="shc${sec?' sec':big?' big':''}" style="--c1:${R[0]};--c2:${R[1]}" ${own?'':`data-a="shopBuy" data-v="${esc(k.id)}"`}>
   <div class="shimg">${src?`<img src="${src}" width="${W}" height="${H}" style="image-rendering:pixelated">`:'<span class="s16">?</span>'}</div>
-  <div class="shnm"><div style="${(()=>{const nm=String(k.name||k.id),max=big?10:7,w=big?140:100,sz=Math.max(5,Math.min(max,Math.floor(w/(nm.length*0.95))));return'font-size:'+sz+'px;line-height:'+(max+2)+'px;';})()}white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
+  <div class="shnm"><div style="${(()=>{const nm=String(k.name||k.id),max=sec?8:big?10:7,w=sec?88:big?140:100,sz=Math.max(sec?4:5,Math.min(max,Math.floor(w/(nm.length*0.95))));return'font-size:'+sz+'px;line-height:'+(max+2)+'px;';})()}white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
   <div class="shpr">${own?'<span class="grt">OWNED</span>':`${CUR(2)}<span class="cct">${(+k.shop.price).toLocaleString()}</span>`}</div></div>`;}
 function shopRegister(){
 SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday(),cat=UI.shopCat||'',hw=shopPool('halloween');if(cat&&!hw.length)UI.shopCat='';
@@ -2055,7 +2055,7 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
    :`<div class="col scroll" style="flex:1;gap:8px">
     <div class="shsec">FEATURED</div>
     <div class="row" style="gap:8px;align-items:stretch;justify-content:center;flex-shrink:0">${grid||'<div class="s7 dim" style="padding:30px">NO SKINS IN THE SHOP YET</div>'}</div>
-    ${SHOP_SECTIONS.map(S=>{const p=shopPool(S.cat).sort((a,b)=>(+a.shop.price)-(+b.shop.price)||(a.id<b.id?-1:1));return p.length?`<div class="shsec">${esc(S.name)}</div><div class="shgrid">${p.map(k=>shopCard(k,true)).join('')}</div>`:'';}).join('')}
+    ${SHOP_SECTIONS.map(S=>{const p=shopPool(S.cat).sort((a,b)=>(+a.shop.price)-(+b.shop.price)||(a.id<b.id?-1:1));return p.length?`<div class="shsec">${esc(S.name)}</div><div class="shgrid">${p.map(k=>shopCard(k,'sec')).join('')}</div>`:'';}).join('')}
    </div>`}
    <div class="shnote"><b>NOTE:</b> SKINS ARE COSMETIC ONLY (NO GAMEPLAY CHANGES)</div>
   </div></div></div>`;};
