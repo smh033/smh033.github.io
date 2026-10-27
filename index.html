@@ -6518,7 +6518,7 @@ function netGuestStart(m){
  M.fieldCvs=[];M.ov=null;M.phase='dead';M.dir=1;M.udir=1;
  NET.gdir=dirPref();
  if(!m.olg){netsStart(m);netsPut({role:'guest',code:NET.code,tok:NET.tok,lob:NET.lob});}}
-function netPuppets(R){const O=[],D=[],all=[];for(const r of R){const f={pl:r[0]>=0?P(r[0]):null,side:r[1],role:r[2],key:r[3],lk:r[4]?Object.assign({},r[4]):null,star:!!r[5],x:0,y:0,vx:0,vy:0,face:1,t:0,route:null,rlen:0,man:null,zone:null,blitz:false};(f.side==='O'?O:D).push(f);all.push(f);}return{O,D,all};}
+function netPuppets(R){const O=[],D=[],all=[];for(const r of R){const f={pl:r[0]>=0?P(r[0]):null,side:r[1],role:r[2],key:r[3],lk:r[4]?Object.assign({},r[4]):null,star:r[0]>=0&&!!P(r[0])&&P(r[0]).team===L.user,x:0,y:0,vx:0,vy:0,face:1,t:0,route:null,rlen:0,man:null,zone:null,blitz:false};(f.side==='O'?O:D).push(f);all.push(f);}return{O,D,all};}
 /* one snapshot's one-off things (popups, sounds, the popup window), applied once when its moment comes */
 function netTake(e){if(e.done)return;e.done=true;if(e.ov!==undefined)NET.ovH=e.ov;
  for(const x of e.ev||[]){try{if(x[0]==='p')pop(x[1],x[2],x[3],x[4]);else if(x[0]==='b')banner(x[1],/YOU|YOUR/.test(x[2]||'')?'':x[2],x[3],x[4]);else if(x[0]==='s')sfx(x[1]);else if(x[0]==='boom')boom();else if(x[0]==='cr')crowd(x[1],x[2]);}catch(err){}}}
