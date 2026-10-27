@@ -4306,7 +4306,7 @@ function applyDefCall(){
  for(const f of D){f.blitz=false;f.zone=null;}
  const c=M.dcall||'MAN';
  if(c==='MAN'){if(db[0])db[0].man=M.w1;if(db[1])db[1].man=M.w2;if(lb[1])lb[1].man=M.te;if(lb[0])lb[0].man=M.rb;}
- else if(c==='BLITZ'){if(db[0])db[0].man=M.w1;if(db[1])db[1].man=M.w2;for(const f of lb){f.blitz=true;f.man=null;}if(sf){sf.man=M.te;sf.role='DB';sf.x=Math.min(119,los+6);}}
+ else if(c==='BLITZ'){if(db[0])db[0].man=M.w1;if(db[1])db[1].man=M.w2;for(const f of lb){f.blitz=true;f.man=null;}if(lb[0])lb[0].man=M.rb;if(sf){sf.man=M.te;sf.role='DB';sf.x=Math.min(119,los+6);}}
  else if(c==='ZONE'){const z=(f,x,y)=>{if(f){f.man=null;f.zone={x:Math.min(119,x),y:clamp(y,3,50)};}};
   z(db[0],los+9,(M.w1?M.w1.y:by-14));z(db[1],los+9,(M.w2?M.w2.y:by+14));z(lb[0],los+5,by-6);z(lb[1],los+5,by+6);}
  else{/* PREVENT: everyone deep, nothing over the top */const z=(f,x,y)=>{if(f){f.man=null;f.zone={x:Math.min(119,x),y:clamp(y,3,50)};f.x=Math.min(119,Math.max(f.x,x-4));}};
@@ -4724,7 +4724,7 @@ function throwBall(ai){
  const d=Math.hypot(tx-ai.x0,ty-ai.y0),T=Math.max(0.12,d/ai.v);
  const F=makeFlight(ai.x0,ai.y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,T,ai.bullet?PASS.G:PASS.G_LOB);
  M.ball={F,t:0,T:F.T,Tg:F.Tg,x0:F.x0,y0:F.y0,x1:tx,y1:ty,bullet:ai.bullet};
- if(M.def&&!netHost()&&L.settings.autoSw!==false)autoCtlBall(tx,ty);   /* setting: AUTO SWITCH ON THROWS */
+ if(M.def&&!netHost()&&L.settings.autoSw!==false)autoCtlBall(tx,ty);else if(netHost()&&!M.def)netSwitch(tx,ty);   /* online: your friend on defense jumps to the defender nearest the throw */   /* setting: AUTO SWITCH ON THROWS */
  window.__pass.last={plan:ai.F,actual:F,err:ai.err};
  M.thrown=true;M.aim=null;M.input=null;q.throwT=0.3;sfx('kick');
  // Who the throw was probably meant for: only used so that receiver keeps
@@ -5134,7 +5134,9 @@ function upDef(f,dt){
  if(M.play==='ret'){steer(f,M.land.x+2,M.land.y+(f.lane||0),f.spd,18,dt);return;}
  const b=M.ball;
  if(b&&f.hawk&&b.t>f.react){steer(f,b.x1,b.y1,f.spd,f.acc+4,dt);return;}
- if(f.role==='DL'||f.blitz){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
+ /* a blitzing linebacker who has the back peels off when the back releases on a route (screens, swings, flats) */
+ const peel=f.blitz&&f.role==='LB'&&f.man&&f.man.role==='RB'&&M.play==='pass'&&M.pt>0.25&&f.man.route&&f.man.route.length&&(f.man.x>M.los-1||(M.qb&&Math.abs(f.man.y-M.qb.y)>3.5));
+ if(!peel&&(f.role==='DL'||f.blitz)){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
  if(f.role==='S'){
   // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
   // running vertically against a slower linebacker - instead of just floating in the middle.
@@ -5152,8 +5154,12 @@ function upDef(f,dt){
  /* zone coverage (defense mode calls): sit in the area, shade the nearest receiver, break on the throw */
  if(f.zone){const z=f.zone;
   if(M.thrown&&M.ball&&M.ball.F){if(M.ball.t>(f.react||0.3))steer(f,M.ball.x1,M.ball.y1,f.spd,f.acc+4,dt);else steer(f,f.x,f.y,0,10,dt);return;}
-  let r=null,bd=8;for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}}
-  const tx=r?lerp(z.x,r.x+1,0.7):z.x,ty=r?lerp(z.y,r.y,0.7):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95,f.acc,dt);return;}
+  const lbz=f.role==='LB';let r=null,bd=lbz?10:8,fl=null,fd=12;for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;if(lbz&&M.D.some(g=>g!==f&&g.role==='LB'&&g.zt===o))continue;   /* two linebackers never take the same man */const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}
+   if(lbz&&dd<fd&&o.x<M.los+3&&o.route&&Math.hypot(o.vx||0,o.vy||0)>2&&M.qb&&Math.abs(o.y-M.qb.y)>3.5){fd=dd;fl=o;}}if(fl)r=fl;
+  if(lbz&&!r){let id=18;for(const o of M.O){if((o.role!=='TE'&&o.role!=='RB')||!o.route||M.D.some(g=>g!==f&&(g.zt===o||g.man===o)))continue;const dd=Math.hypot(o.x-f.x,o.y-f.y);if(dd<id){id=dd;r=o;}}}   /* nobody in his area: he goes and gets the TE or back nobody has */
+  f.zt=lbz?r:null;   /* linebackers carry the TE through their area, and jump a man who leaks out to the flat (screens, swings) */
+  if(lbz&&r&&(r.role==='TE'||r.role==='RB')){const sp=Math.max(f.spd,r.spd*1.05),ld=clamp(Math.hypot(f.x-r.x,f.y-r.y)/sp,0.1,0.8);steer(f,Math.min(r.x+r.vx*ld+0.4,119.5),r.y+r.vy*ld,sp*0.97,Math.max(f.acc,21),dt);return;}   /* carrying the TE or back: stay on him like man coverage */
+  const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95,f.acc,dt);return;}
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,2.2));
   if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
   const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
@@ -5161,8 +5167,8 @@ function upDef(f,dt){
   if(parked){steer(f,Math.min(m.x+0.7,119.5),m.y,f.spd*0.85,f.acc*0.8,dt);return;}
   /* your defenders (defense mode) close back on a receiver who has gotten behind them */
   const trail=M.def&&m.x>f.x-0.3&&d2(f,m)<5?1.09:1;
-  const te=m.role==='TE'&&f.role==='LB',sp=te?Math.max(f.spd,m.spd*1.1):f.spd,ac=te?Math.max(f.acc,21):f.acc,ld=te?0.04:0.1;   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free) */
-  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:1),119.5),m.y+m.vy*ld,sp*0.97*trail,ac,dt);return;}
+  const te=m.role==='TE'&&f.role==='LB',rb=m.role==='RB'&&f.role==='LB',sp=te||rb?Math.max(f.spd,m.spd*(te?1.1:m.x<M.los+1?1.2:1.05)):f.spd,ac=te||rb?Math.max(f.acc,21):f.acc,ld=te?0.04:rb?clamp(Math.hypot(f.x-m.x,f.y-m.y)/sp,0.2,1.2):0.1;   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free); on the back he takes an angle to where he's going (screens and swings) */
+  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:rb?0:1),119.5),m.y+m.vy*ld,sp*0.97*trail,ac,dt);return;}
  steer(f,f.x,f.y,0,10,dt);
 }
 function doCatch(f,bp){
@@ -6377,7 +6383,9 @@ function rctlMove(f,dt){M.rAt=M.pt;const v=M.rjoy;
  steer(f,clamp(f.x+v.x*5,-1,121),clamp(f.y+v.y*5,0,53.3),f.spd*(0.35+0.68*v.m),f.acc+12,dt);}
 function rctlPre(dt){const v=M.rjoy,f=M.rctl;if(!f)return;const sp=6.5*v.m,nx=clamp(f.x+v.x*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
  f.x=nx;f.y=ny;f.moved=true;/* zone stays put (like Madden): his line points to its centre */preAnim(f,dx,dy,dt);}
-function netSwitch(){const t=M.carrier||(M.ball&&M.ball.F?{x:M.ball.F.x1,y:M.ball.F.y1}:M.qb);if(!t)return;let best=null,bd=1e9;for(const f of M.D){if(f===M.rctl||f.stun>0||(f.down>0&&!(f.dive>0)))continue;const d=Math.hypot(f.x-t.x,f.y-t.y);if(d<bd){bd=d;best=f;}}if(best){M.rctl=best;M.rkey=best.key;}}
+function netSwitch(x,y){const t=x!=null?{x,y}:M.carrier||(M.ball&&M.ball.F?(M.primary||{x:M.ball.F.x1,y:M.ball.F.y1}):M.qb);if(!t)return;netEnsureKeys();
+ let best=null,bd=1e9;for(const f of M.D){if(f.role==='DL'||f.eng||f.stun>0||(f.down>0&&!(f.dive>0)))continue;const d=Math.hypot(f.x-t.x,f.y-t.y);if(d<bd){bd=d;best=f;}}
+ if(best){M.rctl=best;M.rkey=best.key;}}   /* the defender nearest the ball (or the receiver it's thrown to); if that's already you, you stay on him */
 function netThrow(tx,ty,bu){const q=M.qb;if(!q)return;M.passBullet=!!bu;let best=null;const gx0=wx(tx)-wx(q.x),gy0=wy(ty)-wy(q.y),l0=Math.hypot(gx0,gy0)||1;
  for(let pull=PASS.PULL_MIN;pull<=PASS.PULL_MAX+10;pull+=3){const a={sx:320,sy:200,cx:320-gx0/l0*pull,cy:200-gy0/l0*pull};const ai=aimInfo(a);if(ai.run)continue;const e=Math.hypot(ai.tx-tx,ai.ty-ty);if(!best||e<best.e)best={e,ai};}
  if(best){M.aiQB=null;throwBall(best.ai);}}
