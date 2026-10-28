@@ -2379,7 +2379,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}<button class="bt" data-a="pdOpen">📋 PLAY DESIGNER</button><button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -2451,7 +2451,7 @@ SCR.h2h=()=>{if(!L||!L.exh)return SCR.title();const s=h2hState();
    <div class="row ctr" style="gap:3px;flex-wrap:wrap"><span class="s7" style="width:84px">DIFFICULTY</span>${ch('diff',0,'EASY')}${ch('diff',1,'NORMAL')}${ch('diff',2,'HARD')}${ch('diff',4,'EXTREME')}</div>
    <div class="row ctr" style="gap:3px"><span class="s7" style="width:84px">YOU PLAY</span>${ch('mode','off','OFFENSE')}${ch('mode','def','DEFENSE')}${ch('mode','both','BOTH')}</div>
    <div class="row ctr" style="gap:3px"><span class="s7" style="width:84px">QUARTERS</span>${[120,180,240,300].map(q=>ch('qlen',q,q/60+':00')).join('')}</div>
-   <button class="bt" data-a="arcade" data-b="h2h">ARCADE MODE: ${arc()?'ON':'OFF'} · EDIT</button>
+   <button class="bt" data-a="pdOpen">MY PLAYS</button><button class="bt" data-a="arcade" data-b="h2h">ARCADE MODE: ${arc()?'ON':'OFF'} · EDIT</button>
    ${clash?'<div class="s7 rdt" style="text-align:center">JERSEY COLORS CLASH!</div>':''}
    <div class="s16" style="text-align:center;margin-top:4px">${s.home?'VS':'AT'}</div>
   </div>
@@ -2670,6 +2670,7 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
   <button class="bt grow" data-a="go" data-s="fo">FRONT OFFICE</button>
   <button class="bt grow" data-a="go" data-s="roster">ROSTER</button>
   <button class="bt grow" data-a="go" data-s="hof">HALL OF FAME</button>
+  <button class="bt grow" data-a="pdOpen">MY PLAYS</button>
   <button class="bt y grow" data-a="hubGo">CONTINUE &gt;</button>
  </div></div>`;
 };
@@ -6547,7 +6548,7 @@ SCR.online=()=>{cfbSync(null);const s=NET;
   </div>
   ${side('g',host?'GUEST':'YOU (GUEST)')}
  </div>
- <div class="row" style="width:100%"><div class="sp"></div>${host?'<button class="bt y" style="width:160px;padding:8px 0 7px" data-a="netGo">PLAY &gt;</button>':'<span class="s7 yl blink">WAITING FOR THE HOST TO START</span>'}</div></div>`;};
+ <div class="row" style="width:100%"><button class="bt" data-a="pdOpen">MY PLAYS</button><div class="sp"></div>${host?'<button class="bt y" style="width:160px;padding:8px 0 7px" data-a="netGo">PLAY &gt;</button>':'<span class="s7 yl blink">WAITING FOR THE HOST TO START</span>'}</div></div>`;};
 function teamRatings0(t){try{return L&&L.teams&&L.players?teamRatings(t):null;}catch(e){return null;}}
 /* ---------- start ---------- */
 ACT.netGo=async()=>{if(NET.role!=='host'||!NET.connOpen)return;if(NET.oldV){render();return;}const o=NET.lob;
