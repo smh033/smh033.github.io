@@ -4627,7 +4627,11 @@ function snap(type){
  if(type==='run'){for(const f of M.O)if(f.role==='WR'||f.role==='TE')f.route=null;M.rb.route=null;}
 }
 function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;if(M.def){if(M.input!=='dctl')M.input=null;}else M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down&&!M.def)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
-function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier||trickBusy())return;M.scramble=true;setCarrier(M.qb);pop(M.qb.role==='QB'?'QB KEEPER':'KEEPS IT',M.qb.x,M.qb.y,'#ffe94a');}
+function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier||trickBusy())return;M.scramble=true;setCarrier(M.qb);
+ /* the QB escapes the pocket first: a quick roll-out toward the side with fewer rushers, staying behind his line,
+    then he turns upfield (running straight ahead used to put him right into the pile: a loss every time) */
+ {const q=M.qb;let up=0,dn=0;for(const d of M.D){if(d.stun>0||Math.hypot(d.x-q.x,d.y-q.y)>9)continue;const w=d.eng?0.4:1;if(d.y<q.y)up+=w;else dn+=w;}
+  const dir=up<dn?-1:up>dn?1:(q.y<26.67?1:-1);if(q.x<M.los+0.5){q.esc=0.5;q.ty=clamp(q.y+dir*6.5,2,51.3);}}pop(M.qb.role==='QB'?'QB KEEPER':'KEEPS IT',M.qb.x,M.qb.y,'#ffe94a');}
 
 /* =====================================================================
    PASSING — custom slingshot model
@@ -5198,7 +5202,8 @@ function upCarrier(c,dt){
  const fat=1-clamp(((c.runT||0)-3.0)*0.07*(1.35-A(c,'stm')*0.06),0,0.28);   /* long sprints (route + run after catch) wear him down */
  const sp=c.spd*(c.slow>0?0.55:1)*fat*(M.def&&c.side==='O'?(M.play==='run'?CPU_RUN_SP:0.92):1)*(M.play==='run'&&c.side==='O'&&!M.def?RUN_SP*(c.role==='QB'?0.95:1):1),vmax=sp*1.1;   /* designed runs: a back carrying it into traffic isn't at full sprint */   // side-steps are quick, like Retro Bowl
  if(c.ty==null)c.ty=c.y;
- const vyT=clamp((c.ty-c.y)*14,-vmax,vmax),vxT=sp*(1-0.28*Math.abs(vyT)/vmax);
+ if(c.esc>0)c.esc-=dt;const roll=c.esc>0&&c.x<M.los;   /* QB rolling out of the pocket: mostly sideways */
+ const vyT=clamp((c.ty-c.y)*14,-vmax,vmax),vxT=roll?sp*0.12:sp*(1-0.28*Math.abs(vyT)/vmax);
  let ax=vxT-c.vx,ay=vyT-c.vy,mx=135*dt,am=Math.hypot(ax,ay);
  if(am>mx){ax*=mx/am;ay*=mx/am;}
  c.vx+=ax;c.vy+=ay;c.x+=c.vx*dt;c.y+=c.vy*dt;
