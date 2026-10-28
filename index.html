@@ -1284,7 +1284,8 @@ function startNewSeason(){
 }
 
 /* ---------- news / save ---------- */
-function news(s){if(!L)return;if(L.seats&&/^(You|Your) /.test(s))s=abbr(L.user)+': '+s;L.news.unshift({w:L.phase==='REG'?'WK '+L.week:L.phase==='PO'?'PLAYOFFS':'OFFSEASON',y:L.year,s});if(L.news.length>40)L.news.length=40;}
+function news(s){if(!L)return;if(L.seats&&/^(You|Your) /.test(s))s=abbr(L.user)+': '+s;
+ else if(L.seats&&/^(WIN|LOSS|TIE) (vs|at) /.test(s)){const m=s.match(/^(WIN|LOSS|TIE) (vs|at) (\S+) (\d+)-(\d+)\.$/);s=m?abbr(L.user)+(m[1]==='WIN'?' BEAT ':m[1]==='LOSS'?' LOST TO ':' TIED ')+m[3]+' '+m[4]+'-'+m[5]+(m[2]==='at'?' (AWAY)':' (HOME)')+'.':abbr(L.user)+' '+s;}   /* online league: everyone reads the same news, so say whose game it was */L.news.unshift({w:L.phase==='REG'?'WK '+L.week:L.phase==='PO'?'PLAYOFFS':'OFFSEASON',y:L.year,s});if(L.news.length>40)L.news.length=40;}
 /* Save slots: slot 1 keeps the original key so existing saves stay in slot 1. */
 const SLOTS_N=5;
 let SLOT=(()=>{try{return clamp(+localStorage.getItem('rf_slot')||1,1,SLOTS_N);}catch(e){return 1;}})();
