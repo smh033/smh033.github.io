@@ -5103,7 +5103,7 @@ function engage(b,d){
 function holdBlock(f,d,dt){const h=M.carrier||M.qb||f;const dx=h.x-d.x,dy=h.y-d.y,l=Math.hypot(dx,dy)||1;steer(f,d.x+dx/l*0.95,d.y+dy/l*0.95,4.5,30,dt);}
 function upOL(f,dt){
  if(f.blk&&(f.blk.stun>0||(f.blk.eng&&f.blk.eng!==f)||(f.blk.shed>0&&f.blk.eng!==f)))f.blk=null;
- if(!f.blk){let best=null,bd=4.5;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(M.O.some(o=>o!==f&&o.blk===d))continue;const dd=d2(f,d);if(dd<bd){bd=dd;best=d;}}f.blk=best;}
+ if(!f.blk){const pb=M.play==='pass'&&!M.carrier;let best=null,bd=4.5;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(pb&&d.role!=='DL'&&!d.blitz&&d.x>M.los+1.2)continue;   /* pass pro blocks rushers, not linebackers dropping into coverage (they were getting stuck and the TE ran free) */if(M.O.some(o=>o!==f&&o.blk===d))continue;const dd=d2(f,d);if(dd<bd){bd=dd;best=d;}}f.blk=best;}
  const d=f.blk;
  if(!d){steer(f,f.x+(M.play==='pass'&&!M.carrier?-0.4:0.6),f.y,1.6,10,dt);return;}
  if(d.eng===f)holdBlock(f,d,dt);else{steer(f,d.x-0.6,d.y,f.spd,30,dt);if(d2(f,d)<1.1&&!d.eng&&d.shed<=0)engage(f,d);}
@@ -5154,10 +5154,15 @@ function upDef(f,dt){
  /* zone coverage (defense mode calls): sit in the area, shade the nearest receiver, break on the throw */
  if(f.zone){const z=f.zone;
   if(M.thrown&&M.ball&&M.ball.F){if(M.ball.t>(f.react||0.3))steer(f,M.ball.x1,M.ball.y1,f.spd,f.acc+4,dt);else steer(f,f.x,f.y,0,10,dt);return;}
-  const lbz=f.role==='LB';let r=null,bd=lbz?10:8,fl=null,fd=12;for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;if(lbz&&M.D.some(g=>g!==f&&g.role==='LB'&&g.zt===o))continue;   /* two linebackers never take the same man */const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}
-   if(lbz&&dd<fd&&o.x<M.los+3&&o.route&&Math.hypot(o.vx||0,o.vy||0)>2&&M.qb&&Math.abs(o.y-M.qb.y)>3.5){fd=dd;fl=o;}}if(fl)r=fl;
-  if(lbz&&!r){let id=18;for(const o of M.O){if((o.role!=='TE'&&o.role!=='RB')||!o.route||M.D.some(g=>g!==f&&(g.zt===o||g.man===o)))continue;const dd=Math.hypot(o.x-f.x,o.y-f.y);if(dd<id){id=dd;r=o;}}}   /* nobody in his area: he goes and gets the TE or back nobody has */
-  f.zt=lbz?r:null;   /* linebackers carry the TE through their area, and jump a man who leaks out to the flat (screens, swings) */
+  const lbz=f.role==='LB',taken=o=>M.D.some(g=>g!==f&&(g.zt===o||g.man===o));let r=null,bd=8;
+  if(lbz){/* linebackers own the TE and the back (corners and the safety have the wide receivers): they stick with the one they pick up instead of flipping between men */
+   const ok=o=>o&&(o.role==='TE'||o.role==='RB')&&o.route&&o!==M.qb&&!taken(o);
+   if(ok(f.zt)&&Math.hypot(f.zt.x-f.x,f.zt.y-f.y)<14)r=f.zt;
+   if(!r){let fd=12;for(const o of M.O)if(ok(o)&&o.x<M.los+3&&Math.hypot(o.vx||0,o.vy||0)>2&&M.qb&&Math.abs(o.y-M.qb.y)>3.5){const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<fd){fd=dd;r=o;}}}   /* a man leaking to the flat (screens, swings) */
+   if(!r){let id=12;for(const o of M.O)if(ok(o)){const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<id){id=dd;r=o;}}}
+   if(!r){let id=18;for(const o of M.O)if(ok(o)){const dd=Math.hypot(o.x-f.x,o.y-f.y);if(dd<id){id=dd;r=o;}}}   /* nobody in his area: he goes and gets the TE or back nobody has */
+   f.zt=r;}
+  else for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}}
   if(lbz&&r&&(r.role==='TE'||r.role==='RB')){const sp=Math.max(f.spd,r.spd*1.05),ld=clamp(Math.hypot(f.x-r.x,f.y-r.y)/sp,0.1,0.8);steer(f,Math.min(r.x+r.vx*ld+0.4,119.5),r.y+r.vy*ld,sp*0.97,Math.max(f.acc,21),dt);return;}   /* carrying the TE or back: stay on him like man coverage */
   const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95,f.acc,dt);return;}
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,2.2));
@@ -5167,7 +5172,7 @@ function upDef(f,dt){
   if(parked){steer(f,Math.min(m.x+0.7,119.5),m.y,f.spd*0.85,f.acc*0.8,dt);return;}
   /* your defenders (defense mode) close back on a receiver who has gotten behind them */
   const trail=M.def&&m.x>f.x-0.3&&d2(f,m)<5?1.09:1;
-  const te=m.role==='TE'&&f.role==='LB',rb=m.role==='RB'&&f.role==='LB',sp=te||rb?Math.max(f.spd,m.spd*(te?1.1:m.x<M.los+1?1.2:1.05)):f.spd,ac=te||rb?Math.max(f.acc,21):f.acc,ld=te?0.04:rb?clamp(Math.hypot(f.x-m.x,f.y-m.y)/sp,0.2,1.2):0.1;   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free); on the back he takes an angle to where he's going (screens and swings) */
+  const te=m.role==='TE'&&f.role!=='DL',rb=m.role==='RB'&&f.role==='LB',sp=te||rb?Math.max(f.spd,m.spd*(te?1.1:m.x<M.los+1?1.2:1.05)):f.spd,ac=te||rb?Math.max(f.acc,21):f.acc,gap=Math.hypot(f.x-m.x,f.y-m.y),ld=te?(gap>1.5?clamp(gap/sp,0.1,0.8):0.04):rb?clamp(gap/sp,0.2,1.2):0.1;   /* whoever has the TE (the safety on a blitz too) cuts him off once he's behind instead of chasing his back on crossers */   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free); on the back he takes an angle to where he's going (screens and swings) */
   steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:rb?0:1),119.5),m.y+m.vy*ld,sp*0.97*trail,ac,dt);return;}
  steer(f,f.x,f.y,0,10,dt);
 }
