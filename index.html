@@ -2379,7 +2379,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -8195,12 +8195,20 @@ async function syncPack(st){const txt=JSON.stringify({rfSave:1,at:Date.now(),dev
 async function syncUnpack(buf,code,pin){const b=new Uint8Array(buf);let z;
  try{z=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12)},await syncAes(code,pin),b.slice(12));}catch(e){throw new Error('WRONG PIN');}
  const j=JSON.parse(await new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream('gzip'))).text());if(!j||j.rfSave!==1)throw new Error('NOT A SYNC CODE');return j;}
-const syncUrl=c=>OL_URL+'/lg/'+c;
-async function syncFetch(st,have){const r=await fetch(syncUrl(st.code)+(have?'?have='+have:''),{cache:'no-store',signal:olTimeout()});
+const syncUrl=c=>OL_URL+'/lg/'+c,acctUrl=u=>OL_URL+'/acct/'+u;
+async function gunzipJ(buf){return JSON.parse(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text());}
+function acctLoggedOut(){const st=syncGet();if(st&&st.acct){syncSet(null);setTimeout(()=>toast('YOU WERE LOGGED OUT. LOG IN AGAIN FROM ACCOUNT'),300);if(UI.scr==='title')render();}}
+async function syncFetch(st,have){
+ if(st.acct){const r=await fetch(acctUrl(st.u)+(have?'?have='+have:''),{cache:'no-store',headers:{'x-tok':st.tok},signal:olTimeout()});
+  if(r.status===204)return null;if(r.status===401){acctLoggedOut();throw new Error('LOGGED OUT');}if(!r.ok)throw new Error('ACCOUNT SERVER ERROR '+r.status);
+  const v=+r.headers.get('x-v'),j=await gunzipJ(await r.arrayBuffer());if(!j||j.rfSave!==1)throw new Error('BAD SAVE');return{v,j};}
+ const r=await fetch(syncUrl(st.code)+(have?'?have='+have:''),{cache:'no-store',signal:olTimeout()});
  if(r.status===204)return null;if(r.status===404)throw new Error('NO SAVES ON THAT CODE');if(!r.ok)throw new Error('SYNC SERVER ERROR '+r.status);
  const v=+r.headers.get('x-v');return{v,j:await syncUnpack(await r.arrayBuffer(),st.code,st.pin)};}
-async function syncPush(st){SY.lastPush=Date.now();const body=await syncPack(st),dirtyAt=st.dirty||0;
- const r=await fetch(syncUrl(st.code)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'raw'},body,signal:olTimeout()});
+async function syncPush(st){SY.lastPush=Date.now();const dirtyAt=st.dirty||0;let r;
+ if(st.acct){const body=await new Response(new Blob([JSON.stringify({rfSave:1,at:Date.now(),dev:st.dev,data:syncCollect()})]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+  r=await fetch(acctUrl(st.u)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'gz','x-tok':st.tok},body,signal:olTimeout()});if(r.status===401){acctLoggedOut();throw new Error('LOGGED OUT');}}
+ else{const body=await syncPack(st);r=await fetch(syncUrl(st.code)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'raw'},body,signal:olTimeout()});}
  if(r.status===409)return false;if(!r.ok)throw new Error('SYNC SERVER ERROR '+r.status);
  const j=await r.json();const cur=syncGet()||st;cur.v=j.v;cur.at=Date.now();if((cur.dirty||0)<=dirtyAt)cur.dirty=0;syncSet(cur);return true;}
 const syncIdle=()=>!M&&!UI.modal&&UI.scr!=='game'&&!(document.activeElement&&/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));   /* any menu, not mid-game or mid-typing */
@@ -8217,7 +8225,7 @@ async function syncNow(manual){const st=syncGet();if(!st||SY.busy)return;SY.busy
    setTimeout(()=>location.reload(),manual?400:50);if(manual)toast('SAVES SYNCED');return;}
   if(manual)toast('SAVES SYNCED');
  }catch(e){SY.err=String(e.message||e).toUpperCase();if(manual)toast(SY.err);console.warn('sync',e);}
- finally{SY.busy=0;if(UI.modal&&UI.modal.indexOf('data-a="syncOff"')>=0)ACT.sync();}}
+ finally{SY.busy=0;if(UI.modal&&UI.modal.indexOf('data-a="syncOff"')>=0)ACT.sync();if(UI.modal&&UI.modal.indexOf('data-a="acctOut"')>=0)ACT.acct();}}
 /* any save marks the device as changed */
 (function(){const S=Storage.prototype,st=S.setItem,rm=S.removeItem;
  const mark=k=>{if(SYNC_SKIP.test(String(k)))return;if(SY.onDirty&&!SY.applying)SY.onDirty();const now=Date.now();if(now-SY.dirtyMem<2000)return;SY.dirtyMem=now;const o=syncGet();if(o){o.dirty=now;try{st.call(localStorage,SYNC_KEY,JSON.stringify(o));}catch(e){}SY.st=o;}};
@@ -8249,6 +8257,58 @@ ACT.syncLink=async()=>{const el=document.getElementById('syncIn'),raw=String(el&
  if(SY.busy)return;SY.busy=1;SY.err='';try{const st={code:m[1],pin:m[2],v:0,dev:syncDev()};const got=await syncFetch(st,0);
   syncApply(got.j.data);syncSet(Object.assign(st,{v:got.v,at:Date.now(),dirty:0}));closeModal();toast('LINKED · LOADING YOUR SAVES');setTimeout(()=>location.reload(),600);}
  catch(e){SY.err=String(e.message||e).toUpperCase();ACT.sync();}finally{SY.busy=0;}};
+/* ---------- ACCOUNTS: a username (only one person can have it) and a password. Everything this device saves
+   (franchise saves, skins, candy corn, the pass, custom plays) goes to the account by itself, and logging in on
+   another device brings it all over. Replaces sync codes (an old sync code keeps working until you log in). ---------- */
+var ACC={tab:'in',err:'',busy:0,rec:null,on:false};   /* var: the title screen can draw before this line runs */
+/* accounts show up once the relay knows about them (until the new relay is published, SYNC DEVICES stays) */
+setTimeout(()=>{fetch(OL_URL+'/acct/probe_x?op=exists',{cache:'no-store'}).then(r=>r.json()).then(j=>{if(j&&'taken' in j){ACC.on=true;if(UI.scr==='title'&&!UI.modal)render();}}).catch(()=>{});},800);
+const acctName=v=>String(v||'').toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,16);
+const ACCT_BAD=['fuck','shit','bitch','cunt','nigg','fag','dick','pussy','cock','slut','whore','rape','nazi','hitler','retard','porn','sex','penis','vagina','kkk','chink','spic','kike','tranny'];
+const acctBad=u=>ACCT_BAD.some(w=>u.replace(/_/g,'').includes(w))||/^(admin|mod|moderator|retrofootball|official|staff)$/.test(u);
+async function acctPost(u,op,body){let r;try{r=await fetch(acctUrl(u)+'?op='+op,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body||{}),signal:olTimeout()});}catch(e){throw new Error('NO CONNECTION, TRY AGAIN');}
+ let j=null;try{j=await r.json();}catch(e){}if(!j)throw new Error('ACCOUNTS AREN\'T SWITCHED ON YET');if(!r.ok)throw new Error(j.err||('ERROR '+r.status));return j;}
+ACT.acct=()=>{if(!SHOP_ON)return;const st=syncGet(),when=t=>{if(!t)return'NOT YET';const s=Math.round((Date.now()-t)/1000);return s<60?'JUST NOW':s<3600?Math.round(s/60)+' MIN AGO':Math.round(s/3600)+' HR AGO';};
+ const err=ACC.err?`<div class="s7 rdt" style="line-height:1.6">${esc(ACC.err)}</div>`:'';
+ if(ACC.rec){modal(`<div class="mp" style="width:460px;align-items:center;text-align:center;gap:10px">${ttl('YOUR RECOVERY CODE',true)}
+  <div class="s7" style="line-height:1.7">IF YOU EVER FORGET YOUR PASSWORD, THIS CODE IS THE ONLY WAY BACK IN. WRITE IT DOWN OR SCREENSHOT IT NOW. YOU WON'T SEE IT AGAIN.</div>
+  <div class="s16 yl" style="letter-spacing:2px;user-select:all">${esc(ACC.rec)}</div><button class="bt y" data-a="acctRecOk">I SAVED IT</button></div>`);return;}
+ if(st&&st.acct){modal(`<div class="mp" style="width:440px;align-items:center;text-align:center;gap:10px">${ttl('ACCOUNT',true)}
+  <div class="s10">LOGGED IN AS <span class="yl">${esc(st.u.toUpperCase())}</span></div>
+  <div class="s7 dim" style="line-height:1.7">YOUR SAVES, SKINS, CANDY CORN, PASS AND PLAYS SAVE TO YOUR ACCOUNT BY THEMSELVES. LOG IN ON ANY DEVICE TO PICK UP WHERE YOU LEFT OFF.</div>
+  <div class="s7 dim">LAST SAVED: ${when(st.at)}${st.dirty?' · SAVING SOON':''}</div>${err}
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="syncGo">SAVE NOW</button><button class="bt r" data-a="acctOut">LOG OUT</button></div></div>`);return;}
+ const T=ACC.tab,tb=(v,l)=>`<button class="bt ${T===v?'y':''}" data-a="acctTab" data-v="${v}" style="padding:5px 8px 4px">${l}</button>`,inp=(id,ph,type,ml)=>`<input class="txt" id="${id}" type="${type||'text'}" maxlength="${ml||64}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${ph}" style="width:240px;text-align:center">`;
+ const old=st&&st.code?`<div class="s7 dim" style="line-height:1.6">THIS DEVICE USES A SYNC CODE. MAKING AN ACCOUNT OR LOGGING IN REPLACES IT.</div>`:'';
+ modal(`<div class="mp" style="width:460px;align-items:center;text-align:center;gap:8px">${ttl('ACCOUNT',true)}
+  <div class="row" style="gap:6px">${tb('in','LOG IN')}${tb('up','SIGN UP')}${tb('fix','FORGOT PASSWORD')}</div>
+  ${T==='up'?`<div class="s7 dim" style="line-height:1.6">PICK A USERNAME (3-16 LETTERS, NUMBERS OR _). ONCE IT'S YOURS NOBODY ELSE CAN HAVE IT. THIS DEVICE'S SAVES GO INTO YOUR NEW ACCOUNT.</div>${inp('acU','USERNAME','text',16)}${inp('acP','PASSWORD (6+)','password')}${inp('acP2','PASSWORD AGAIN','password')}`
+   :T==='fix'?`<div class="s7 dim" style="line-height:1.6">USE THE RECOVERY CODE YOU GOT WHEN YOU SIGNED UP.</div>${inp('acU','USERNAME','text',16)}${inp('acR','RECOVERY CODE (XXXX-XXXX-XXXX)','text',14)}${inp('acP','NEW PASSWORD (6+)','password')}`
+   :`${inp('acU','USERNAME','text',16)}${inp('acP','PASSWORD','password')}<div class="s7 rdt" style="line-height:1.6">LOGGING IN REPLACES THIS DEVICE'S SAVES WITH YOUR ACCOUNT'S.</div>`}
+  ${old}${err}<div class="s7 dim" style="line-height:1.5">DON'T USE A PASSWORD YOU USE ANYWHERE ELSE.</div>
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="acctGo">${T==='up'?'CREATE ACCOUNT':T==='fix'?'RESET PASSWORD':'LOG IN'}</button></div></div>`);
+ setTimeout(()=>{const i=$('#acU');if(i)i.focus();},50);};
+ACT.acctTab=d=>{ACC.tab=d.v;ACC.err='';ACT.acct();};
+ACT.acctRecOk=()=>{ACC.rec=null;if(ACC.after){const f=ACC.after;ACC.after=null;f();}else ACT.acct();};
+ACT.acctGo=async()=>{if(ACC.busy)return;const v=id=>{const e=document.getElementById(id);return e?e.value:'';},u=acctName(v('acU')),T=ACC.tab;
+ const fail=m=>{ACC.err=m;ACT.acct();};
+ if(u.length<3)return fail('USERNAME: 3-16 LETTERS, NUMBERS OR _');
+ if(T==='up'){if(acctBad(u))return fail('PICK A DIFFERENT USERNAME');if(v('acP').length<6)return fail('PASSWORD MUST BE AT LEAST 6 CHARACTERS');if(v('acP')!==v('acP2'))return fail('THE PASSWORDS DON\'T MATCH');}
+ else if(v('acP').length<6)return fail(T==='fix'?'NEW PASSWORD MUST BE AT LEAST 6 CHARACTERS':'WRONG PASSWORD');
+ ACC.busy=1;ACC.err='';try{
+  if(T==='up'){const j=await acctPost(u,'create',{pw:v('acP')});
+   syncSet({acct:1,u,tok:j.tok,v:0,dev:syncDev(),dirty:Date.now()});   /* this device's saves become the account's */
+   try{await syncPush(syncGet());const cur=syncGet();cur.at=Date.now();syncSet(cur);}catch(e){}
+   ACC.rec=j.rec;ACC.after=()=>{closeModal();toast('ACCOUNT CREATED · WELCOME '+u.toUpperCase());render();};ACT.acct();return;}
+  const j=await acctPost(u,T==='fix'?'reset':'login',T==='fix'?{rec:v('acR'),pw:v('acP')}:{pw:v('acP')});
+  const st={acct:1,u,tok:j.tok,v:0,dev:syncDev(),dirty:0};
+  const done=async()=>{if(j.v>0){const got=await syncFetch(st,0);if(got){syncApply(got.j.data);st.v=got.v;}syncSet(Object.assign(st,{at:Date.now(),dirty:0}));closeModal();toast('LOGGED IN · LOADING YOUR SAVES');setTimeout(()=>location.reload(),600);}
+   else{syncSet(Object.assign(st,{dirty:Date.now()}));try{await syncPush(syncGet());}catch(e){}closeModal();toast('LOGGED IN AS '+u.toUpperCase());render();}};
+  if(j.rec){ACC.rec=j.rec;ACC.after=()=>{done().catch(e=>{ACC.err=String(e.message||e).toUpperCase();ACT.acct();});};ACT.acct();return;}   /* new password: new recovery code */
+  await done();
+ }catch(e){fail(String(e.message||e).toUpperCase());}finally{ACC.busy=0;}};
+ACT.acctOut=async()=>{const st=syncGet();if(st&&st.acct){if(st.dirty){try{await syncPush(st);}catch(e){}}try{await fetch(acctUrl(st.u)+'?op=logout',{method:'POST',headers:{'x-tok':st.tok}});}catch(e){}}
+ syncSet(null);ACC.err='';closeModal();toast('LOGGED OUT (THIS DEVICE KEEPS ITS SAVES)');render();};
 /* background: check on open, every 30 s, and when the tab comes back; push right away when the tab is being left */
 (function syncBoot(){if(!SHOP_ON||!window.crypto||!crypto.subtle||!window.CompressionStream)return;   /* goes live with the big update */
  /* constant sync: pull every 10 s while the game is on screen (cheap: the server answers "nothing new" with no data),
