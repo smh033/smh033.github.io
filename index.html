@@ -5970,7 +5970,7 @@ function drawLogoLayer(sh,maxY){
 const TRAIL_TINT=new WeakMap(),SANDE=['#00f0ff','#ff2bd6','#ffe600','#7cff4d','#b05cff'];
 function trailTint(c,col){let m=TRAIL_TINT.get(c);if(!m){m=new Map();TRAIL_TINT.set(c,m);}let t=m.get(col);if(t)return t;
  t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);g.globalCompositeOperation='source-atop';g.globalAlpha=0.82;g.fillStyle=col;g.fillRect(0,0,t.width,t.height);m.set(col,t);return t;}
-function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail==='glitch')return glitchTrail(st,sx,sy);if(K.trail!=='sandevistan')return;
+function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail==='glitch')return glitchTrail(st,sx,sy);if(K.trail==='speed'||K.trail==='chaos')return streakTrail(st,sx,sy,K.trail);if(K.trail!=='sandevistan')return;
  const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
  const o=st.o,u=o.u||2,n=5,T=0.075,k=Math.min(1,(sp-2.5)/4);
  cx.save();
@@ -6005,6 +6005,23 @@ function glitchTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return
   cx.globalAlpha=a*0.8;glitchSlices(trailTint(spr,GLITCH[1]),gx-24*u+2,gy-34*u,9*u);}
  cx.globalAlpha=k;for(let j=0;j<5;j++){if(Math.random()<0.45)continue;const i=1+((Math.random()*n)|0);   /* loose pixel blocks */
   cx.fillStyle=GLITCH[(Math.random()*3)|0];cx.fillRect(Math.round(wx(st.x-st.vx*i*T)+(Math.random()-0.5)*18),Math.round(wy(st.y-st.vy*i*T)-st.jy-6-Math.random()*30),2+((Math.random()*6)|0),1+((Math.random()*2)|0));}
+ cx.restore();}
+/* "trail": "speed" (blue speed streak) and "chaos" (red-and-black streak): stretched afterimages in the running
+   colour, speed lines pulled out behind, and dust kicked up at the feet ("chaos" adds red sparks) */
+const STREAK={speed:{img:['#1f6bff','#59b8ff'],line:['#ffffff','#9fe0ff','#3d8cff'],dust:'rgba(230,240,255,.8)'},chaos:{img:['#ff1a2c','#8a0012'],line:['#ff2b2b','#1a0004','#ff5a5a'],dust:'rgba(255,90,60,.8)'}};
+function streakTrail(st,sx,sy,kind){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;const C=STREAK[kind],o=st.o,u=o.u||2,k=Math.min(1,(sp-2.5)/4),n=4,T=0.05;
+ const ux=-st.vx/sp*(M&&M.dir?M.dir:1),uy=-st.vy/sp;   /* screen direction straight back from the run */
+ cx.save();
+ for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy),spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));
+  cx.globalAlpha=k*0.55*(1-(i-1)/(n+1));cx.drawImage(trailTint(spr,C.img[i%2]),gx-24*u,gy-34*u);}
+ /* speed lines from the body backwards */
+ cx.globalCompositeOperation=kind==='speed'?'lighter':'source-over';   /* red lines would turn yellow when added onto the green field */
+ for(let j=0;j<6;j++){const y0=sy-st.jy-4*u-Math.random()*22*u,x0=sx+ux*(4+Math.random()*6)*u,len=(14+Math.random()*26)*u*k;
+  cx.globalAlpha=k*(0.45+Math.random()*0.45);cx.strokeStyle=C.line[j%C.line.length];cx.lineWidth=j%3===0?2:1;cx.beginPath();cx.moveTo(Math.round(x0),Math.round(y0));cx.lineTo(Math.round(x0+ux*len),Math.round(y0+uy*len*0.3));cx.stroke();}
+ cx.globalCompositeOperation='source-over';
+ /* dust at the feet */
+ for(let j=0;j<3;j++){if(Math.random()<0.4)continue;const dx=ux*(4+Math.random()*14)*u,r=1+Math.random()*2.2;cx.globalAlpha=k*0.7;cx.fillStyle=C.dust;cx.beginPath();cx.arc(sx+dx,sy-st.jy-1-Math.random()*3,r*u*0.6,0,Math.PI*2);cx.fill();}
+ if(kind==='chaos')for(let j=0;j<3;j++){if(Math.random()<0.5)continue;cx.globalAlpha=k;cx.fillStyle=Math.random()<0.5?'#ff3b3b':'#ffd23a';cx.fillRect(Math.round(sx+ux*Math.random()*20*u+(Math.random()-0.5)*8),Math.round(sy-st.jy-Math.random()*30*u),2,2);}
  cx.restore();}
 function glitchNow(st){if(!st.lk||!st.lk.spr||!st.o.run||Math.hypot(st.vx,st.vy)<2.5)return false;const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='glitch')return false;
  const now=performance.now(),key=st.lk.key||st.lk.spr;let g=GLITCH_T.get(key);if(!g){g={until:0,next:now+300+Math.random()*700};GLITCH_T.set(key,g);}
