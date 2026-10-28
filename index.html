@@ -8294,8 +8294,8 @@ ACT.acct=()=>{if(!SHOP_ON)return;const st=syncGet(),when=t=>{if(!t)return'NOT YE
  if(st&&st.acct){modal(`<div class="mp" style="width:440px;align-items:center;text-align:center;gap:10px">${ttl('ACCOUNT',true)}
   <div class="s10">LOGGED IN AS <span class="yl">${esc(st.u.toUpperCase())}</span></div>
   <div class="s7 dim" style="line-height:1.7">YOUR SAVES, SKINS, CANDY CORN, PASS AND PLAYS SAVE TO YOUR ACCOUNT BY THEMSELVES. LOG IN ON ANY DEVICE TO PICK UP WHERE YOU LEFT OFF.</div>
-  <div class="s7 dim">LAST SAVED: ${when(st.at)}${st.dirty?' · SAVING SOON':''}</div>${err}
-  <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="syncGo">SAVE NOW</button><button class="bt r" data-a="acctOut">LOG OUT</button></div></div>`);return;}
+  <div class="s7 dim">SAVES AUTOMATICALLY · LAST SAVED: ${when(st.at)}${st.dirty?' · SAVING NOW':''}</div>${err}
+  <div class="row" style="gap:8px"><button class="bt y" data-a="close">CLOSE</button><button class="bt r" data-a="acctOut">LOG OUT</button></div></div>`);return;}
  const T=ACC.tab,tb=(v,l)=>`<button class="bt ${T===v?'y':''}" data-a="acctTab" data-v="${v}" style="padding:5px 8px 4px">${l}</button>`,inp=(id,ph,type,ml)=>`<input class="txt" id="${id}" type="${type||'text'}" maxlength="${ml||64}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${ph}" style="width:240px;text-align:center">`;
  const old=st&&st.code?`<div class="s7 dim" style="line-height:1.6">THIS DEVICE USES A SYNC CODE. MAKING AN ACCOUNT OR LOGGING IN REPLACES IT.</div>`:'';
  modal(`<div class="mp" style="width:460px;align-items:center;text-align:center;gap:8px">${ttl('ACCOUNT',true)}
