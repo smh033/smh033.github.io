@@ -2664,7 +2664,7 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
   <div class="col" style="flex:1;min-width:0;gap:12px">
    ${box('FANS '+Math.round(L.fan)+'%',`<div class="bar"><i style="width:${L.fan}%"></i></div>`,'padding:10px 8px 7px')}
    <div class="row stretch" style="gap:8px">${box('MORALE',`${mor}% ${face(mor)}`,'flex:1;min-width:0','c')}${box('OFFENSE',stars(R.offS,'o'),'flex:1;min-width:0','c')}${box('DEFENSE',stars(R.defS,'d'),'flex:1;min-width:0','c')}</div>
-   ${box('LEAGUE NEWS',`<div class="col s7" style="gap:5px;overflow:hidden;max-height:100%">${aiOffersFor(L.user).length?`<div class="nwi yl blink" style="cursor:pointer" data-a="aiOff">TRADE OFFER FROM ${esc(T(aiOffersFor(L.user)[0].t).name.toUpperCase())}! TAP TO SEE</div>`:''}${L.news.slice(0,aiOffersFor(L.user).length?3:4).map(n=>`<div class="nwi">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0')}
+   ${box('LEAGUE NEWS',`<div class="col s7 scroll" style="gap:5px;overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;padding-right:3px;touch-action:pan-y">${aiOffersFor(L.user).length?`<div class="nwi yl blink" style="cursor:pointer" data-a="aiOff">TRADE OFFER FROM ${esc(T(aiOffersFor(L.user)[0].t).name.toUpperCase())}! TAP TO SEE</div>`:''}${L.news.slice(0,20).map(n=>`<div class="nwi">${esc(n.s.toUpperCase())}</div>`).join('')}</div>`,'flex:1;padding:10px 7px 5px;min-height:0;min-width:0;display:flex;flex-direction:column')}
   </div>
  </div>
  <div class="row" style="gap:7px">
