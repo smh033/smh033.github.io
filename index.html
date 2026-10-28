@@ -2379,7 +2379,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?`<button class="bt" data-a="sync">${syncGet()?'✓ ':''}SYNC DEVICES</button>`:''}<button class="bt" data-a="pdOpen">📋 PLAY DESIGNER</button><button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
@@ -3896,9 +3896,178 @@ function drawTrickBall(){const T0=M.trick;if(!T0||T0.stage!=='fly')return;const 
  drawBallAt(T0.from.x+(w.x-T0.from.x)*u,T0.from.y+(w.y-T0.from.y)*u,1.4+Math.sin(u*Math.PI)*(T0.hand?0.2:1.6),M.tt*20);}
 function applyRoutes(name){
  const P0=PLAYS[name];if(!P0||P0.k!=='pass')return;
+ if(P0.cust){cpApplyO(P0.cust);M.called=name;return;}cpResetO();
  const keep=(f,k,r,ins)=>{if(!f||!RT[k][r])return;const sx=f.x,sy=f.y;setRoute(f,k,r,ins);f.x=sx;f.y=sy;};
  keep(M.w1,'WR',P0.r[0],1);keep(M.w2,'WR',P0.r[1],-1);keep(M.te,'TE',P0.r[2],-1);keep(M.rb,'RB',P0.r[3],-1);M.called=name;
 }
+/* =====================================================================
+   PLAY DESIGNER: your own pass plays and defenses
+   Made only from the game's own pieces, so a custom play is never stronger than a normal one:
+   - offense: the same routes the playbooks use (plus BLOCK for the TE and the back), and the
+     receivers can only line up where a real formation could put them (spaced out, behind the line);
+   - defense: the same man / zone / blitz / deep jobs the coverage calls use, at most 2 extra
+     rushers, and every defender stays inside the range his position normally lines up in.
+   Saved on this device (and carried over by SYNC DEVICES). Online, the play travels with the call
+   and the host checks it against the same limits.
+   ===================================================================== */
+const CP_KEY='rf_cplays',CP_MAXO=8,CP_MAXD=6,CP_BLITZ=2;
+const CPO_KEYS=['w1','w2','te','rb'],CPO_KIND={w1:'WR',w2:'WR',te:'TE',rb:'RB'},CPO_LAB={w1:'WR1',w2:'WR2',te:'TE',rb:'RB'};
+const CPO_DEF={w1:[-0.8,-14],w2:[-0.8,14],te:[-0.9,3.5],rb:[-5.2,1.9]};
+const CPO_LIM={w1:{x:[-2.5,-0.8],y:[3.5,22]},w2:{x:[-2.5,-0.8],y:[3.5,22]},te:{x:[-2.5,-0.9],y:[2.6,11]},rb:{x:[-7,-3],y:[0,4.5]}};
+const CPD_KEYS=['DL0','DL1','LB0','LB1','DB0','DB1','S0'],CPD_LAB={DL0:'DL',DL1:'DL',LB0:'LB',LB1:'LB',DB0:'CB',DB1:'CB',S0:'S'};
+const CPD_DEF={DL0:[0.9,-1],DL1:[0.9,1],LB0:[4.6,-3.6],LB1:[4.6,3.8],DB0:[4,-14],DB1:[4,14],S0:[15,0]};
+const CPD_LIM={DL:{x:[0.9,0.9],y:6},LB:{x:[2.5,9],y:14},DB:{x:[1.2,16],y:24},S:{x:[6,22],y:20}};
+const CPD_JOB={LB0:{t:'man',m:'rb'},LB1:{t:'man',m:'te'},DB0:{t:'man',m:'w1'},DB1:{t:'man',m:'w2'},S0:{t:'deep'}};
+const cpRole=k=>k.replace(/\d$/,'');
+const cpNum=(v,a,b,d)=>{v=+v;return isFinite(v)?clamp(v,a,b):d;};
+const cpName=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9 '!&\-]/g,'').replace(/\s+/g,' ').trim().slice(0,18);
+function cpGet(){let d=null;try{d=JSON.parse(localStorage.getItem(CP_KEY)||'null');}catch(e){}if(!d||typeof d!=='object')d={};
+ d.o=(Array.isArray(d.o)?d.o:[]).map(cpSanO).filter(Boolean).slice(0,CP_MAXO);d.d=(Array.isArray(d.d)?d.d:[]).map(cpSanD).filter(Boolean).slice(0,CP_MAXD);return d;}
+function cpPut(d){try{localStorage.setItem(CP_KEY,JSON.stringify({o:d.o,d:d.d}));}catch(e){}cpRegister();}
+/* one offensive spot, kept legal: behind the line, outside the linemen, not on top of a teammate */
+function cpSpotO(k,x,y,f){const L0=CPO_LIM[k];x=cpNum(x,L0.x[0],L0.x[1],CPO_DEF[k][0]);y=cpNum(y,-L0.y[1],L0.y[1],CPO_DEF[k][1]);
+ if(Math.abs(y)<L0.y[0])y=(y<0?-1:1)*L0.y[0];
+ if(k==='rb'&&Math.hypot(x+4.6,y)<1.5)y=(y<0?-1:1)*Math.max(1.5,Math.abs(y));   /* not on the QB */
+ if(f)for(let it=0;it<4;it++)for(const o of CPO_KEYS){if(o===k||!f[o])continue;const[ox,oy]=f[o];if(Math.hypot(x-ox,y-oy)<2.2){y=oy+(y>=oy?2.3:-2.3);y=clamp(y,-L0.y[1],L0.y[1]);if(Math.abs(y)<L0.y[0])y=(y<0?-1:1)*L0.y[0];}}
+ return[Math.round(x*10)/10,Math.round(y*10)/10];}
+function cpRoutes(k){return k==='te'||k==='rb'?[...Object.keys(RT[CPO_KIND[k]]),'block']:Object.keys(RT.WR);}
+function cpSanO(o){if(!o||typeof o!=='object')return null;const n=cpName(o.n);if(!n)return null;const f={},r=[];
+ for(const k of CPO_KEYS){const p=o.f&&Array.isArray(o.f[k])?o.f[k]:CPO_DEF[k];f[k]=cpSpotO(k,p[0],p[1],f);}
+ CPO_KEYS.forEach((k,i)=>{const v=o.r&&o.r[i];r.push(cpRoutes(k).includes(v)?v:cpRoutes(k)[0]);});
+ return{n,f,r};}
+function cpSpotD(k,x,y,p){const R=CPD_LIM[cpRole(k)];x=cpNum(x,R.x[0],R.x[1],CPD_DEF[k][0]);y=cpNum(y,-R.y,R.y,CPD_DEF[k][1]);
+ if(p)for(let it=0;it<4;it++)for(const o of CPD_KEYS){if(o===k||!p[o])continue;const[ox,oy]=p[o];if(Math.hypot(x-ox,y-oy)<1.6){y=clamp(oy+(y>=oy?1.7:-1.7),-R.y,R.y);}}
+ return[Math.round(x*10)/10,Math.round(y*10)/10];}
+function cpSanJob(j){if(!j||typeof j!=='object')return null;
+ if(j.t==='man')return CPO_KEYS.includes(j.m)?{t:'man',m:j.m}:null;
+ if(j.t==='zone')return{t:'zone',x:Math.round(cpNum(j.x,3,22,8)*10)/10,y:Math.round(cpNum(j.y,-24,24,0)*10)/10};
+ if(j.t==='blitz'||j.t==='deep')return{t:j.t};return null;}
+function cpSanD(d){if(!d||typeof d!=='object')return null;const n=cpName(d.n);if(!n)return null;const p={},a={};let bl=0;
+ for(const k of CPD_KEYS){const q=d.p&&Array.isArray(d.p[k])?d.p[k]:CPD_DEF[k];p[k]=cpSpotD(k,q[0],q[1],p);}
+ for(const k of CPD_KEYS){if(cpRole(k)==='DL')continue;let j=cpSanJob(d.a&&d.a[k])||Object.assign({},CPD_JOB[k]);if(j.t==='blitz'){if(bl>=CP_BLITZ)j={t:'zone',x:8,y:p[k][1]};else bl++;}a[k]=j;}
+ return{n,p,a};}
+/* custom plays live in PLAYS like the generated ones (they can't take a name that's already used) */
+const CDEF={};
+function cpRegister(){for(const n in PLAYS)if(PLAYS[n].custU)delete PLAYS[n];for(const n in CDEF)if(n.startsWith('C:'))delete CDEF[n];
+ const d=cpGet();for(const o of d.o)if(!PLAYS[o.n])PLAYS[o.n]={k:'pass',r:o.r.slice(),cust:o,custU:1,deep:0};
+ for(const x of d.d)CDEF['C:'+x.n]=x;}
+const cpLab=c=>String(c||'MAN').replace(/^[CG]:/,'');
+/* put the offense in the custom formation and give everyone his route */
+function cpApplyO(c){const los=M.los,by=M.ballY,F={w1:M.w1,w2:M.w2,te:M.te,rb:M.rb};M.custF=true;
+ CPO_KEYS.forEach((k,i)=>{const f=F[k];if(!f)return;const[dx,dy]=c.f[k];f.x=los+dx;f.y=clamp(by+dy,1.5,51.8);f.pblk=false;f.blk=null;const r=c.r[i];
+  if(r==='block'){f.route=null;f.rname='block';f.pblk=true;}else if(RT[CPO_KIND[k]][r])setRoute(f,CPO_KIND[k],r,f.y>=by?-1:1);});
+ cpLineUpD();}
+function cpResetO(){if(!M.custF)return;M.custF=false;const los=M.los,by=M.ballY,F={w1:M.w1,w2:M.w2,te:M.te,rb:M.rb};
+ for(const k of CPO_KEYS){const f=F[k];if(!f)continue;const[dx,dy]=CPO_DEF[k];f.x=los+dx;f.y=k==='w1'||k==='w2'?clamp(by+dy,3,50):by+dy;f.pblk=false;}cpLineUpD();}
+/* the computer's corners and safety line up over the receivers wherever they went */
+function cpLineUpD(){if(M.def)return;for(const d of M.D){if(d.man&&(d.role==='DB'||d.role==='S')&&M.O.includes(d.man))d.y=d.man.y;}}
+/* TE / back staying in to block: picks up the nearest rusher in front of the QB */
+function upPB(f,dt){const q=M.qb||f;if(f.blk&&(f.blk.stun>0||(f.blk.eng&&f.blk.eng!==f)||(f.blk.shed>0&&f.blk.eng!==f)))f.blk=null;
+ if(!f.blk){let best=null,bd=12;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(d.role!=='DL'&&!d.blitz)continue;if(M.O.some(o=>o!==f&&o.blk===d))continue;const dd=d2(d,q);if(dd<bd){bd=dd;best=d;}}f.blk=best;}
+ const d=f.blk;if(!d){steer(f,q.x+2.4,q.y+(f.y<q.y?-1.8:1.8),f.spd*0.6,14,dt);return;}
+ if(d.eng===f)holdBlock(f,d,dt);else{steer(f,d.x-0.6,d.y,f.spd,30,dt);if(d2(f,d)<1.1&&!d.eng&&d.shed<=0)engage(f,d);}}
+/* a custom defense: everyone to his spot and his job */
+function cpApplyD(def){const los=M.los,by=M.ballY,R={w1:M.w1,w2:M.w2,te:M.te,rb:M.rb},cnt={};
+ for(const f of M.D){const r=f.role0||f.role,i=cnt[r]=(cnt[r]||0),k=r+i;cnt[r]++;const p=def.p[k];if(!p)continue;
+  f.x=Math.min(119,los+p[0]);f.y=clamp(by+p[1],1.5,51.8);f.man=null;f.zone=null;f.blitz=false;if(r==='DL')continue;
+  const j=def.a[k]||{t:'deep'};
+  if(j.t==='man'){f.man=R[j.m]||null;if(r==='S')f.role='DB';}
+  else if(j.t==='zone'){f.zone={x:Math.min(119,los+j.x),y:clamp(by+j.y,3,50)};if(r==='S')f.role='DB';}
+  else if(j.t==='blitz'){f.blitz=true;}
+  else{/* deep */if(r==='S'){f.help=null;}else f.zone={x:Math.min(119,los+(r==='LB'?11:16)),y:clamp(by+p[1],3,50)};}}}
+
+/* ---------- the designer screen ---------- */
+const PD={};   /* editor state: side, cur (the play being edited), sel (selected player), drag */
+function pdNewO(){return{n:'',f:JSON.parse(JSON.stringify(CPO_DEF)),r:['go','slant','curl','flat']};}
+function pdNewD(){return{n:'',p:JSON.parse(JSON.stringify(CPD_DEF)),a:JSON.parse(JSON.stringify(CPD_JOB))};}
+ACT.pdOpen=()=>{PD.side=PD.side||'o';PD.cur=PD.side==='o'?pdNewO():pdNewD();PD.edit=-1;PD.sel=null;PD.back=UI.scr==='pdes'?(PD.back||'title'):UI.scr;go('pdes');};
+ACT.pdSide=d=>{PD.side=d.v;PD.cur=PD.side==='o'?pdNewO():pdNewD();PD.edit=-1;PD.sel=null;render();};
+ACT.pdNew=()=>{PD.cur=PD.side==='o'?pdNewO():pdNewD();PD.edit=-1;PD.sel=null;render();};
+ACT.pdLoad=d=>{const L0=cpGet()[PD.side==='o'?'o':'d'],x=L0[+d.i];if(!x)return;PD.cur=JSON.parse(JSON.stringify(x));PD.edit=+d.i;PD.sel=null;render();};
+ACT.pdBack=()=>go(PD.back&&SCR[PD.back]&&PD.back!=='game'?PD.back:'title');
+ACT.pdRoute=d=>{const i=CPO_KEYS.indexOf(PD.sel);if(i<0)return;PD.cur.r[i]=d.v;pdDraw();};
+ACT.pdJob=d=>{const k=PD.sel;if(!k||cpRole(k)==='DL')return;const a=PD.cur.a;
+ if(d.v==='blitz'){const n=CPD_KEYS.filter(x=>x!==k&&a[x]&&a[x].t==='blitz').length;if(n>=CP_BLITZ){toast('MAX '+CP_BLITZ+' BLITZERS');return;}a[k]={t:'blitz'};}
+ else if(d.v==='zone')a[k]={t:'zone',x:Math.max(4,Math.min(20,PD.cur.p[k][0]+3)),y:PD.cur.p[k][1]};
+ else if(d.v==='deep')a[k]={t:'deep'};
+ else a[k]={t:'man',m:d.v};
+ pdDraw();};
+ACT.pdSave=()=>{const inp=$('#pdName');const n=cpName(inp?inp.value:PD.cur.n);if(!n){toast('NAME YOUR PLAY');return;}
+ const all=cpGet(),side=PD.side==='o'?'o':'d',list=all[side];
+ if(side==='o'&&PLAYS[n]&&!PLAYS[n].custU){toast('THAT NAME IS TAKEN, TRY ANOTHER');return;}
+ if(list.some((x,i)=>x.n===n&&i!==PD.edit)){toast('YOU ALREADY HAVE A PLAY CALLED '+n);return;}
+ if(['MAN','ZONE','BLITZ','PREVENT'].includes(n)&&side==='d'){toast('THAT NAME IS TAKEN, TRY ANOTHER');return;}
+ if(PD.edit<0&&list.length>=(side==='o'?CP_MAXO:CP_MAXD)){toast('PLAYBOOK FULL: DELETE ONE FIRST');return;}
+ const x=(side==='o'?cpSanO:cpSanD)(Object.assign({},PD.cur,{n}));if(!x)return;
+ if(PD.edit>=0)list[PD.edit]=x;else{list.push(x);PD.edit=list.length-1;}cpPut(all);PD.cur=JSON.parse(JSON.stringify(x));sfx('td');toast('SAVED · '+n);render();};
+ACT.pdDel=()=>{if(PD.edit<0)return;const all=cpGet(),side=PD.side==='o'?'o':'d';all[side].splice(PD.edit,1);cpPut(all);ACT.pdNew();toast('DELETED');};
+/* field: the line of scrimmage near the bottom, offense going UP the screen. 1 unit = 1 yard */
+const PDV={w:53.33,top:23,h:32};
+const pdX=dy=>26.67+dy,pdY=dx=>PDV.top-dx;
+function pdRoutePts(k,f,r){const R=RT[CPO_KIND[k]][r];if(!R)return[];const[dx,dy]=f,ins=dy>=0?-1:1;const pts=[[dx,dy]];for(const q of R)pts.push([dx+q[0],dy+q[1]*ins]);
+ const l=pts[pts.length-1],p=pts[pts.length-2];if(!R[R.length-1][2]){const ex=l[0]-p[0],ey=l[1]-p[1],d=Math.hypot(ex,ey)||1;pts.push([l[0]+ex/d*6,l[1]+ey/d*6]);}
+ return pts;}
+function pdSVG(){const S=PD.side,C=PD.cur;let g='';
+ g+=`<rect x="0" y="0" width="${PDV.w}" height="${PDV.h}" fill="#2f8f3c"/>`;
+ for(let dx=-5;dx<=20;dx+=5)g+=`<line x1="0" x2="${PDV.w}" y1="${pdY(dx)}" y2="${pdY(dx)}" stroke="rgba(255,255,255,.35)" stroke-width="0.15"/>`;
+ for(let dx=-8;dx<=22;dx++)g+=`<line x1="${pdX(-6.2)-0.6}" x2="${pdX(-6.2)+0.6}" y1="${pdY(dx)}" y2="${pdY(dx)}" stroke="rgba(255,255,255,.35)" stroke-width="0.12"/><line x1="${pdX(6.2)-0.6}" x2="${pdX(6.2)+0.6}" y1="${pdY(dx)}" y2="${pdY(dx)}" stroke="rgba(255,255,255,.35)" stroke-width="0.12"/>`;
+ g+=`<line x1="0" x2="${PDV.w}" y1="${pdY(0)}" y2="${pdY(0)}" stroke="#4f8dff" stroke-width="0.3"/><line x1="0" x2="${PDV.w}" y1="${pdY(10)}" y2="${pdY(10)}" stroke="#ffe94a" stroke-width="0.25"/>`;
+ const dot=(k,dx,dy,fill,lab,ghost)=>{const x=pdX(dy),y=pdY(dx),on=PD.sel===k;return`<g ${ghost?'':`data-k="${k}"`} style="${ghost?'opacity:.45':'cursor:grab'}"><circle cx="${x}" cy="${y}" r="2.6" fill="transparent"/>${on?`<circle cx="${x}" cy="${y}" r="1.75" fill="none" stroke="#ffe94a" stroke-width="0.35"/>`:''}<circle cx="${x}" cy="${y}" r="1.25" fill="${fill}" stroke="#000" stroke-width="0.25"/><text x="${x}" y="${y+0.4}" font-size="${lab.length>2?0.78:1.0}" text-anchor="middle" fill="${fill==='#fff'?'#000':'#fff'}" font-family="'Press Start 2P',monospace" style="pointer-events:none">${lab}</text></g>`;};
+ const poly=(pts,col,w,dash)=>`<polyline points="${pts.map(([a,b])=>pdX(b)+','+pdY(a)).join(' ')}" fill="none" stroke="${col}" stroke-width="${w||0.4}" ${dash?'stroke-dasharray="0.8 0.6"':''} stroke-linejoin="round" style="pointer-events:none"/>`;
+ /* offense (in the defense editor it's the usual look, faded, so you can see who you're covering) */
+ const OF=S==='o'?C.f:CPO_DEF;
+ for(const dy of[-1.7,0,1.7])g+=`<circle cx="${pdX(dy)}" cy="${pdY(-0.7)}" r="0.8" fill="#fff" stroke="#000" stroke-width="0.2" opacity=".55"/>`;
+ g+=dot('qb',-4.6,0,'#fff','QB',true);
+ if(S==='o'){CPO_KEYS.forEach((k,i)=>{const r=C.r[i];if(r==='block'){const[dx,dy]=OF[k];g+=poly([[dx,dy],[dx+1.6,dy*0.85]],'#ff9a3d',0.45)+`<line x1="${pdX(dy*0.85)-0.9}" x2="${pdX(dy*0.85)+0.9}" y1="${pdY(dx+1.6)}" y2="${pdY(dx+1.6)}" stroke="#ff9a3d" stroke-width="0.45"/>`;}
+   else g+=poly(pdRoutePts(k,OF[k],r),k==='rb'?'#6fb0ff':'#7dff6a',PD.sel===k?0.55:0.4);});
+  for(const k of CPO_KEYS)g+=dot(k,OF[k][0],OF[k][1],'#fff',CPO_LAB[k]);}
+ else{for(const k of CPO_KEYS)g+=dot(k,OF[k][0],OF[k][1],'#fff',CPO_LAB[k],true);
+  /* jobs first (lines under the players) */
+  for(const k of CPD_KEYS){const p=C.p[k],j=C.a[k];if(!j)continue;const x=pdX(p[1]),y=pdY(p[0]);
+   if(j.t==='man'){const t=OF[j.m];g+=poly([[p[0],p[1]],[t[0],t[1]]],'#ff5a5a',0.3,true);}
+   else if(j.t==='zone'){const zx=pdX(j.y),zy=pdY(j.x),on=PD.sel===k;g+=`<ellipse cx="${zx}" cy="${zy}" rx="5" ry="5.5" fill="rgba(80,170,255,.18)" stroke="#7fd0ff" stroke-width="0.25" stroke-dasharray="0.8 0.5" style="pointer-events:none"/>`+poly([[p[0],p[1]],[j.x,j.y]],'#7fd0ff',0.25)+`<g data-k="z:${k}" style="cursor:grab"><circle cx="${zx}" cy="${zy}" r="2.4" fill="transparent"/><circle cx="${zx}" cy="${zy}" r="${on?0.8:0.55}" fill="#7fd0ff" stroke="#000" stroke-width="0.15"/></g>`;}
+   else if(j.t==='blitz')g+=poly([[p[0],p[1]],[-4,0]],'#ff3b3b',0.45)+`<circle cx="${pdX(0)}" cy="${pdY(-4)}" r="0.4" fill="#ff3b3b"/>`;
+   else if(j.t==='deep')g+=poly([[p[0],p[1]],[p[0]+4,p[1]*0.6]],'#ffe94a',0.3,true);}
+  for(const k of CPD_KEYS)g+=dot(k,C.p[k][0],C.p[k][1],cpRole(k)==='DL'?'#7a1010':'#d1202c',CPD_LAB[k]);}
+ return g;}
+function pdPanel(){const S=PD.side,C=PD.cur,k=PD.sel;
+ if(!k)return`<div class="s7 dim" style="line-height:1.7">${S==='o'?'TAP A RECEIVER TO GIVE HIM A ROUTE. DRAG PLAYERS TO MOVE THEM.<br><br>TE AND RB CAN STAY IN TO BLOCK.':'TAP A DEFENDER TO GIVE HIM A JOB. DRAG PLAYERS TO MOVE THEM.<br><br>ZONE: DRAG THE BLUE DOT TO SET HIS AREA.<br><br>MAX '+CP_BLITZ+' BLITZERS.'}</div>`;
+ const b=(a,v,l,on,dis)=>`<button class="bt ${on?'y':''}" style="padding:3px 4px 2px;font-size:7px" data-a="${a}" data-v="${v}" ${dis?'disabled':''}>${l}</button>`;
+ if(S==='o'){const i=CPO_KEYS.indexOf(k);return`<div class="s7 yl">${CPO_LAB[k]} ROUTE</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">${cpRoutes(k).map(r=>b('pdRoute',r,r==='block'?'BLOCK':RLAB[r],C.r[i]===r)).join('')}</div>`;}
+ if(cpRole(k)==='DL')return`<div class="s7 yl">DEFENSIVE LINE</div><div class="s7 dim" style="line-height:1.6">ALWAYS RUSHES THE QB. DRAG HIM ALONG THE LINE.</div>`;
+ const j=C.a[k]||{},nb=CPD_KEYS.filter(x=>x!==k&&C.a[x]&&C.a[x].t==='blitz').length;
+ return`<div class="s7 yl">${CPD_LAB[k]} JOB</div><div class="s7 dim">MAN ON:</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">${CPO_KEYS.map(m=>b('pdJob',m,CPO_LAB[m],j.t==='man'&&j.m===m)).join('')}</div>
+  <div style="display:grid;grid-template-columns:1fr;gap:3px;margin-top:3px">${b('pdJob','zone','ZONE',j.t==='zone')}${b('pdJob','deep','DEEP HELP',j.t==='deep')}${b('pdJob','blitz','BLITZ'+(nb>=CP_BLITZ&&j.t!=='blitz'?' (MAX)':''),j.t==='blitz',nb>=CP_BLITZ&&j.t!=='blitz')}</div>`;}
+function pdDraw(){const f=$('#pdF'),p=$('#pdR');if(f)f.innerHTML=pdSVG();if(p)p.innerHTML=pdPanel();}
+function pdPt(e){const sv=$('#pdF');const pt=sv.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(sv.getScreenCTM().inverse());return{dy:q.x-26.67,dx:PDV.top-q.y};}
+function pdDown(e){const t=e.target.closest&&e.target.closest('[data-k]');if(!t)return;e.preventDefault();const k=t.getAttribute('data-k'),zone=k.startsWith('z:'),key=zone?k.slice(2):k;
+ PD.sel=key;PD.drag={k:key,zone};pdDraw();
+ const mv=ev=>{if(!PD.drag)return;const{dx,dy}=pdPt(ev),C=PD.cur;
+  if(PD.drag.zone){C.a[key]={t:'zone',x:Math.round(clamp(dx,3,22)*10)/10,y:Math.round(clamp(dy,-24,24)*10)/10};}
+  else if(PD.side==='o')C.f[key]=cpSpotO(key,dx,dy,C.f);
+  else C.p[key]=cpSpotD(key,dx,dy,C.p);
+  const sv=$('#pdF');if(sv)sv.innerHTML=pdSVG();};
+ const up=()=>{PD.drag=null;window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);pdDraw();};
+ window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);}
+SCR.pdes=()=>{PD.side=PD.side||'o';if(!PD.cur){PD.cur=PD.side==='o'?pdNewO():pdNewD();PD.edit=-1;}
+ const all=cpGet(),S=PD.side,list=all[S==='o'?'o':'d'],max=S==='o'?CP_MAXO:CP_MAXD;
+ const tab=(v,l)=>`<button class="bt ${S===v?'y':''}" style="padding:5px 8px 4px" data-a="pdSide" data-v="${v}">${l}</button>`;
+ const items=list.map((x,i)=>`<button class="bt ${i===PD.edit?'y':''}" style="padding:4px 5px 3px;font-size:7px;text-align:left;white-space:normal;overflow-wrap:anywhere" data-a="pdLoad" data-i="${i}">${esc(x.n)}</button>`).join('');
+ return`<div class="screen" style="gap:5px">
+ <div class="row" style="gap:6px;width:100%"><button class="bt ico" data-a="pdBack">${ICON.back}</button><div class="grow">${ttl('PLAY DESIGNER',true)}</div>${tab('o','OFFENSE')}${tab('d','DEFENSE')}</div>
+ <div class="row grow" style="gap:6px;align-items:stretch;min-height:0;width:100%">
+  <div class="col" style="width:108px;gap:4px;min-height:0"><div class="s7 dim">${S==='o'?'MY PLAYS':'MY DEFENSES'} ${list.length}/${max}</div><div class="col scroll" style="gap:3px;overflow-y:auto;min-height:0;flex:1">${items||'<div class="s7 dim" style="line-height:1.6">NONE YET</div>'}</div><button class="bt g" style="padding:4px 4px 3px;font-size:7px" data-a="pdNew">+ NEW</button></div>
+  <svg id="pdF" viewBox="0 0 ${PDV.w} ${PDV.h}" preserveAspectRatio="xMidYMid meet" style="flex:1;min-width:0;height:100%;touch-action:none;background:#2f8f3c;border:2px solid #000;image-rendering:pixelated" onpointerdown="pdDown(event)">${pdSVG()}</svg>
+  <div id="pdR" class="col" style="width:128px;gap:4px;min-height:0;overflow-y:auto">${pdPanel()}</div>
+ </div>
+ <div class="row" style="gap:6px;width:100%;align-items:center"><input class="txt" id="pdName" maxlength="18" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="PLAY NAME" value="${esc(PD.cur.n||'')}" oninput="PD.cur.n=this.value" style="width:170px"><span class="s7 dim grow" style="line-height:1.5">${S==='o'?'SHOWS UP FIRST IN YOUR PLAYBOOK':'PICK IT WITH "MY D" WHEN YOU\'RE ON DEFENSE'}</span>${PD.edit>=0?'<button class="bt r" data-a="pdDel">DELETE</button>':''}<button class="bt y" data-a="pdSave">SAVE</button></div></div>`;};
+/* in a game: your custom defenses */
+ACT.gDPB=()=>{if(M&&M.def&&M.phase==='pre')M.dpb=!M.dpb;};
+ACT.gDPick=d=>{M.dpb=false;ACT.dCall({c:'C:'+d.n});};
+function dpbHTML(){const L0=cpGet().d;return`<div class="gov" style="z-index:35"><div class="mp" style="width:420px;max-width:calc(100% - 12px);gap:6px"><div class="row" style="gap:6px"><div class="grow">${ttl('MY DEFENSES',true)}</div><button class="bt" data-a="gDPB">CLOSE</button></div>
+ <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">${L0.map(x=>`<button class="bt ${M.dcall==='C:'+x.n?'y':''}" style="padding:6px 4px 5px;white-space:normal" data-a="gDPick" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join('')}</div></div></div>`;}
+
+cpRegister();
 /* Small route diagram for a play card. */
 function playSVG(name){
  const P0=PLAYS[name],W=58,H=34,X=x=>clamp(9+(x+6)*1.35,1,W-1),Y=y=>clamp(H/2+y*1.05,1,H-1);let g='';
@@ -3916,8 +4085,8 @@ function playSVG(name){
   else{g+=line([[-1,sw],[-3,2*S],[-3,-6*S],[14,-14*S]],'#ffe94a')+dash([[-5,2],[-1,1]],'#ff9a3d');}
   g+=dot(-4,0,'#ffe94a');
  }else if(P0.k==='pass'){
-  const st=[[-1,-13,'WR',1],[-1,13,'WR',-1],[-1,4,'TE',-1],[-5,2,'RB',-1]];
-  P0.r.forEach((r,i)=>{const[x0,y0,k,ins]=st[i],R=RT[k][r];if(!R)return;let pts=`${X(x0)},${Y(y0)}`;for(const q of R)pts+=` ${X(x0+q[0]*0.75)},${Y(y0+q[1]*ins*0.75)}`;
+  const cu=P0.cust,st=cu?CPO_KEYS.map(k=>{const[a,b]=cu.f[k];return[a,b*0.75,CPO_KIND[k],b>=0?-1:1];}):[[-1,-13,'WR',1],[-1,13,'WR',-1],[-1,4,'TE',-1],[-5,2,'RB',-1]];
+  P0.r.forEach((r,i)=>{const[x0,y0,k,ins]=st[i];if(r==='block'){g+=`<polyline points="${X(x0)},${Y(y0)} ${X(x0+2)},${Y(y0)}" fill="none" stroke="#ff9a3d" stroke-width="2"/>`+dot(x0,y0,'#fff');return;}const R=RT[k][r];if(!R)return;let pts=`${X(x0)},${Y(y0)}`;for(const q of R)pts+=` ${X(x0+q[0]*0.75)},${Y(y0+q[1]*ins*0.75)}`;
    g+=`<polyline points="${pts}" fill="none" stroke="${k==='RB'?'#3d8cff':'#2ef03c'}" stroke-width="1.5"/>`+dot(x0,y0,'#fff');});
   g+=dot(-4,0,'#ffe94a');
  }else{
@@ -4306,6 +4475,8 @@ function defPre(){
  M.aiPlay=aiCallPlay();M.aiSnapT=rnd(3.6,5.2);
 }
 function applyDefCall(){
+ for(const f of M.D){if(!f.role0)f.role0=f.role;f.role=f.role0;}   /* a blitz or custom call can make the safety a cover man for one play: start each call fresh */
+ {const c0=M.dcall||'MAN';if(/^[CG]:/.test(c0)){if(!CDEF[c0])cpRegister();if(CDEF[c0]){cpApplyD(CDEF[c0]);return;}M.dcall='MAN';}}
  const by=M.ballY,los=M.los,D=M.D,dl=D.filter(f=>f.role==='DL'),lb=D.filter(f=>f.role==='LB'),db=D.filter(f=>f.role==='DB'),sf=D.find(f=>f.role==='S');
  for(const f of D){f.blitz=false;f.zone=null;}
  const c=M.dcall||'MAN';
@@ -5039,6 +5210,7 @@ function upLive(dt){
   if(M.play==='ret'&&f===M.kr&&!M.caught){steer(f,M.land.x,M.land.y,f.spd,f.acc,dt);f.face=1;continue;}
   if(M.carrier||M.play==='run'||M.play==='ret'){upBlocker(f,dt);continue;}
   if(b&&f===M.primary){upChase(f,dt);continue;}
+  if(f.pblk&&M.play==='pass'){upPB(f,dt);continue;}
   followRoute(f,dt);
  }
  for(const f of M.D){tickF(f,dt);
@@ -5965,7 +6137,7 @@ function hud(){
   setH('gtop',`<div class="sbw"><div class="sb"><div class="tm">${bd(L.user)}<div class="sc"><b>${M.sc[0]}</b>${pips(M.to)}</div>${ours?'<i class="pos"></i>':''}</div><div class="clk"><b>${clockTxt()}</b><span>${q}</span></div><div class="tm">${ours?'':'<i class="pos"></i>'}<div class="sc"><b>${M.sc[1]}</b>${pips(M.oto==null?3:M.oto)}</div>${bd(M.op)}</div></div>${tag}</div>`);}
  let who=M.def&&(M.phase==='pre'||M.phase==='live'||M.phase==='dead')?(M.play==='intret'?M.carrier:M.ctl):M.phase==='kick'&&M.kick?{pl:M.kick.K,role:'K'}:M.ov&&M.ov.type==='drive'?null:M.play==='intret'?M.chaser:(M.carrier||(M.play==='pass'&&!M.thrown?M.qb:null)||(M.phase==='pre'?M.qb:null));
  let bot='';if(who){const p=who.pl;bot=p?`${face(p.mor)}<span>${esc(pname(p))} [${p.pos}]</span>`:`<span class="dim">BACKUP [${who.role==='KR'?'KR':who.role}]</span>`;}
- if(M.def&&(M.phase==='pre'||M.phase==='live'))bot+=`<span class="yl" style="margin-left:8px">DEFENSE · ${esc(M.dcall||'MAN')}</span>`;
+ if(M.def&&(M.phase==='pre'||M.phase==='live'))bot+=`<span class="yl" style="margin-left:8px">DEFENSE · ${esc(cpLab(M.dcall))}</span>`;
  else if(M.called&&(M.phase==='pre'||M.phase==='live')&&M.play!=='ret'&&M.play!=='intret')bot+=`<span class="yl" style="margin-left:8px">${esc(M.called)}</span>`;
  bot+=`<span class="sp"></span>`;
  setH('gbot',bot);
@@ -5974,6 +6146,7 @@ function hud(){
   const b=[];
   if(M.def&&M.phase==='pre'){
    for(const[c,l]of COVERS)b.push(`<button class="bt ${M.dcall===c?'y':''}" data-a="dCall" data-c="${c}">${l}</button>`);
+   if(cpGet().d.length)b.push(`<button class="bt ${/^C:/.test(M.dcall||'')?'y':''}" data-a="gDPB">${/^C:/.test(M.dcall||'')?esc(cpLab(M.dcall)):'MY D'}</button>`);
    if(M.to>0&&M.runoff>0&&M.clock>0)b.push(`<button class="bt" data-a="gTO">TIMEOUT</button>`);
    hint=M.plays<12?(IS_MOBILE?'THUMB DOWN ON THE LEFT = JOYSTICK · TAP A DEFENDER TO PICK HIM':'DRAG DEFENDERS TO LINE THEM UP · CLICK ONE TO CONTROL HIM · 1-4 = COVERAGE'):'';
   }else if(M.def&&M.phase==='live'){
@@ -5997,7 +6170,7 @@ function hud(){
   ctrl=b.join('');
  }
  setH('gctrl',ctrl);setH('ghint',hint);
- setH('gpb',M.pb&&M.phase==='pre'&&!M.ov&&!M.paused?pbHTML():'');
+ setH('gpb',M.pb&&M.phase==='pre'&&!M.ov&&!M.paused?pbHTML():M.dpb&&M.def&&M.phase==='pre'&&!M.ov&&!M.paused?dpbHTML():'');
  setH('gban',M.banT>0&&M.ban?`<div>${esc(M.ban.t)}${M.ban.sub?`<small>${esc(M.ban.sub)}</small>`:''}</div>`:'');
  setH('gov',M.ov?`<div class="gov">${M.ov.html()}</div>`:'');
  setH('gpz',M.paused?`<div class="gov" style="z-index:40"><div class="mp" style="width:300px;align-items:center;text-align:center">${ttl('PAUSED',true)}<button class="bt y big" data-a="gResume">RESUME</button><button class="bt" data-a="gSnd">SOUND: ${L.settings.sound?'ON':'OFF'}</button>${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${L.net?(NET.role==='host'?'<button class="bt" data-a="netBreak">TAKE A BREAK</button><button class="bt r" data-a="netEnd">END GAME</button>':''):M.prac?'<button class="bt r" data-a="gSim">END PRACTICE</button>':'<button class="bt r" data-a="gSim">SIM REST OF GAME</button>'}</div></div>`:'');
@@ -6025,11 +6198,11 @@ function snapRun(v,name){snap('run');if(M.phase!=='live')return;M.runVar=v||'div
  if(v==='qb'){M.scramble=true;M.qbDraw=true;}}
 ACT.gPB=()=>{if(M&&M.phase==='pre')M.pb=!M.pb;};
 ACT.gPlay=d=>callPlay(d.n);
-function pbOrder(){const pb=playbook(L.user),only=M&&M.prac&&M.prac.D.only,ps=only==='run'?[]:pb.filter(n=>PLAYS[n].k==='pass'),tr=only?[]:pb.filter(n=>PLAYS[n].k==='trick'),rn=only==='pass'?[]:pb.filter(n=>PLAYS[n].k==='run');
- return[...ps.slice(0,6),...tr,...rn.slice(0,1),...ps.slice(6),...rn.slice(1)];}
+function pbOrder(){cpRegister();const pb=playbook(L.user),only=M&&M.prac&&M.prac.D.only,cu=only==='run'?[]:cpGet().o.map(x=>x.n).filter(n=>PLAYS[n]&&PLAYS[n].cust),ps=only==='run'?[]:pb.filter(n=>PLAYS[n].k==='pass'),tr=only?[]:pb.filter(n=>PLAYS[n].k==='trick'),rn=only==='pass'?[]:pb.filter(n=>PLAYS[n].k==='run');
+ return[...cu,...ps.slice(0,6),...tr,...rn.slice(0,1),...ps.slice(6),...rn.slice(1)];}
 ACT.pbPg=d=>{if(M){M.pbPage=+d.p;}};
 function pbHTML(){const all=pbOrder(),pages=Math.ceil(all.length/8),pg=clamp(M.pbPage||0,0,pages-1),pb=all.slice(pg*8,pg*8+8);return`<div class="gov" style="z-index:35"><div class="mp" style="width:600px;max-width:calc(100% - 12px);max-height:calc(100% - 8px);overflow:hidden;gap:6px"><div class="row" style="gap:6px"><div class="grow">${ttl('PLAYBOOK · '+teamStyle(L.user),true)}</div><button class="bt" data-a="pbPg" data-p="${pg-1}" ${pg>0?'':'disabled'}>&lt;</button><span class="s7">PAGE ${pg+1}/${pages}</span><button class="bt" data-a="pbPg" data-p="${pg+1}" ${pg<pages-1?'':'disabled'}>&gt;</button><button class="bt" data-a="gPB">CLOSE</button></div>
- <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${pb.map(n=>`<button class="bt" style="padding:4px 3px 3px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;overflow:hidden;${n===M.called?'border-color:#ffe94a':''}" data-a="gPlay" data-n="${n}">${playSVG(n)}<span class="s7" style="${n.length>18?'font-size:6px;':''}line-height:1.25;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center">${n}</span><span class="s6 ${PLAYS[n].k==='run'?'yl':PLAYS[n].k==='trick'?'yl':'cyt'}">${PLAYS[n].k==='run'?'RUN · SNAPS NOW':PLAYS[n].k==='trick'?'TRICK PLAY':'PASS'}</span></button>`).join('')}</div></div></div>`;}
+ <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">${pb.map(n=>`<button class="bt" style="padding:4px 3px 3px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;overflow:hidden;${n===M.called?'border-color:#ffe94a':''}" data-a="gPlay" data-n="${n}">${playSVG(n)}<span class="s7" style="${n.length>18?'font-size:6px;':''}line-height:1.25;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center">${n}</span><span class="s6 ${PLAYS[n].k==='run'?'yl':PLAYS[n].k==='trick'?'yl':'cyt'}">${PLAYS[n].k==='run'?'RUN · SNAPS NOW':PLAYS[n].k==='trick'?'TRICK PLAY':PLAYS[n].cust?'MY PLAY':'PASS'}</span></button>`).join('')}</div></div></div>`;}
 ACT.gFG=()=>{if(M)startKick('fg');};
 ACT.gKneel=()=>{if(M)kneel();};
 ACT.gTO=()=>{if(M)timeout();};
@@ -6462,6 +6635,7 @@ function netHostMsg(m){
  if(m.t==='to'){if(pre&&M.oto>0&&M.runoff>0&&M.clock>0){M.runoff=0;M.oto--;banner('TIMEOUT',abbr(M.op)+' · '+M.oto+' LEFT','#fff',1.2);sfx('whistle');}return;}
  if(m.t==='kick'){if(M.phase==='kick'&&M.kick&&M.kick.guest)kickRelease(+m.dx||0,+m.dy||0,true);return;}
  if(M.def){   /* guest is on offense */
+  if(m.t==='play'&&pre&&m.cp){const c=cpSanO(m.cp);if(!c)return;const n='G:'+c.n;PLAYS[n]={k:'pass',r:c.r.slice(),cust:c,deep:0};M.trick=null;applyRoutes(n);M.aiPlay={n,k:'pass'};return;}   /* your friend's own play: checked against the same limits */
   if(m.t==='play'&&pre){const P0=PLAYS[m.n];if(!P0||!playbook(M.op).includes(m.n))return;M.trick=null;if(P0.k==='pass')applyRoutes(m.n);else if(P0.k==='trick')setupTrick(m.n);M.aiPlay={n:m.n,k:P0.k};return;}
   if(m.t==='cp'&&pre&&M.ocp>0&&!M.conv){const pb=playbook(M.op).filter(n=>PLAYS[n].k==='pass'&&n!==(M.aiPlay&&M.aiPlay.n));if(!pb.length)return;M.ocp--;M.trick=null;const n=pick(pb);applyRoutes(n);M.aiPlay={n,k:'pass'};return;}
   if(m.t==='runplay'&&pre){M.aiSnapT=null;M.pb=false;snapRun(m.v||'dive',m.n||'HB DIVE');M.aiQB=null;M.called=null;return;}
@@ -6481,7 +6655,7 @@ function netHostMsg(m){
   if(m.t==='chase'&&live&&M.play==='intret'){M.rchase={x:+m.x,y:+m.y,rt:performance.now()};return;}
   if(m.t==='cdive'&&live&&M.play==='intret'){if(M.rchaser)chaserDive(M.rchaser);return;}
  }else{        /* guest is on defense */
-  if(m.t==='dcall'&&pre){M.dcall=m.c;applyDefCall();return;}
+  if(m.t==='dcall'&&pre){if(m.cd){const c=cpSanD(m.cd);if(!c)return;CDEF['G:'+c.n]=c;M.dcall='G:'+c.n;}else M.dcall=['MAN','ZONE','BLITZ','PREVENT'].includes(m.c)?m.c:'MAN';applyDefCall();return;}
   if(m.t==='sel'){netEnsureKeys();const f=M.D.find(x=>x.key===m.k);if(f){M.rctl=f;M.rkey=m.k;}return;}
   if(m.t==='joy'){M.rjoy={x:+m.x||0,y:+m.y||0,m:+m.m||0,rt:performance.now()};if(M.rjoy.m>0.05)M.rAt=M.pt;return;}
   if(m.t==='tap'&&live&&M.rctl){M.rAt=M.pt;ctlTap(M.rctl);return;}
@@ -6622,7 +6796,7 @@ function netInit(){
  netWrap('snapRun',(o,v,n)=>{netSend({t:'runplay',v:v||'dive',n:n||'HB DIVE'});});
  netWrap('callPlay',(o,name)=>{if(!M||M.phase!=='pre')return;const P0=PLAYS[name];if(!P0)return;M.pb=false;
   if(P0.k==='run'){netSend({t:'runplay',v:M.conv&&P0.v==='draw'?'dive':P0.v,n:name});return;}
-  netSend({t:'play',n:name});M.called=name;M.trick=P0.k==='trick'?{stage:'ready',guest:1}:null;sfx('tick');banner(name,P0.k==='trick'?'TAP TO SNAP · THROW AFTER THE PITCH':'PULL BACK TO SNAP','#fff',0.9);});
+  netSend(P0.cust?{t:'play',n:name,cp:P0.cust}:{t:'play',n:name});M.called=name;M.trick=P0.k==='trick'?{stage:'ready',guest:1}:null;sfx('tick');banner(name,P0.k==='trick'?'TAP TO SNAP · THROW AFTER THE PITCH':'PULL BACK TO SNAP','#fff',0.9);});
  netWrap('tuck',()=>{netSend({t:'tuck'});});
  netWrap('dive',()=>{netSend({t:'dive'});});
  netWrap('applyRunSwipe',(o,c,cmd)=>{if(cmd==='forward')netSend({t:'dive'});else if(cmd&&cmd!=='tap')netSend({t:'swipe',c:cmd});});
@@ -6645,7 +6819,7 @@ function netInit(){
  netWrap('chaserDive',()=>{netSend({t:'cdive'});});
  netWrap('kickRelease',(o,dx,dy)=>{const k=M.kick;if(!k||!k.mine||k.st!=='aim'||dy>-18||performance.now()-NET.kSent<1500)return;NET.kSent=performance.now();netSend({t:'kick',dx:r2(dx),dy:r2(dy)});sfx('kick');});
  netWrap('toggleBullet',()=>{if(!M||!M.aim)return false;M.passBullet=!M.passBullet;pop(M.passBullet?'BULLET':'LOB',M.qb?M.qb.x:0,M.qb?M.qb.y:0,M.passBullet?'#ffdf5b':'#9bdcff');return true;});
- const dc=ACT.dCall;ACT.dCall=d=>{if(netGuest()){if(M.phase==='pre'&&M.def){M.dcall=d.c;netSend({t:'dcall',c:d.c});sfx('tick');}return;}dc(d);};
+ const dc=ACT.dCall;ACT.dCall=d=>{if(netGuest()){if(M.phase==='pre'&&M.def){M.dcall=d.c;const cd=/^C:/.test(d.c||'')?CDEF[d.c]:null;netSend(cd?{t:'dcall',c:d.c,cd}:{t:'dcall',c:d.c});sfx('tick');}return;}dc(d);};
  const gp=ACT.gPause;ACT.gPause=()=>{if(netGuest()){NET.menu=!NET.menu;return;}gp();};
  netEvWrap('pop',(t,x,y,col)=>['p',t,r2(x),r2(y),col]);
  netEvWrap('banner',(t,sub,col,dur)=>['b',t,sub||'',col||'#fff',dur||1.4]);
