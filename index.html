@@ -1918,6 +1918,10 @@ const BPASS={id:'haunted-2026',name:'HAUNTED SEASON',tiers:30,xp:135,cost:500,
   {t:25,tr:'p',tok:75},{t:27,tr:'f',tok:40},{t:28,tr:'p',tok:75},{t:30,tr:'p',skin:'headlesshorseman'}]};
 const BP_KEY='rf_bp',TOK_KEY='rf_pumpkins';
 function bpTok(){try{return +localStorage.getItem(TOK_KEY)||0;}catch(e){return 0;}}
+/* 2X CANDY CORN WEEK (Halloween): candy earned from playing (games, daily login, first win, challenges,
+   weekly quests, achievements) is doubled until Sunday night. Battle pass tier rewards stay as listed. */
+const CC2_FROM=Date.parse('2026-10-28T00:00:00-04:00'),CC2_TO=Date.parse('2026-11-02T00:00:00-05:00');
+const cc2On=()=>{const t=NOW();return t>=CC2_FROM&&t<CC2_TO;},ccx=n=>cc2On()?n*2:n;
 function bpTokAdd(n){try{localStorage.setItem(TOK_KEY,String(Math.max(0,bpTok()+n)));}catch(e){}}
 function bpGet(){let b=null;try{b=JSON.parse(localStorage.getItem(BP_KEY)||'null');}catch(e){}if(!b||b.id!==BPASS.id)b={id:BPASS.id,xp:0,prem:false,cl:{},last:''};return b;}
 function bpPut(b){try{localStorage.setItem(BP_KEY,JSON.stringify(b));}catch(e){}}
@@ -1926,7 +1930,7 @@ function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)retu
  const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
  const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?1/3:1;
  const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
- const tok=SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
+ const tok=ccx(SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k)),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
  setTimeout(()=>toast('+'+tok+' CANDY CORN · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
  if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}}
@@ -2012,19 +2016,19 @@ const WEEKQ=[
 function weeklyGet(){let w=null;try{w=JSON.parse(localStorage.getItem('rf_weekly')||'null');}catch(e){}if(!w)w={};const wk=shopWeek();
  if(w.wk!==wk){w.wk=wk;w.q={};const r=seedRand('wq|'+wk),pool=WEEKQ.slice();w.ids=[];while(w.ids.length<5&&pool.length)w.ids.push(pool.splice(Math.floor(r()*pool.length),1)[0].id);}return w;}
 function weeklyAfterGame(g){const w=weeklyGet(),msgs=[];
- for(const id of w.ids){const c=WEEKQ.find(x=>x.id===id),st=w.q[id]||(w.q[id]={n:0,done:false});if(!c||st.done)continue;st.n+=Math.max(0,Math.round(c.add(g)||0));if(st.n>=c.need){st.n=c.need;st.done=true;bpTokAdd(c.tok);msgs.push('WEEKLY QUEST DONE: '+c.txt+' +'+c.tok);}}
+ for(const id of w.ids){const c=WEEKQ.find(x=>x.id===id),st=w.q[id]||(w.q[id]={n:0,done:false});if(!c||st.done)continue;st.n+=Math.max(0,Math.round(c.add(g)||0));if(st.n>=c.need){st.n=c.need;st.done=true;bpTokAdd(ccx(c.tok));msgs.push('WEEKLY QUEST DONE: '+c.txt+' +'+ccx(c.tok));}}
  try{localStorage.setItem('rf_weekly',JSON.stringify(w));}catch(e){}msgs.forEach((m,i)=>setTimeout(()=>toast(m),9000+i*2400));}
 function weekLeft(){const now=NOW();let t=shopSecsLeft();const cur=shopWeek(now);while(shopWeek(now+t*1000+60e3)===cur&&t<8*86400)t+=86400;const d=Math.floor(t/86400),h=Math.floor(t%86400/3600);return d?d+'D '+h+'H':h+'H '+Math.floor(t%3600/60)+'M';}
 function dailyPut(d){try{localStorage.setItem('rf_daily',JSON.stringify(d));}catch(e){}}
 function dailyLogin(){if(!SHOP_ON)return;const d=dailyGet(),today=dayKey();if(d.login.day===today)return;
  const y=new Date(NOW());y.setDate(y.getDate()-1);d.login.streak=d.login.day===dayKey(y)?Math.min(7,d.login.streak+1):1;d.login.day=today;
- const tok=20+5*(d.login.streak-1);bpTokAdd(tok);dailyPut(d);setTimeout(()=>toast('DAILY LOGIN · DAY '+d.login.streak+' STREAK · +'+tok+' CANDY CORN'),1200);}
+ const tok=ccx(20+5*(d.login.streak-1));bpTokAdd(tok);dailyPut(d);setTimeout(()=>toast('DAILY LOGIN · DAY '+d.login.streak+' STREAK · +'+tok+' CANDY CORN'),1200);}
 function dailyAfterGame(g){const d=dailyGet();let msgs=[];
- if(g.win&&!d.fw){d.fw=true;bpTokAdd(30);msgs.push('FIRST WIN OF THE DAY +30');}
- for(const id of d.ids){const c=CHALL.find(x=>x.id===id),st=d.ch[id]||(d.ch[id]={n:0,done:false});if(!c||st.done||!c.ok(g))continue;st.n++;if(st.n>=(c.need||1)){st.done=true;bpTokAdd(c.tok);msgs.push('CHALLENGE DONE: '+c.txt+' +'+c.tok);}}
+ if(g.win&&!d.fw){d.fw=true;bpTokAdd(ccx(30));msgs.push('FIRST WIN OF THE DAY +'+ccx(30));}
+ for(const id of d.ids){const c=CHALL.find(x=>x.id===id),st=d.ch[id]||(d.ch[id]={n:0,done:false});if(!c||st.done||!c.ok(g))continue;st.n++;if(st.n>=(c.need||1)){st.done=true;bpTokAdd(ccx(c.tok));msgs.push('CHALLENGE DONE: '+c.txt+' +'+ccx(c.tok));}}
  dailyPut(d);msgs.forEach((m,i)=>setTimeout(()=>toast(m),3300+i*2400));}
 function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
- return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
+ return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}${cc2On()?`<span class="s7" style="color:#ff9a1f;text-shadow:1px 1px 0 #000;margin-left:4px">🎃 2X CANDY CORN · ENDS SUN NIGHT</span>`:''}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
 const SHOPC=new Map();
 function shopCard(k,big){const sec=big==='sec',R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=sec?5.6:big?8.5:3.4,W=sec?100:big?150:110,H=sec?96:big?144:57;   /* characters fill their cards; 'sec' = section cards, 4 to a row */
  let src=SHOPC.get(k.id+'|'+u)||'';if(!src&&SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*3;cc.height=H*3;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();SHOPC.set(k.id+'|'+u,src);}   /* 3x for sharp cards (ultra-HD skins keep their detail); drawn once, then reused */
@@ -2035,7 +2039,7 @@ function shopCard(k,big){const sec=big==='sec',R=RARITY[k.shop.rarity]||RARITY.r
 function shopRegister(){
 SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday(),cat=UI.shopCat||'',hw=shopPool('halloween');if(cat&&!hw.length)UI.shopCat='';
  clearInterval(window.__shopT);window.__shopT=setInterval(()=>{const e=document.getElementById('shopT');if(!e){clearInterval(window.__shopT);return;}e.textContent=shopLeft();if(shopLeft()==='00:00:00')setTimeout(render,1500);},1000);
- const ch=d.ids.map(id=>{const c=CHALL.find(x=>x.id===id),st=d.ch[id]||{n:0,done:false};if(!c)return'';return`<div class="row" style="gap:6px;align-items:center;${st.done?'opacity:.55':''}"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}${c.need?` (${Math.min(st.n,c.need)}/${c.need})`:''}</span><span class="s7 yl" style="white-space:nowrap">+${c.tok}</span></div>`;}).join('');
+ const ch=d.ids.map(id=>{const c=CHALL.find(x=>x.id===id),st=d.ch[id]||{n:0,done:false};if(!c)return'';return`<div class="row" style="gap:6px;align-items:center;${st.done?'opacity:.55':''}"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}${c.need?` (${Math.min(st.n,c.need)}/${c.need})`:''}</span><span class="s7 yl" style="white-space:nowrap">+${ccx(c.tok)}</span></div>`;}).join('');
  const grid=items.length>=4?`<div class="col" style="gap:6px">${shopCard(items[0])}${shopCard(items[1])}</div>${shopCard(items[2],true)}${shopCard(items[3],true)}`:items.map(k=>shopCard(k,true)).join('');
  return`<div class="screen" style="gap:6px">${shopTabs('shop')}
  <div class="row" style="width:100%;gap:8px;align-items:stretch;flex:1;min-height:0">
@@ -2044,10 +2048,10 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
     <div style="margin:0 6px 6px;height:8px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${tier>=BPASS.tiers?100:Math.round(into/BPASS.xp*100)}%;background:#ffe600"></div></div></div>
    <div class="shbox" style="flex:1;min-height:0;display:flex;flex-direction:column"><div class="shhd row" style="gap:4px;padding:0"><button class="shq${UI.shopQ?'':' on'}" data-a="shopQ" data-v="">DAILY</button><button class="shq${UI.shopQ?' on':''}" data-a="shopQ" data-v="1">WEEKLY</button></div>
     ${UI.shopQ?(()=>{const w=weeklyGet();return`<div class="col scroll" style="gap:6px;padding:6px;flex:1;min-height:0">${w.ids.map(id=>{const c=WEEKQ.find(x=>x.id===id),st=w.q[id]||{n:0,done:false};if(!c)return'';const pc=Math.min(100,Math.round(st.n/c.need*100));
-      return`<div class="col" style="gap:3px;${st.done?'opacity:.55':''}"><div class="row" style="gap:6px;align-items:center"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}</span><span class="s7 yl" style="white-space:nowrap">+${c.tok}</span></div><div class="row" style="gap:5px;align-items:center"><div style="flex:1;height:5px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${pc}%;background:${st.done?'#7dff8a':'#ffe600'}"></div></div><span class="s7 dim">${Math.min(st.n,c.need).toLocaleString()}/${c.need.toLocaleString()}</span></div></div>`;}).join('')}
+      return`<div class="col" style="gap:3px;${st.done?'opacity:.55':''}"><div class="row" style="gap:6px;align-items:center"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}</span><span class="s7 yl" style="white-space:nowrap">+${ccx(c.tok)}</span></div><div class="row" style="gap:5px;align-items:center"><div style="flex:1;height:5px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${pc}%;background:${st.done?'#7dff8a':'#ffe600'}"></div></div><span class="s7 dim">${Math.min(st.n,c.need).toLocaleString()}/${c.need.toLocaleString()}</span></div></div>`;}).join('')}
      <div class="s7 dim">NEW QUESTS IN ${weekLeft()}</div></div>`;})()
     :`<div class="col" style="gap:6px;padding:6px">${ch}
-    <div class="s7 dim" style="line-height:1.6">FIRST WIN OF THE DAY: ${d.fw?'<span class="grt">DONE</span>':'<span class="yl">+30</span>'}<br>LOGIN STREAK: ${d.login.streak||0} DAY${d.login.streak===1?'':'S'}</div></div>`}</div>
+    <div class="s7 dim" style="line-height:1.6">FIRST WIN OF THE DAY: ${d.fw?'<span class="grt">DONE</span>':'<span class="yl">+'+ccx(30)+'</span>'}<br>LOGIN STREAK: ${d.login.streak||0} DAY${d.login.streak===1?'':'S'}</div></div>`}</div>
    ${TEST_SITE?'<button class="bt r" data-a="shopTest">TEST: +500 CANDY CORN</button>':''}
   </div>
   <div class="col" style="flex:1;gap:6px;min-width:0">
@@ -4085,7 +4089,7 @@ function achAfterGame(){if(!M||M.prac||M.simmed||M.achDone)return[];M.achDone=tr
   p3:R.some(([,x])=>(x.rtd||0)+(x.wtd||0)>=3),online:!!(L&&L.net),champ:!!(L&&L.phase==='PO'&&M.g&&M.g.conf==='SB')};
  const a=achGet();a.gp++;if(G.win)a.w++;a.td+=G.td;const got=[];
  for(const x of ACH){if(a.u[x.id])continue;if(x.c?a[x.c]>=x.goal:x.t(G)){a.u[x.id]=Date.now();got.push(x);}}
- achPut(a);if(got.length){const cc=got.reduce((v,x)=>v+x.cc,0);if(PASS_ON)bpTokAdd(cc);
+ achPut(a);if(got.length){const cc=ccx(got.reduce((v,x)=>v+x.cc,0));if(PASS_ON)bpTokAdd(cc);
   setTimeout(()=>toast('🏆 ACHIEVEMENT'+(got.length>1?'S':'')+': '+got.map(x=>x.n).join(', ')+(PASS_ON?' · +'+cc+' CANDY CORN':'')),2400);}
  return got;}
 SCR.ach=()=>{const a=achGet(),n=ACH.filter(x=>a.u[x.id]).length;
