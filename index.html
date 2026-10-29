@@ -1306,7 +1306,9 @@ function migrate(o){
  for(const p of o.players){const a=p.a;if(a.arm!=null){if(a.str==null)a.str=a.arm;delete a.arm;}if(a.kpw!=null){a.str=a.kpw;delete a.kpw;}
   const have=Object.values(a),avg=have.length?have.reduce((x,y)=>x+y,0)/have.length:4;for(const k of POSDEF[p.pos])if(a[k]==null)a[k]=clamp(Math.round(avg+rnd(-1,1)),1,10);}
 }
-function tradeValue(p){const v=ovr(p)+(p.pot-ovr(p))*0.5-Math.max(0,p.age-28)*0.4;return v>=7.6?1:v>=6.2?2:v>=4.8?3:0;}
+/* champions are proven winners: each Super Bowl ring adds trade value (like an all-pro season), up to 3 rings */
+const ringBonus=p=>p&&p.rings?[0,0.9,1.4,1.8][Math.min(3,p.rings)]:0;
+function tradeValue(p){const v=ovr(p)+(p.pot-ovr(p))*0.5-Math.max(0,p.age-28)*0.4+ringBonus(p);return v>=7.6?1:v>=6.2?2:v>=4.8?3:0;}
 function tradePlayer(p){const r=tradeValue(p);if(!r)return false;const t=pick(L.teams.filter(x=>!isHuman(x.id))).id;p.team=t;p.bk=false;p.bench=false;const rr=rosterOf(t);if(rr.length>rmax()){const w=rr.filter(x=>x!==p).sort((a,b)=>ovr(a)-ovr(b))[0];if(w){w.team=-1;w.yrs=1;}}L.picks[r-1]++;news('You traded '+p.pos+' '+fullname(p)+' to '+T(t).name+' for a round '+r+' pick.');return r;}
 function autoPickTarget(){const sc=p=>p.scout[0]+p.scout[1]+(3-'ABCD'.indexOf(p.potg))*0.4;return L.draft.pool.map(P).filter(Boolean).sort((a,b)=>sc(b)-sc(a))[0];}
 function hasSave(n){try{return!!localStorage.getItem(slotKey(n||SLOT));}catch(e){return false;}}
@@ -2903,7 +2905,7 @@ ACT.pTrade=()=>{const p=P(UI.sub.id),r=tradeValue(p);if(!tradesOpen())return mod
    average players. Young players with high potential are worth more, old ones less.
    The other team says yes when what it gets is worth a bit more than what it gives,
    and it won't give up its only player at a position without getting one back. */
-function trVal(p){if(!p)return 0;const o=ovr(p)+(p.age<=26?Math.max(0,p.pot-ovr(p))*0.4:0)-Math.max(0,p.age-29)*0.45;return Math.pow(Math.max(0.5,o-2),2.2);}
+function trVal(p){if(!p)return 0;const o=ovr(p)+(p.age<=26?Math.max(0,p.pot-ovr(p))*0.4:0)-Math.max(0,p.age-29)*0.45+ringBonus(p);return Math.pow(Math.max(0.5,o-2),2.2);}
 const PICK_V=[Math.pow(5.1,2.2),Math.pow(3.9,2.2),Math.pow(2.8,2.2)];
 /* Other teams' draft picks for this season (everyone starts with one per round; trades move them). */
 function aiPk(t){L.aiPicks=L.aiPicks||{};return L.aiPicks[t]||(L.aiPicks[t]=[1,1,1]);}
@@ -3963,7 +3965,12 @@ function cpApplyO(c){const los=M.los,by=M.ballY,F={w1:M.w1,w2:M.w2,te:M.te,rb:M.
 function cpResetO(){if(!M.custF)return;M.custF=false;const los=M.los,by=M.ballY,F={w1:M.w1,w2:M.w2,te:M.te,rb:M.rb};
  for(const k of CPO_KEYS){const f=F[k];if(!f)continue;const[dx,dy]=CPO_DEF[k];f.x=los+dx;f.y=k==='w1'||k==='w2'?clamp(by+dy,3,50):by+dy;f.pblk=false;}cpLineUpD();}
 /* the computer's corners and safety line up over the receivers wherever they went */
-function cpLineUpD(){if(M.def)return;for(const d of M.D){if(d.man&&(d.role==='DB'||d.role==='S')&&M.O.includes(d.man))d.y=d.man.y;}}
+function cpLineUpD(){if(M.def)return;const by=M.ballY;
+ for(const d of M.D){if(d.man0===undefined){d.man0=d.man||null;d.y0=d.y;}d.man=d.man0;d.zone=null;d.y=d.y0;}   /* start from the computer's normal call each time */
+ for(const d of M.D){const m=d.man;if(!m||!M.O.includes(m))continue;
+  if(m.pblk){d.man=null;d.zone={x:Math.min(119,M.los+7),y:clamp(by+(d.y<by?-4:4),3,50)};continue;}   /* his man stayed in to block: he helps underneath in the middle */
+  if(d.role==='DB'||d.role==='S')d.y=m.y;
+  else if(d.role==='LB')d.y=clamp(m.role==='RB'?by+(m.y-by)*0.9:m.y,2,51.3);}}   /* linebackers line up over the TE / back wherever they moved (a TE split wide or a back out of the backfield was running free) */
 /* TE / back staying in to block: picks up the nearest rusher in front of the QB */
 function upPB(f,dt){const q=M.qb||f;if(f.blk&&(f.blk.stun>0||(f.blk.eng&&f.blk.eng!==f)||(f.blk.shed>0&&f.blk.eng!==f)))f.blk=null;
  if(!f.blk){let best=null,bd=12;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(d.role!=='DL'&&!d.blitz)continue;if(M.O.some(o=>o!==f&&o.blk===d))continue;const dd=d2(d,q);if(dd<bd){bd=dd;best=d;}}f.blk=best;}
