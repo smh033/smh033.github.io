@@ -4082,6 +4082,7 @@ function dpbHTML(){const L0=cpGet().d;return`<div class="gov" style="z-index:35"
  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">${L0.map(x=>`<button class="bt ${M.dcall==='C:'+x.n?'y':''}" style="padding:6px 4px 5px;white-space:normal" data-a="gDPick" data-n="${esc(x.n)}">${esc(x.n)}</button>`).join('')}</div></div></div>`;}
 
 cpRegister();
+{const d=cpGet(),t=JSON.stringify({o:d.o,d:d.d});try{const raw=localStorage.getItem(CP_KEY);if(raw&&raw!==t)localStorage.setItem(CP_KEY,t);}catch(e){}}   /* saved plays that break the current rules (trips etc.) are fixed and saved back */
 /* Small route diagram for a play card. */
 function playSVG(name){
  const P0=PLAYS[name],W=58,H=34,X=x=>clamp(9+(x+6)*1.35,1,W-1),Y=y=>clamp(H/2+y*1.05,1,H-1);let g='';
@@ -4910,7 +4911,7 @@ function aimInfo(a){
  // Max placement error (yd). The ring drawn in the preview is exactly this radius,
  // and the real throw can never land outside it.
  const accMul=1.5-0.09*(clamp(acc,1,11)-1);               // acc 1 -> 1.5x, acc 11 -> 0.6x
- const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1)*(M.def?1-0.12*diffLvl():1+0.2*Math.max(0,diffLvl()))*(xd()?1.2:1)*(M.aimShake>0?1.9:1);
+ const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1)*(M.def?1-0.12*diffLvl():1+0.2*Math.max(0,diffLvl()))*(M.aimShake>0?1.9:1);
  const F=makeFlight(x0,y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,tm.T,bullet?PASS.G:PASS.G_LOB);
  return{tx,ty,x0,y0,d:tm.d,v:tm.v,T:tm.T,p:tm.p,maxR:tm.maxR,run,err,press,moving,pull,str,acc,bullet,F};
 }
@@ -5278,7 +5279,7 @@ function routeBreak(f){if(f.ri>=f.rlen)return;
  // running deep: much better odds to win, and the defender overruns instead of just slowing down.
  const stop=!!(f.route&&f.route[f.ri]&&f.route[f.route.length-1].stop&&f.ri>=f.route.length-1);
  for(const d of M.D){if(d.man!==f)continue;const pb=0.32+(stop?0.08:0)+(A(f,'spd')+A(f,'cat')*0.5-A(d,'cov')*1.5)*0.045;
-  if(Math.random()<clamp(pb,stop?0.35:0.1,stop?0.8:0.75)){d.beat=(stop?0.45:0.4)+Math.random()*0.3;d.overrun=stop;}}}
+  if(Math.random()<clamp(pb-0.12,stop?0.12:0.06,stop?0.45:0.5)){d.beat=0.22+Math.random()*(stop?0.15:0.2);d.overrun=stop;}}}   /* a receiver can still win at the break, but the defender recovers quickly instead of running off */
 /* Run THROUGH route corners at full speed (no braking into each waypoint) and make the cut
    sharply; only a final "stop" point (curl/hitch/comeback) is approached with braking. */
 function runThrough(f,tx,ty,spd,acc,dt){const dx=tx-f.x,dy=ty-f.y,d=Math.hypot(dx,dy)||1;
@@ -5353,6 +5354,11 @@ function upDef(f,dt){
     keeping contain a few yards off the passer, so the RB slips out the back side */
  if(M.trick&&M.trick.fool>0&&!M.thrown&&f.man&&M.trick.bite.includes(f.man)){const q=trickBiteTarget();if(q){const sd=f.y<q.y?-1:1;steer(f,q.x+2.5,q.y+sd*3.2,f.spd*0.9,f.acc,dt);return;}}
  /* zone coverage (defense mode calls): sit in the area, shade the nearest receiver, break on the throw */
+ if(f.zone&&!M.thrown&&M.play==='pass'&&!(M.def&&f===M.ctl)&&M.pt>0.6&&(f.zsw||0)<=M.pt){f.zsw=M.pt+0.12;   /* smart zone: a receiver running free with nobody near him gets picked up man-to-man by the closest zone defender who isn't busy */
+  let best=null,bo=5;for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb||o.pblk||!o.route||o.x<M.los+1)continue;let dm=99;for(const d of M.D){if(d.role==='DL'||d.blitz)continue;dm=Math.min(dm,Math.hypot(d.x-o.x,d.y-o.y));}if(dm>bo){bo=dm;best=o;}}
+  if(best){let near=null,nd=1e9;for(const d of M.D){if(!d.zone||d.blitz||(M.def&&d===M.ctl))continue;const dd=Math.hypot(d.x-best.x,d.y-best.y);if(dd<nd){nd=dd;near=d;}}
+   const busy=M.O.some(o=>o!==best&&SKILL.includes(o.role)&&o.route&&!o.pblk&&Math.hypot(o.x-f.x,o.y-f.y)<4);
+   if(near===f&&!busy){f.zone=null;f.man=best;f.zt=null;}}}
  if(f.zone){const z=f.zone;
   if(M.thrown&&M.ball&&M.ball.F){if(M.ball.t>(f.react||0.3))steer(f,M.ball.x1,M.ball.y1,f.spd,f.acc+4,dt);else steer(f,f.x,f.y,0,10,dt);return;}
   const lbz=f.role==='LB',taken=o=>M.D.some(g=>g!==f&&(g.zt===o||g.man===o));let r=null,bd=8;
@@ -5367,10 +5373,10 @@ function upDef(f,dt){
   if(lbz&&r&&(r.role==='TE'||r.role==='RB')){const sp=Math.max(f.spd,r.spd*1.05),ld=clamp(Math.hypot(f.x-r.x,f.y-r.y)/sp,0.1,0.8);steer(f,Math.min(r.x+r.vx*ld+0.4,119.5),r.y+r.vy*ld,sp*0.97,Math.max(f.acc,21),dt);return;}   /* carrying the TE or back: stay on him like man coverage */
   const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95*(M.custF?1.06:1)*(xd()?1.07:1),f.acc,dt);return;}
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,2.2));
-  if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
-  const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
+  if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.4,f.y+f.vy*0.4,f.spd*0.6,f.acc*0.6,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
+  const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length-1&&(m.ri>=m.route.length||Math.hypot(m.route[m.route.length-1].x-m.x,m.route[m.route.length-1].y-m.y)<2.5);   /* hitch / curl: drive on him as he settles */
   // receiver sitting down in a curl: defender recovers to a spot behind him, he doesn't teleport onto his hip
-  if(parked){steer(f,Math.min(m.x+0.7,119.5),m.y,f.spd*0.85,f.acc*0.8,dt);return;}
+  if(parked){steer(f,Math.min(m.x+0.6,119.5),m.y+(M.qb?(M.qb.y-m.y)*0.04:0),f.spd*0.95,f.acc*1.2,dt);return;}
   /* your defenders (defense mode) close back on a receiver who has gotten behind them */
   const trail=M.def&&m.x>f.x-0.3&&d2(f,m)<5?1.09:1;
   const te=m.role==='TE'&&f.role!=='DL',rb=m.role==='RB'&&f.role==='LB',sp=te||rb?Math.max(f.spd,m.spd*(te?1.1:m.x<M.los+1?1.2:1.05)):f.spd,ac=te||rb?Math.max(f.acc,21):f.acc,gap=Math.hypot(f.x-m.x,f.y-m.y),ld=te?(gap>1.5?clamp(gap/sp,0.1,0.8):0.04):rb?clamp(gap/sp,0.2,1.2):0.1;   /* whoever has the TE (the safety on a blitz too) cuts him off once he's behind instead of chasing his back on crossers */   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free); on the back he takes an angle to where he's going (screens and swings) */
