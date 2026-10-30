@@ -4819,7 +4819,7 @@ function snap(type){
  sfx('whistle');recStart();M.leap=false;M.rp=null;
  if(type==='run'){for(const f of M.O)if(f.role==='WR'||f.role==='TE')f.route=null;M.rb.route=null;}
 }
-function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;if(M.def){if(M.input!=='dctl')M.input=null;}else M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down&&!M.def)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
+function setCarrier(f){M.carrier=f;M.aim=null;f.route=null;f.ty=f.y;if(M.def){if(M.input!=='dctl'&&M.input!=='joy')M.input=null;}   /* on defense: a handoff or catch never drops the joystick you're holding */else M.input=ptr.down?'run':null;for(const o of M.O)if(o!==f&&o.role!=='OL')o.blk=null;if(f.role!=='QB'||M.scramble)M.carries++;if(ptr.down&&!M.def)M.steer={x0:ptr.x,y0:ptr.y,ty0:f.y,stepped:true,ly:ptr.y,lt:performance.now()};}
 function tuck(){if(!M||M.phase!=='live'||M.play!=='pass'||M.thrown||M.carrier||trickBusy())return;M.scramble=true;setCarrier(M.qb);
  /* the QB escapes the pocket first: a quick roll-out toward the side with fewer rushers, staying behind his line,
     then he turns upfield (running straight ahead used to put him right into the pile: a loss every time) */
@@ -4927,7 +4927,7 @@ function throwBall(ai){
  M.ball={F,t:0,T:F.T,Tg:F.Tg,x0:F.x0,y0:F.y0,x1:tx,y1:ty,bullet:ai.bullet};
  if(M.def&&!netHost()&&L.settings.autoSw!==false)autoCtlBall(tx,ty);else if(netHost()&&!M.def)netSwitch(tx,ty);   /* online: your friend on defense jumps to the defender nearest the throw */   /* setting: AUTO SWITCH ON THROWS */
  window.__pass.last={plan:ai.F,actual:F,err:ai.err};
- M.thrown=true;M.aim=null;M.input=null;q.throwT=0.3;sfx('kick');
+ M.thrown=true;M.aim=null;if(!(M.def&&(M.input==='joy'||M.input==='dctl')))M.input=null;q.throwT=0.3;sfx('kick');
  // Who the throw was probably meant for: only used so that receiver keeps
  // working back to the ball late in flight (upChase). The ball is never steered.
  // The receiver who can get to the ball's catch point soonest breaks off his
