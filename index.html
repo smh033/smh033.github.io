@@ -4582,7 +4582,7 @@ function ctlActive(){return M.def&&M.ctl&&((ptr.down&&(M.input==='dctl'||M.input
 /* the defender you steer is a step quicker than the computer's (top speed 1.18x, snappier cuts) */
 const UCTL_SP=0.78;
 function ctlMove(f,dt){
- M.ctlAt=M.pt;if(ctlActive())M.ctlTouch=M.plays;
+ M.ctlAt=M.pt;if(ctlActive()){M.ctlTouch=M.plays;M.ctlTouchF=f;}   /* only the defender you actually moved stays manual: one you get switched to (on a throw) plays on until you touch him */
  if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(1.8+A(f,'str')*0.2)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  let tx,ty;
  const jv=joyVec();
@@ -5239,8 +5239,8 @@ function upLive(dt){
   if(f.dive>0){if(stepDefDive(f,dt))return;continue;}
   if(f.stun>0)continue;
   if(f===M.ctl&&f.diveQ&&ballDive(f,dt))continue;
-  if(f===M.ctl&&(ctlActive()||M.ctlTouch===M.plays)){ctlMove(f,dt);continue;}   /* once you've moved him this play he's all yours: no drifting back to his man when you let go */
-  if(f===M.rctl&&!M.def){if(f.diveQ&&ballDive(f,dt))continue;if(netRActive()||M.rTouch===M.plays){rctlMove(f,dt);continue;}}   /* online: your friend's defender */
+  if(f===M.ctl&&(ctlActive()||(M.ctlTouch===M.plays&&M.ctlTouchF===f))){ctlMove(f,dt);continue;}   /* once you've moved him this play he's all yours: no drifting back to his man when you let go */
+  if(f===M.rctl&&!M.def){if(f.diveQ&&ballDive(f,dt))continue;if(netRActive()||(M.rTouch===M.plays&&M.rTouchF===f)){rctlMove(f,dt);continue;}}   /* online: your friend's defender */
   upDef(f,dt);if(!(M.def&&f===M.ctl)&&!(f===M.rctl&&!M.def&&netRActive()))maybeDefDive(f,dt);}
  separate(M.O);separate(M.D);
  // hands go up for a ball that is about to arrive
@@ -6609,7 +6609,7 @@ const r2=v=>v==null?0:Math.round(v*100)/100,r1=v=>v==null?0:Math.round(v*10)/10;
 function netEnsureKeys(){for(const list of [M.D])list.forEach((f,i)=>{if(!f.key)f.key=f.role+list.filter((g,j)=>j<i&&g.role===f.role).length;});}
 function netRCtl(){if(M.def){M.rctl=null;return;}netEnsureKeys();if(M.rctl&&M.D.includes(M.rctl))return;M.rctl=M.D.find(f=>f.key===(M.rkey||'LB0'))||M.D.find(f=>f.role==='LB')||M.D[0]||null;}
 const netRActive=()=>!!(M&&M.rjoy&&M.rjoy.m>0.05&&performance.now()-M.rjoy.rt<700);
-function rctlMove(f,dt){M.rAt=M.pt;if(netRActive())M.rTouch=M.plays;const v=M.rjoy;
+function rctlMove(f,dt){M.rAt=M.pt;if(netRActive()){M.rTouch=M.plays;M.rTouchF=f;}const v=M.rjoy;
  if(f.eng){if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  steer(f,clamp(f.x+v.x*5,-1,121),clamp(f.y+v.y*5,0,53.3),f.spd*(0.35+0.68*v.m),f.acc+12,dt);}
 function rctlPre(dt){const v=M.rjoy,f=M.rctl;if(!f)return;const sp=6.5*v.m,nx=clamp(f.x+v.x*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
