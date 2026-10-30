@@ -3961,9 +3961,10 @@ const cpLab=c=>String(c||'MAN').replace(/^[CG]:/,'');
 function cpApplyO(c){const los=M.los,by=M.ballY,F={w1:M.w1,w2:M.w2,te:M.te,rb:M.rb};M.custF=true;
  CPO_KEYS.forEach((k,i)=>{const f=F[k];if(!f)return;const[dx,dy]=c.f[k];f.x=los+dx;f.y=clamp(by+dy,1.5,51.8);f.pblk=false;f.blk=null;const r=c.r[i];
   if(r==='block'){f.route=null;f.rname='block';f.pblk=true;}else if(RT[CPO_KIND[k]][r])setRoute(f,CPO_KIND[k],r,f.y>=by?-1:1);});
- cpLineUpD();}
+ cpDefRedo();}
+function cpDefRedo(){if(M.def||netHost())applyDefCall();else cpLineUpD();}   /* a person on defense: their call lines up again over the new formation */
 function cpResetO(){if(!M.custF)return;M.custF=false;const los=M.los,by=M.ballY,F={w1:M.w1,w2:M.w2,te:M.te,rb:M.rb};
- for(const k of CPO_KEYS){const f=F[k];if(!f)continue;const[dx,dy]=CPO_DEF[k];f.x=los+dx;f.y=k==='w1'||k==='w2'?clamp(by+dy,3,50):by+dy;f.pblk=false;}cpLineUpD();}
+ for(const k of CPO_KEYS){const f=F[k];if(!f)continue;const[dx,dy]=CPO_DEF[k];f.x=los+dx;f.y=k==='w1'||k==='w2'?clamp(by+dy,3,50):by+dy;f.pblk=false;}cpDefRedo();}
 /* the computer's corners and safety line up over the receivers wherever they went */
 function cpLineUpD(){if(M.def)return;const by=M.ballY;
  for(const d of M.D){if(d.man0===undefined){d.man0=d.man||null;d.y0=d.y;}d.man=d.man0;d.zone=null;d.y=d.y0;}   /* start from the computer's normal call each time */
@@ -4493,11 +4494,18 @@ function applyDefCall(){
  if(c==='MAN'){if(db[0])db[0].man=M.w1;if(db[1])db[1].man=M.w2;if(lb[1])lb[1].man=M.te;if(lb[0])lb[0].man=M.rb;}
  else if(c==='BLITZ'){if(db[0])db[0].man=M.w1;if(db[1])db[1].man=M.w2;for(const f of lb){f.blitz=true;f.man=null;}if(lb[0])lb[0].man=M.rb;if(sf){sf.man=M.te;sf.role='DB';sf.x=Math.min(119,los+6);}}
  else if(c==='ZONE'){const z=(f,x,y)=>{if(f){f.man=null;f.zone={x:Math.min(119,x),y:clamp(y,3,50)};}};
-  z(db[0],los+9,(M.w1?M.w1.y:by-14));z(db[1],los+9,(M.w2?M.w2.y:by+14));z(lb[0],los+5,by-6);z(lb[1],los+5,by+6);}
+  const rc=[M.w1,M.w2,M.te].filter(Boolean),sh=rc.length?clamp((rc.reduce((s,o)=>s+o.y,0)/rc.length-by)*0.6,-6,6):0;   /* linebacker zones lean toward the side with more receivers (trips) */
+  z(db[0],los+9,(M.w1?M.w1.y:by-14));z(db[1],los+9,(M.w2?M.w2.y:by+14));z(lb[0],los+5,by-6+sh);z(lb[1],los+5,by+6+sh);}
  else{/* PREVENT: everyone deep, nothing over the top */const z=(f,x,y)=>{if(f){f.man=null;f.zone={x:Math.min(119,x),y:clamp(y,3,50)};f.x=Math.min(119,Math.max(f.x,x-4));}};
   z(db[0],los+17,(M.w1?M.w1.y:by-12));z(db[1],los+17,(M.w2?M.w2.y:by+12));z(lb[0],los+8,by-5);z(lb[1],los+8,by+5);if(sf)sf.x=Math.min(119,los+22);}
  for(const f of dl)f.blitz=false;
+ defAlign();
 }
+/* line the defense up over the offense's formation (custom plays can put trips, a split TE or a wide back anywhere):
+   cover men stand over their man, zone corners over their zone, linebackers over a TE or back who moved */
+function defAlign(){const by=M.ballY;for(const f of M.D){if(f.role==='DL'||f.blitz)continue;const m=f.man;
+  if(m&&M.O.includes(m)){if(f.role==='DB'||f.role==='S')f.y=m.y;else if(f.role==='LB'&&Math.abs(m.y-by)>4.5)f.y=clamp(m.role==='RB'?by+(m.y-by)*0.9:m.y,2,51.3);}
+  else if(f.zone&&f.role==='DB')f.y=f.zone.y;}}
 ACT.dCall=d=>{if(!M||!M.def||M.phase!=='pre')return;M.dcall=d.c;applyDefCall();sfx('tick');};
 ACT.gSwitch=()=>switchCtl();ACT.gDDive=()=>{if(M&&M.def)ctlTap();};
 /* CATCH / SWAT while the ball is in the air (Madden style): your defender breaks on the ball and
