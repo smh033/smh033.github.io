@@ -3918,7 +3918,7 @@ function applyRoutes(name){
 const CP_KEY='rf_cplays',CP_MAXO=8,CP_MAXD=6,CP_BLITZ=2;
 const CPO_KEYS=['w1','w2','te','rb'],CPO_KIND={w1:'WR',w2:'WR',te:'TE',rb:'RB'},CPO_LAB={w1:'WR1',w2:'WR2',te:'TE',rb:'RB'};
 const CPO_DEF={w1:[-0.8,-14],w2:[-0.8,14],te:[-0.9,3.5],rb:[-5.2,1.9]};
-const CPO_LIM={w1:{x:[-2.5,-0.8],y:[3.5,22]},w2:{x:[-2.5,-0.8],y:[3.5,22]},te:{x:[-2.5,-0.9],y:[2.6,11]},rb:{x:[-7,-3],y:[0,4.5]}};
+const CPO_LIM={w1:{x:[-2.5,-0.8],y:[6,22]},w2:{x:[-2.5,-0.8],y:[6,22]},te:{x:[-2.5,-0.9],y:[2.6,9]},rb:{x:[-7,-3],y:[0,3.5]}};
 const CPD_KEYS=['DL0','DL1','LB0','LB1','DB0','DB1','S0'],CPD_LAB={DL0:'DL',DL1:'DL',LB0:'LB',LB1:'LB',DB0:'CB',DB1:'CB',S0:'S'};
 const CPD_DEF={DL0:[0.9,-1],DL1:[0.9,1],LB0:[4.6,-3.6],LB1:[4.6,3.8],DB0:[4,-14],DB1:[4,14],S0:[15,0]};
 const CPD_LIM={DL:{x:[0.9,0.9],y:6},LB:{x:[2.5,9],y:14},DB:{x:[1.2,16],y:24},S:{x:[6,22],y:20}};
@@ -3933,6 +3933,7 @@ function cpPut(d){try{localStorage.setItem(CP_KEY,JSON.stringify({o:d.o,d:d.d}))
 function cpSpotO(k,x,y,f){const L0=CPO_LIM[k];x=cpNum(x,L0.x[0],L0.x[1],CPO_DEF[k][0]);y=cpNum(y,-L0.y[1],L0.y[1],CPO_DEF[k][1]);
  if(Math.abs(y)<L0.y[0])y=(y<0?-1:1)*L0.y[0];
  if(k==='rb'&&Math.hypot(x+4.6,y)<1.5)y=(y<0?-1:1)*Math.max(1.5,Math.abs(y));   /* not on the QB */
+ if(f&&k!=='rb'){const side=y<0?-1:1,same=['w1','w2','te'].filter(o=>o!==k&&f[o]&&(f[o][1]<0?-1:1)===side).length;if(same>=2)y=-y;}   /* at most 2 receivers on one side (no trips/bunch overloads) */
  if(f)for(let it=0;it<4;it++)for(const o of CPO_KEYS){if(o===k||!f[o])continue;const[ox,oy]=f[o];if(Math.hypot(x-ox,y-oy)<2.2){y=oy+(y>=oy?2.3:-2.3);y=clamp(y,-L0.y[1],L0.y[1]);if(Math.abs(y)<L0.y[0])y=(y<0?-1:1)*L0.y[0];}}
  return[Math.round(x*10)/10,Math.round(y*10)/10];}
 function cpRoutes(k){return k==='te'||k==='rb'?[...Object.keys(RT[CPO_KIND[k]]),'block']:Object.keys(RT.WR);}
@@ -4578,7 +4579,7 @@ function ctlActive(){return M.def&&M.ctl&&((ptr.down&&(M.input==='dctl'||M.input
 /* the defender you steer is a step quicker than the computer's (top speed 1.18x, snappier cuts) */
 const UCTL_SP=0.78;
 function ctlMove(f,dt){
- M.ctlAt=M.pt;
+ M.ctlAt=M.pt;if(ctlActive())M.ctlTouch=M.plays;
  if(f.eng){/* fight off the block: holding toward the play sheds it faster than the AI would */if(Math.random()<dt*(1.8+A(f,'str')*0.2)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  let tx,ty;
  const jv=joyVec();
@@ -5235,8 +5236,8 @@ function upLive(dt){
   if(f.dive>0){if(stepDefDive(f,dt))return;continue;}
   if(f.stun>0)continue;
   if(f===M.ctl&&f.diveQ&&ballDive(f,dt))continue;
-  if(f===M.ctl&&ctlActive()){ctlMove(f,dt);continue;}
-  if(f===M.rctl&&!M.def){if(f.diveQ&&ballDive(f,dt))continue;if(netRActive()){rctlMove(f,dt);continue;}}   /* online: your friend's defender */
+  if(f===M.ctl&&(ctlActive()||M.ctlTouch===M.plays)){ctlMove(f,dt);continue;}   /* once you've moved him this play he's all yours: no drifting back to his man when you let go */
+  if(f===M.rctl&&!M.def){if(f.diveQ&&ballDive(f,dt))continue;if(netRActive()||M.rTouch===M.plays){rctlMove(f,dt);continue;}}   /* online: your friend's defender */
   upDef(f,dt);if(!(M.def&&f===M.ctl)&&!(f===M.rctl&&!M.def&&netRActive()))maybeDefDive(f,dt);}
  separate(M.O);separate(M.D);
  // hands go up for a ball that is about to arrive
@@ -5362,7 +5363,7 @@ function upDef(f,dt){
    f.zt=r;}
   else for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}}
   if(lbz&&r&&(r.role==='TE'||r.role==='RB')){const sp=Math.max(f.spd,r.spd*1.05),ld=clamp(Math.hypot(f.x-r.x,f.y-r.y)/sp,0.1,0.8);steer(f,Math.min(r.x+r.vx*ld+0.4,119.5),r.y+r.vy*ld,sp*0.97,Math.max(f.acc,21),dt);return;}   /* carrying the TE or back: stay on him like man coverage */
-  const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95,f.acc,dt);return;}
+  const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95*(M.custF?1.06:1),f.acc,dt);return;}
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,2.2));
   if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
   const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
@@ -5371,7 +5372,7 @@ function upDef(f,dt){
   /* your defenders (defense mode) close back on a receiver who has gotten behind them */
   const trail=M.def&&m.x>f.x-0.3&&d2(f,m)<5?1.09:1;
   const te=m.role==='TE'&&f.role!=='DL',rb=m.role==='RB'&&f.role==='LB',sp=te||rb?Math.max(f.spd,m.spd*(te?1.1:m.x<M.los+1?1.2:1.05)):f.spd,ac=te||rb?Math.max(f.acc,21):f.acc,gap=Math.hypot(f.x-m.x,f.y-m.y),ld=te?(gap>1.5?clamp(gap/sp,0.1,0.8):0.04):rb?clamp(gap/sp,0.2,1.2):0.1;   /* whoever has the TE (the safety on a blitz too) cuts him off once he's behind instead of chasing his back on crossers */   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free); on the back he takes an angle to where he's going (screens and swings) */
-  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:rb?0:1),119.5),m.y+m.vy*ld,sp*0.97*trail,ac,dt);return;}
+  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:rb?0:1)*(M.custF?0.6:1),119.5),m.y+m.vy*ld,sp*0.97*trail*(M.custF?1.06:1),ac,dt);return;}   /* custom plays: cover men play a step tighter and quicker */
  steer(f,f.x,f.y,0,10,dt);
 }
 function doCatch(f,bp){
@@ -6600,7 +6601,7 @@ const r2=v=>v==null?0:Math.round(v*100)/100,r1=v=>v==null?0:Math.round(v*10)/10;
 function netEnsureKeys(){for(const list of [M.D])list.forEach((f,i)=>{if(!f.key)f.key=f.role+list.filter((g,j)=>j<i&&g.role===f.role).length;});}
 function netRCtl(){if(M.def){M.rctl=null;return;}netEnsureKeys();if(M.rctl&&M.D.includes(M.rctl))return;M.rctl=M.D.find(f=>f.key===(M.rkey||'LB0'))||M.D.find(f=>f.role==='LB')||M.D[0]||null;}
 const netRActive=()=>!!(M&&M.rjoy&&M.rjoy.m>0.05&&performance.now()-M.rjoy.rt<700);
-function rctlMove(f,dt){M.rAt=M.pt;const v=M.rjoy;
+function rctlMove(f,dt){M.rAt=M.pt;if(netRActive())M.rTouch=M.plays;const v=M.rjoy;
  if(f.eng){if(Math.random()<dt*(0.9+A(f,'str')*0.12)){if(f.eng.blk===f)f.eng.blk=null;f.eng=null;f.shed=0.35;pop('SHED!',f.x,f.y,'#7fffd4');}else{upDef(f,dt);return;}}
  steer(f,clamp(f.x+v.x*5,-1,121),clamp(f.y+v.y*5,0,53.3),f.spd*(0.35+0.68*v.m),f.acc+12,dt);}
 function rctlPre(dt){const v=M.rjoy,f=M.rctl;if(!f)return;const sp=6.5*v.m,nx=clamp(f.x+v.x*sp*dt,M.los+(f.role==='DL'?0.9:1.2),Math.min(119,M.los+30)),ny=clamp(f.y+v.y*sp*dt,1,52.3),dx=nx-f.x,dy=ny-f.y;
