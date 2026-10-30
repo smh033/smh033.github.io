@@ -457,6 +457,8 @@ function arcadeHTML(back){const a=Object.assign({},ARC_DEF,L.settings.arc||{}),r
  ${opt('wind','WIND',[['auto','AUTO'],['none','NONE'],['strong','STRONG']])}
  ${opt('turbo','TURBO SPEED',[[false,'OFF'],[true,'ON']])}</div>
  <div class="row"><div class="sp"></div><button class="bt y" data-a="${back==='h2h'?'close':'settings'}">DONE</button></div></div>`;}
+/* EXTREME vs you: the computer's defense gets its own extra edge on top of the hard settings */
+const xd=()=>!!(M&&!M.def&&L&&L.settings&&L.settings.diff===4&&!(OLG&&OLG.live)&&!L.net);
 function diffLvl(){if(OLG&&OLG.live)return 0;const d=L.settings.diff;return d===0?-1:d===1?0:d===2?1:d===4?2.2:clamp((L.dyn-10)/8,-1.25,1.25);}   /* EXTREME (4) is past hard and past dynamic at 20 */
 function diffMult(){return 1+diffLvl()*0.14;}          // opponent team strength (sims + their drives)
 function diffAdj(){return diffLvl()*1.6;}              // in-game defender ratings (speed, tackling, coverage)
@@ -4908,7 +4910,7 @@ function aimInfo(a){
  // Max placement error (yd). The ring drawn in the preview is exactly this radius,
  // and the real throw can never land outside it.
  const accMul=1.5-0.09*(clamp(acc,1,11)-1);               // acc 1 -> 1.5x, acc 11 -> 0.6x
- const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1)*(M.def?1-0.12*diffLvl():1+0.2*Math.max(0,diffLvl()))*(M.aimShake>0?1.9:1);
+ const err=(PASS.ERR_BASE+PASS.ERR_PER_YD*tm.d)*accMul*press*moving*(bullet?PASS.BUL_ERR:1)*(M.def?1-0.12*diffLvl():1+0.2*Math.max(0,diffLvl()))*(xd()?1.2:1)*(M.aimShake>0?1.9:1);
  const F=makeFlight(x0,y0,PASS.REL_Z,tx,ty,PASS.CATCH_Z,tm.T,bullet?PASS.G:PASS.G_LOB);
  return{tx,ty,x0,y0,d:tm.d,v:tm.v,T:tm.T,p:tm.p,maxR:tm.maxR,run,err,press,moving,pull,str,acc,bullet,F};
 }
@@ -4936,8 +4938,8 @@ function throwBall(ai){
  for(const f of[...M.O,...M.D]){f.tried=false;f.hawk=false;}
  // Coverage defenders read the throw and break on the ball: not on easy, late on normal, fast on hard.
  const lv=M.def?0.6-diffLvl():diffLvl();
- if(lv>-0.5)M.D.filter(f=>f.role!=='DL'&&!f.eng&&!(f.stun>0)).sort((a,c)=>Math.hypot(a.x-tx,a.y-ty)-Math.hypot(c.x-tx,c.y-ty)).slice(0,lv>0.5?2:1)
-  .forEach((f,i)=>{if(Math.hypot(f.x-tx,f.y-ty)<13){f.hawk=true;f.react=clamp(0.5-0.22*lv,0.2,0.75)+i*0.15;}});
+ if(lv>-0.5)M.D.filter(f=>f.role!=='DL'&&!f.eng&&!(f.stun>0)).sort((a,c)=>Math.hypot(a.x-tx,a.y-ty)-Math.hypot(c.x-tx,c.y-ty)).slice(0,xd()?3:lv>0.5?2:1)
+  .forEach((f,i)=>{if(Math.hypot(f.x-tx,f.y-ty)<(xd()?16:13)){f.hawk=true;f.react=clamp(0.5-0.22*lv,xd()?0.12:0.2,0.75)+i*0.15;}});
  // Deep shots: a safety (or anyone) already running stride-for-stride with the target reads it and
  // goes for the ball on every difficulty - so a streaking TE with a safety on him isn't a free completion.
  {const tgt=M.primary;if(tgt&&Math.hypot(tx-ai.x0,ty-ai.y0)>=14)for(const f of M.D){if(f.eng||f.stun>0)continue;if((f.role==='S'||f.role==='DB')&&Math.hypot(f.x-tgt.x,f.y-tgt.y)<4&&f.x>tgt.x-3.5){f.hawk=true;f.react=0.32;}}}
@@ -5113,7 +5115,7 @@ function resolveContact(b,bp,p){
  const mine=userCtl(d),want=defAct(d);   /* the defender you control: get to the ball and you usually come down with it */
  if(want==='swat'){if(!b.tip&&R()<0.2)return tipBall(b,bp,d);creditD(d,'pbu',3);b.done=true;M.ball=null;looseFrom(b,bp,1);pop('SWATTED!',d.x,d.y,'#ff8a8a');return endPlay('inc',M.los,M.ballY,'SWATTED AWAY!');}
  if(want==='catch'&&R()<clamp(0.58+dh.s*0.3+0.03*(cov-6),0.45,0.9)*Math.min(1.5,arcM('int')))return passPick(b,d);
- if(dh.s>(mine?0.12:0.3)){const pi=clamp(0.35+dh.s*0.45+0.03*(cov-6)-(dh.h===2?0.1:0)+(b.tip?0.1:0)+(mine?0.3:0),0.2,mine?0.95:0.9)*arcM('int');if(R()<pi)return passPick(b,d);}
+ if(dh.s>(mine?0.12:0.3)){const pi=clamp(0.35+dh.s*0.45+0.03*(cov-6)-(dh.h===2?0.1:0)+(b.tip?0.1:0)+(mine?0.3:0),0.2,mine?0.95:0.9)*arcM('int')*(xd()&&!mine?1.3:1);if(R()<pi)return passPick(b,d);}
  if(!b.tip&&R()<0.55)return tipBall(b,bp,d);
  creditD(d,'pbu',3);b.done=true;M.ball=null;looseFrom(b,bp,1);return endPlay('inc',M.los,M.ballY,b.tip?'TIPPED · INCOMPLETE':'BROKEN UP!');
 }
@@ -5325,7 +5327,7 @@ function upChase(f,dt){
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
-function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D';steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,c.spd*CATCHUP):f.spd)*(dist<3.5?1.07:1),f.acc+6,dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
+function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D';steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,c.spd*CATCHUP):f.spd)*(dist<3.5?1.07:1)*(f.side==='D'&&xd()?1.05:1),f.acc+6,dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
 function upDef(f,dt){
  if(f.eng){const h=M.carrier||M.qb||f.eng;const dx=h.x-f.x,dy=h.y-f.y,l=Math.hypot(dx,dy)||1;f.vx=dx/l*0.8;f.vy=dy/l*0.8;f.x+=f.vx*dt;f.y+=f.vy*dt;return;}
  const c=M.carrier;
@@ -5335,7 +5337,7 @@ function upDef(f,dt){
  if(b&&f.hawk&&b.t>f.react){steer(f,b.x1,b.y1,f.spd,f.acc+4,dt);return;}
  /* a blitzing linebacker who has the back peels off when the back releases on a route (screens, swings, flats) */
  const peel=f.blitz&&f.role==='LB'&&f.man&&f.man.role==='RB'&&M.play==='pass'&&M.pt>0.25&&f.man.route&&f.man.route.length&&(f.man.x>M.los-1||(M.qb&&Math.abs(f.man.y-M.qb.y)>3.5));
- if(!peel&&(f.role==='DL'||f.blitz)){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl()),16,dt);return;}
+ if(!peel&&(f.role==='DL'||f.blitz)){let tq=M.trick&&M.trick.fool>0&&M.trick.decoy?M.trick.decoy:M.qb;if(M.play==='run'&&M.rb&&M.pt>0.45)tq=M.rb;   /* a run play: linemen read it and play the back, not the QB */if(tq)steer(f,tq.x,tq.y,f.spd*(f.role==='DL'?0.82:0.92)*(1+0.06*diffLvl())*(xd()?1.06:1),16,dt);return;}
  if(f.role==='S'){
   // Deep safety: help over the top of the most dangerous deep receiver - especially a tight end
   // running vertically against a slower linebacker - instead of just floating in the middle.
@@ -5363,7 +5365,7 @@ function upDef(f,dt){
    f.zt=r;}
   else for(const o of M.O){if(!SKILL.includes(o.role)||o===M.qb)continue;const dd=Math.hypot(o.x-z.x,o.y-z.y);if(dd<bd){bd=dd;r=o;}}
   if(lbz&&r&&(r.role==='TE'||r.role==='RB')){const sp=Math.max(f.spd,r.spd*1.05),ld=clamp(Math.hypot(f.x-r.x,f.y-r.y)/sp,0.1,0.8);steer(f,Math.min(r.x+r.vx*ld+0.4,119.5),r.y+r.vy*ld,sp*0.97,Math.max(f.acc,21),dt);return;}   /* carrying the TE or back: stay on him like man coverage */
-  const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95*(M.custF?1.06:1),f.acc,dt);return;}
+  const k=lbz?0.85:0.7,tx=r?lerp(z.x,r.x+1,k):z.x,ty=r?lerp(z.y,r.y,k):z.y;steer(f,Math.min(tx,119.5),ty,f.spd*0.95*(M.custF?1.06:1)*(xd()?1.07:1),f.acc,dt);return;}
  if(f.man){const m=f.man,cush=clamp(1.5-M.pt*0.6,0.3,1.5)*(1-0.3*clamp(diffLvl(),-1,2.2));
   if(f.beat>0){f.beat-=dt;if(f.overrun)steer(f,f.x+f.vx*0.6,f.y+f.vy*0.6,f.spd*0.85,f.acc*0.4,dt);else steer(f,f.x+f.vx*0.2,f.y+f.vy*0.2,f.spd*0.45,f.acc*0.5,dt);return;}
   const parked=m.route&&m.route.length&&m.route[m.route.length-1].stop&&m.ri>=m.route.length&&Math.hypot(m.vx,m.vy)<1.5;
@@ -5372,7 +5374,7 @@ function upDef(f,dt){
   /* your defenders (defense mode) close back on a receiver who has gotten behind them */
   const trail=M.def&&m.x>f.x-0.3&&d2(f,m)<5?1.09:1;
   const te=m.role==='TE'&&f.role!=='DL',rb=m.role==='RB'&&f.role==='LB',sp=te||rb?Math.max(f.spd,m.spd*(te?1.1:m.x<M.los+1?1.2:1.05)):f.spd,ac=te||rb?Math.max(f.acc,21):f.acc,gap=Math.hypot(f.x-m.x,f.y-m.y),ld=te?(gap>1.5?clamp(gap/sp,0.1,0.8):0.04):rb?clamp(gap/sp,0.2,1.2):0.1;   /* whoever has the TE (the safety on a blitz too) cuts him off once he's behind instead of chasing his back on crossers */   /* the linebacker on the tight end stays on his hip and keeps pace (TEs were running free); on the back he takes an angle to where he's going (screens and swings) */
-  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:rb?0:1)*(M.custF?0.6:1),119.5),m.y+m.vy*ld,sp*0.97*trail*(M.custF?1.06:1),ac,dt);return;}   /* custom plays: cover men play a step tighter and quicker */
+  steer(f,Math.min(m.x+m.vx*ld+(M.def?cush*0.6:cush)*(te?0.25:rb?0:1)*(M.custF?0.6:1)*(xd()?0.65:1),119.5),m.y+m.vy*ld,sp*0.97*trail*(M.custF?1.06:1)*(xd()?1.07:1),ac,dt);return;}   /* custom plays: cover men play a step tighter and quicker */
  steer(f,f.x,f.y,0,10,dt);
 }
 function doCatch(f,bp){
@@ -5508,10 +5510,10 @@ function tackleAttempt(d,c){
  /* juke: a well-timed side-step can make a tackler miss - but it's a skill move, not a cheat code:
     better for fast backs vs. poor tacklers, harder every time you've already juked someone this play,
     and much harder near the goal line where everyone's packed in */
- if(c.jk>0){const n=c.jkN||0,gl=110-c.x<6?0.55:1,pj=clamp(0.22+(A(c,'spd')-A(d,'tkl'))*0.035,0.08,0.45)*Math.pow(0.55,n)*gl*(1-0.15*clamp(diffLvl(),-1,2.2));c.jk=0;
+ if(c.jk>0){const n=c.jkN||0,gl=110-c.x<6?0.55:1,pj=clamp(0.22+(A(c,'spd')-A(d,'tkl'))*0.035,0.08,0.45)*Math.pow(0.55,n)*gl*(1-0.15*clamp(diffLvl(),-1,2.2))*(xd()?0.6:1);c.jk=0;
   if(Math.random()<pj){c.jkN=n+1;d.stun=0.9;d.down=0.9;pop('JUKE!',c.x,c.y,'#7fffd4');xpG(c.pl,2);M.shake=2;return;}}
  const str=A(c,'str'),tk=A(d,'tkl'),gang=M.D.filter(x=>x!==d&&x.stun<=0&&!x.eng&&d2(x,c)<1.6).length;
- let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,2.2))*arcM('brk');if(c.role==='QB'&&!M.scramble)pb*=0.5;
+ let pb=clamp(0.07+(str-tk)*0.03+(c.pl&&c.pl.pos==='TE'?0.05:0),0.02,0.36)*(gang?0.35:1)*(1-0.3*clamp(diffLvl(),-1,2.2))*arcM('brk')*(xd()?0.6:1);if(c.role==='QB'&&!M.scramble)pb*=0.5;
  if(Math.random()<pb){d.stun=0.9;d.down=0.9;c.vx*=0.55;c.vy*=0.55;c.slow=0.3;pop('BROKEN TACKLE!',c.x,c.y,'#7fffd4');M.shake=3;sfx('hit');xpG(c.pl,3);return;}
  // HIT STICK: defensive backs sometimes lay the runner out (10%); 30% of those knock the ball loose.
  const stick=(d.role==='DB'||d.role==='S'||d.role==='LB')&&Math.random()<0.10*arcM('hit');   // linebackers too, on anyone (QB scrambles included)
