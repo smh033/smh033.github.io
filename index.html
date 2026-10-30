@@ -5239,8 +5239,8 @@ function upLive(dt){
   if(f.dive>0){if(stepDefDive(f,dt))return;continue;}
   if(f.stun>0)continue;
   if(f===M.ctl&&f.diveQ&&ballDive(f,dt))continue;
-  if(f===M.ctl&&(ctlActive()||(M.ctlTouch===M.plays&&M.ctlTouchF===f))){ctlMove(f,dt);continue;}   /* once you've moved him this play he's all yours: no drifting back to his man when you let go */
-  if(f===M.rctl&&!M.def){if(f.diveQ&&ballDive(f,dt))continue;if(netRActive()||(M.rTouch===M.plays&&M.rTouchF===f)){rctlMove(f,dt);continue;}}   /* online: your friend's defender */
+  if(f===M.ctl&&ctlActive()){ctlMove(f,dt);continue;}   /* joystick held: you steer him; let go: he goes back to covering his man */
+  if(f===M.rctl&&!M.def){if(f.diveQ&&ballDive(f,dt))continue;if(netRActive()){rctlMove(f,dt);continue;}}   /* online: your friend's defender */
   upDef(f,dt);if(!(M.def&&f===M.ctl)&&!(f===M.rctl&&!M.def&&netRActive()))maybeDefDive(f,dt);}
  separate(M.O);separate(M.D);
  // hands go up for a ball that is about to arrive
