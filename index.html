@@ -215,7 +215,7 @@ if(/\/test\.html$/.test(location.pathname)&&!Storage.prototype.__tst){const S=St
    delete this line, hwPumpkin() and the HALLOWEEN CSS block. */
 /* test.html runs this same game with features that aren't live yet (SHOP_ON); flip SHOP_ON to true to ship them */
 /* the battle pass + item shop go live for everyone at RELEASE (7 AM Eastern, Oct 23 2026); before that only the test site has them.
-   Saved pass progress, candy corn and premium are never touched, they just stay hidden until release. */
+   Saved pass progress, coins and premium are never touched, they just stay hidden until release. */
 const RELEASE=Date.parse('2026-10-23T07:00:00-04:00');
 /* REAL TIME: the release, the shop day, weekly quests and daily rewards all go by the website's clock (the Date header
    GitHub sends with every page), not the device's, so changing the device's time does nothing. NOW() = device time + the
@@ -1913,20 +1913,23 @@ function showAmerica(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;re
    if(t>2.2&&t<4.6&&Math.floor(t*2.5)%2===0)txt('U-S-A! U-S-A!',320,310,10,'#ffd23f');}
   requestAnimationFrame(frame);};
  let last=T0;requestAnimationFrame(frame);}
-/* ---------- BATTLE BPASS: Candy Corn are earned by playing, the premium track is bought with them ----------
+/* ---------- BATTLE PASS: Coins are earned by playing, the premium track is bought with them ----------
    Each played game: +tokens and +pass XP (more for a win and touchdowns; a simmed game pays a third).
    Rewards: free and premium track per tier; skins unlock when you claim them. Kept on this device. */
-/* the Haunted Season pass is over: hidden from players (progress and purchases stay saved), candy corn still earned */
-const BP_HIDDEN=true;
-const BPASS={id:'haunted-2026',name:'HAUNTED SEASON',tiers:30,xp:135,cost:500,
+/* BP_HIDDEN=true hides the pass between seasons (progress and purchases stay saved, coins still earned).
+   A new season = a new id (everyone starts at tier 0). Skins in a pass are kept out of the item shop. */
+const BP_HIDDEN=false;
+const BPASS={id:'toons-2026',name:'TOON SEASON',tiers:30,xp:135,cost:500,
  rewards:[
-  {t:1,tr:'p',skin:'nikki'},{t:2,tr:'f',tok:20},{t:3,tr:'p',tok:40},{t:4,tr:'f',tok:20},{t:5,tr:'p',tok:40},{t:6,tr:'f',tok:25},
-  {t:8,tr:'f',skin:'slenderman'},{t:9,tr:'p',tok:50},{t:10,tr:'f',tok:30},{t:12,tr:'p',skin:'freddy'},{t:13,tr:'f',tok:30},{t:15,tr:'p',tok:60},
-  {t:16,tr:'f',tok:30},{t:18,tr:'f',skin:'jason'},{t:19,tr:'p',tok:60},{t:21,tr:'f',tok:35},{t:22,tr:'p',skin:'ghostface'},{t:24,tr:'f',tok:35},
-  {t:25,tr:'p',tok:75},{t:27,tr:'f',tok:40},{t:28,tr:'p',tok:75},{t:30,tr:'p',skin:'headlesshorseman'}]};
-const BP_KEY='rf_bp',TOK_KEY='rf_pumpkins';
+  {t:1,tr:'p',skin:'spongebob'},{t:2,tr:'f',tok:20},{t:3,tr:'p',tok:40},{t:4,tr:'f',tok:20},{t:5,tr:'f',skin:'snoopy'},{t:6,tr:'p',tok:40},
+  {t:7,tr:'f',tok:25},{t:8,tr:'p',skin:'patrick'},{t:10,tr:'f',skin:'mordecai'},{t:11,tr:'p',tok:50},{t:12,tr:'f',tok:30},{t:13,tr:'p',skin:'stitch'},
+  {t:14,tr:'f',tok:30},{t:15,tr:'p',tok:60},{t:16,tr:'f',skin:'finn'},{t:18,tr:'p',skin:'lloyd'},{t:19,tr:'f',tok:30},{t:20,tr:'p',tok:60},
+  {t:21,tr:'f',skin:'shrek'},{t:23,tr:'f',tok:35},{t:24,tr:'p',skin:'tomandjerry'},{t:25,tr:'p',tok:75},{t:26,tr:'f',tok:35},{t:28,tr:'p',tok:75},
+  {t:29,tr:'f',tok:40},{t:30,tr:'p',skin:'homer'}]};
+const BP_SKINS=new Set(BPASS.rewards.filter(r=>r.skin).map(r=>r.skin));
+const BP_KEY='rf_bp',TOK_KEY='rf_pumpkins';   /* coins (they were coins: same saved balance) */
 function bpTok(){try{return +localStorage.getItem(TOK_KEY)||0;}catch(e){return 0;}}
-/* 2X CANDY CORN WEEK (Halloween): candy earned from playing (games, daily login, first win, challenges,
+/* 2X COINS WEEK (it was 2X COINS for Halloween): coins earned from playing (games, daily login, first win, challenges,
    weekly quests, achievements) is doubled until Sunday night. Battle pass tier rewards stay as listed. */
 const CC2_FROM=Date.parse('2026-10-28T00:00:00-04:00'),CC2_TO=Date.parse('2026-11-02T00:00:00-05:00');
 const cc2On=()=>{const t=NOW();return t>=CC2_FROM&&t<CC2_TO;},ccx=n=>cc2On()?n*2:n;
@@ -1940,7 +1943,7 @@ function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)retu
  const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
  const tok=ccx(SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k)),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
- setTimeout(()=>toast(BP_HIDDEN?'+'+tok+' CANDY CORN':'+'+tok+' CANDY CORN · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
+ setTimeout(()=>toast(BP_HIDDEN?'+'+tok+' COINS':'+'+tok+' COINS · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
  if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}}
 function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
@@ -1971,11 +1974,11 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
   <div class="sp"></div>${claimable?`<button class="bt" data-a="bpClaimAll">CLAIM ALL (${claimable})</button>`:''}</div>
  <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
   <div class="bpwrap scroll" id="bpw" onscroll="UI.bpX=this.scrollLeft" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)">${cols}</div></div>
- <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN CANDY CORN AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
+ <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN COINS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
 ACT.bp=()=>{if(!PASS_ON)return;if(BP_HIDDEN){ACT.shop();return;}if(!SKINS.ok)loadSkins();else skinsRecheck();UI.bpX=null;go('bpass');};
-ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' CANDY CORN');}render();};
+ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' COINS');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
-ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH CANDY CORN');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
+ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH COINS');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
 }
 /* ---------- ITEM SHOP + daily challenges + daily login (SHOP_ON) ----------
    The shop shows 4 skins a day (same for everyone on the same date), picked from every skin that has "shop": {price, rarity}.
@@ -1991,7 +1994,7 @@ const SHOP_SECTION_OF={};for(const S of SHOP_SECTIONS)for(const id of S.ids)SHOP
 const RARITY={uncommon:['#3f9a2e','#7ad04f','UNCOMMON'],rare:['#1d6fd0','#4fb4ff','RARE'],epic:['#7a2fc2','#c56bff','EPIC'],legendary:['#c8641a','#ffb347','LEGENDARY'],icon:['#0a7d86','#3ff0e6','ICON SERIES']};
 const dayKey=(d=new Date(NOW()))=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 function seedRand(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);return((h^=h>>>16)>>>0)/4294967296;};}
-function shopPool(cat){return SKINS.list.filter(k=>k.shop&&+k.shop.price>0&&!k.styleOf&&((k.shop.cat||'')===(cat||'')));}
+function shopPool(cat){return SKINS.list.filter(k=>k.shop&&+k.shop.price>0&&!k.styleOf&&!BP_SKINS.has(k.id)&&((k.shop.cat||'')===(cat||'')));}
 /* the shop (and weekly quests) turn over at 12 PM Eastern for everyone */
 function etParts(t){const o={};try{for(const x of new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t)))o[x.type]=x.value;}catch(e){const d=new Date(t-4*3600e3);return{year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate(),hour:d.getUTCHours(),minute:d.getUTCMinutes(),second:d.getUTCSeconds()};}
  return{year:+o.year,month:+o.month,day:+o.day,hour:+o.hour%24,minute:+o.minute,second:+o.second};}
@@ -2030,13 +2033,13 @@ function weekLeft(){const now=NOW();let t=shopSecsLeft();const cur=shopWeek(now)
 function dailyPut(d){try{localStorage.setItem('rf_daily',JSON.stringify(d));}catch(e){}}
 function dailyLogin(){if(!SHOP_ON)return;const d=dailyGet(),today=dayKey();if(d.login.day===today)return;
  const y=new Date(NOW());y.setDate(y.getDate()-1);d.login.streak=d.login.day===dayKey(y)?Math.min(7,d.login.streak+1):1;d.login.day=today;
- const tok=ccx(20+5*(d.login.streak-1));bpTokAdd(tok);dailyPut(d);setTimeout(()=>toast('DAILY LOGIN · DAY '+d.login.streak+' STREAK · +'+tok+' CANDY CORN'),1200);}
+ const tok=ccx(20+5*(d.login.streak-1));bpTokAdd(tok);dailyPut(d);setTimeout(()=>toast('DAILY LOGIN · DAY '+d.login.streak+' STREAK · +'+tok+' COINS'),1200);}
 function dailyAfterGame(g){const d=dailyGet();let msgs=[];
  if(g.win&&!d.fw){d.fw=true;bpTokAdd(ccx(30));msgs.push('FIRST WIN OF THE DAY +'+ccx(30));}
  for(const id of d.ids){const c=CHALL.find(x=>x.id===id),st=d.ch[id]||(d.ch[id]={n:0,done:false});if(!c||st.done||!c.ok(g))continue;st.n++;if(st.n>=(c.need||1)){st.done=true;bpTokAdd(ccx(c.tok));msgs.push('CHALLENGE DONE: '+c.txt+' +'+ccx(c.tok));}}
  dailyPut(d);msgs.forEach((m,i)=>setTimeout(()=>toast(m),3300+i*2400));}
 function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
- return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${BP_HIDDEN?'':t('bp','BATTLE PASS')}${cc2On()?`<span class="s7" style="color:#ff9a1f;text-shadow:1px 1px 0 #000;margin-left:4px">🎃 2X CANDY CORN · ENDS SUN NIGHT</span>`:''}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
+ return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${BP_HIDDEN?'':t('bp','BATTLE PASS')}${cc2On()?`<span class="s7" style="color:#ff9a1f;text-shadow:1px 1px 0 #000;margin-left:4px">2X COINS · ENDS SUN NIGHT</span>`:''}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
 const SHOPC=new Map();
 function shopCard(k,big){const sec=big==='sec',R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=sec?5.6:big?8.5:3.4,W=sec?100:big?150:110,H=sec?96:big?144:57;   /* characters fill their cards; 'sec' = section cards, 4 to a row */
  let src=SHOPC.get(k.id+'|'+u)||'';if(!src&&SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*3;cc.height=H*3;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();SHOPC.set(k.id+'|'+u,src);}   /* 3x for sharp cards (ultra-HD skins keep their detail); drawn once, then reused */
@@ -2060,7 +2063,7 @@ SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(
      <div class="s7 dim">NEW QUESTS IN ${weekLeft()}</div></div>`;})()
     :`<div class="col" style="gap:6px;padding:6px">${ch}
     <div class="s7 dim" style="line-height:1.6">FIRST WIN OF THE DAY: ${d.fw?'<span class="grt">DONE</span>':'<span class="yl">+'+ccx(30)+'</span>'}<br>LOGIN STREAK: ${d.login.streak||0} DAY${d.login.streak===1?'':'S'}</div></div>`}</div>
-   ${TEST_SITE?'<button class="bt r" data-a="shopTest">TEST: +500 CANDY CORN</button>':''}
+   ${TEST_SITE?'<button class="bt r" data-a="shopTest">TEST: +500 COINS</button>':''}
   </div>
   <div class="col" style="flex:1;gap:6px;min-width:0">
    <div class="shbar"><button class="bt ${!cat?'y':''}" data-a="shopCat" data-v="" style="padding:4px 8px 3px">DAILY</button>${hw.length?`<button class="bt ${cat==='halloween'?'y':''}" data-a="shopCat" data-v="halloween" style="padding:4px 8px 3px;display:inline-flex;gap:4px;align-items:center">${hwPumpkin(1)} HALLOWEEN</button>`:''}<div class="sp"></div>${cat?'<span class="s7 yl">LIMITED TIME</span>':`<span class="s7 dim">NEW ITEMS IN</span><span class="s10" id="shopT">${shopLeft()}</span>`}</div>
@@ -2078,7 +2081,7 @@ ACT.shopQ=d=>{UI.shopQ=d.v?1:0;render();};
 ACT.shopBuy=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price,R=RARITY[k.shop.rarity]||RARITY.rare;
  modal(`<div class="mp" style="width:340px;align-items:center;text-align:center">${ttl('BUY SKIN',true)}<div class="s10">${esc(String(k.name).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}</div>
   <div class="row" style="gap:6px;align-items:center;justify-content:center">${CUR(3)}<span class="s16 yl">${p.toLocaleString()}</span></div>
-  <div class="s7 ${bpTok()>=p?'dim':'rdt'}">${bpTok()>=p?'YOU HAVE '+bpTok():'YOU NEED '+(p-bpTok())+' MORE CANDY CORN'}</div>
+  <div class="s7 ${bpTok()>=p?'dim':'rdt'}">${bpTok()>=p?'YOU HAVE '+bpTok():'YOU NEED '+(p-bpTok())+' MORE COINS'}</div>
   <div class="row" style="gap:8px"><button class="bt" data-a="close">CANCEL</button>${bpTok()>=p?`<button class="bt y" data-a="shopBuy2" data-v="${esc(k.id)}">BUY</button>`:''}</div></div>`);};
 ACT.shopBuy2=d=>{const k=SKINS.list.find(x=>x.id===d.v);if(!k||!k.shop||skinOpen(k.id))return;const p=+k.shop.price;if(bpTok()<p)return;bpTokAdd(-p);closeModal();
  const show=CODE_SHOWS[String(k.codeShow||'').toLowerCase()];if(show&&!EGG.on)show(k);else{const R=RARITY[k.shop.rarity]||RARITY.rare;eggReward(k.id,String(k.name||k.id).toUpperCase(),R[0],R[1]);}};
@@ -2274,11 +2277,12 @@ const ICON={
 };
 const stars=(s,cls)=>{let h=`<span class="stars ${cls||''}">`;for(let i=1;i<=5;i++)h+=`<i class="${s>=i?'f':s>=i-.5?'h':''}"></i>`;return h+'</span>';};
 const fitS=(txt,base,w)=>{const n=String(txt||'').replace(/&[a-z#0-9]+;/g,'x').length||1;return'font-size:'+Math.max(5,Math.min(base,Math.floor(w/n)))+'px;white-space:nowrap';};
-/* pixel jack-o'-lantern for the Halloween title screen (u = pixel size) */
-function hwCorn(u){const P=['....ww....','...wwww...','...oooo...','..oooooo..','..oooooo..','.oooooooo.','.yyyyyyyy.','yyyyyyyyyy','yyyyyyyyyy','.yyyyyyyy.'],C={w:'#fff4dc',o:'#f58a1f',y:'#ffd23a'};
+/* pixel gold coin: the game's currency icon (u = pixel size) */
+function coinIcon(u){const P=['...dddd...','.ddyyyydd.','.dwyyyyyd.','dwyyooyyyd','dyyyooyyyd','dyyyooyyyd','dyyyooyyyd','.dyyyyyyd.','.ddyyyydd.','...dddd...'],C={d:'#c87a10',y:'#ffd23a',w:'#fff6c0',o:'#e89a1c'};
  let r='';const f=(x,y)=>y>=0&&y<10&&x>=0&&x<10&&P[y][x]!=='.';for(let y=-1;y<11;y++)for(let x=-1;x<11;x++){if(f(x,y))r+=`<rect x="${x+1}" y="${y+1}" width="1" height="1" fill="${C[P[y][x]]}"/>`;else if(f(x-1,y)||f(x+1,y)||f(x,y-1)||f(x,y+1))r+=`<rect x="${x+1}" y="${y+1}" width="1" height="1" fill="#2a1408"/>`;}
  return`<svg class="ccn" width="${12*u}" height="${12*u}" viewBox="0 0 12 12" shape-rendering="crispEdges">${r}</svg>`;}
-const CUR=u=>hwCorn(u);
+const CUR=u=>coinIcon(u);
+/* pixel jack-o'-lantern for the Halloween title screen (u = pixel size) */
 function hwPumpkin(u,glow){const P=['....gg....','...gg.....','.oooooooo.','oooooooooo','oo.oooo.oo','o...oo...o','oooooooooo','oo.o..o.oo','ooo....ooo','.oooooooo.'],C={o:'#f07818',g:'#3c8a2a','.':null};
  let r='';P.forEach((row,y)=>[...row].forEach((ch,x)=>{const c=C[ch];if(c)r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;else if(y>=4&&y<=8&&x>0&&x<9&&P[y][x]==='.')r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#ffe25a"/>`;}));
  return`<svg class="hwp${glow?' glow':''}" width="${10*u}" height="${10*u}" viewBox="0 0 10 10" shape-rendering="crispEdges">${r}</svg>`;}
@@ -4245,7 +4249,7 @@ function boxHTML(){tallyQ();const ot=M.qs[4][0]||M.qs[4][1]||M.qtr>=5,cols=ot?[0
 ACT.gBox=()=>{if(M&&M.ov)M.box=!M.box;};
 /* ---------- ACHIEVEMENTS ----------
    Checked at the final whistle of every game you play (not practice or fully simmed games). Unlocks and career totals live
-   in rf_ach, so Sync Devices carries them; each one pays its candy corn once while the pass is live. */
+   in rf_ach, so Sync Devices carries them; each one pays its coins once while the pass is live. */
 const ACH_KEY='rf_ach';
 const ACH=[
  {id:'win1',n:'FIRST WIN',d:'WIN A GAME',cc:25,t:G=>G.win},
@@ -4276,7 +4280,7 @@ function achAfterGame(){if(!M||M.prac||M.simmed||M.achDone)return[];M.achDone=tr
  const a=achGet();a.gp++;if(G.win)a.w++;a.td+=G.td;const got=[];
  for(const x of ACH){if(a.u[x.id])continue;if(x.c?a[x.c]>=x.goal:x.t(G)){a.u[x.id]=Date.now();got.push(x);}}
  achPut(a);if(got.length){const cc=ccx(got.reduce((v,x)=>v+x.cc,0));if(PASS_ON)bpTokAdd(cc);
-  setTimeout(()=>toast('🏆 ACHIEVEMENT'+(got.length>1?'S':'')+': '+got.map(x=>x.n).join(', ')+(PASS_ON?' · +'+cc+' CANDY CORN':'')),2400);}
+  setTimeout(()=>toast('🏆 ACHIEVEMENT'+(got.length>1?'S':'')+': '+got.map(x=>x.n).join(', ')+(PASS_ON?' · +'+cc+' COINS':'')),2400);}
  return got;}
 SCR.ach=()=>{const a=achGet(),n=ACH.filter(x=>a.u[x.id]).length;
  const cards=ACH.map(x=>{const on=!!a.u[x.id],pr=x.c&&!on?`<span class="s7 dim">${Math.min(a[x.c],x.goal)} / ${x.goal}</span>`:'';
@@ -8287,7 +8291,7 @@ ACT.sync=()=>{if(!SHOP_ON)return;const st=syncGet();
   <div class="s16 yl" style="letter-spacing:3px;user-select:all">${st.code}-${st.pin}</div>
   <div class="s7 dim">LAST SYNCED: ${when(st.at)}${st.dirty?' · CHANGES WAITING':''}</div>${SY.err?`<div class="s7 rdt">${esc(SY.err)}</div>`:''}
   <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="syncGo">SYNC NOW</button><button class="bt r" data-a="syncOff">UNLINK</button></div>`
- :`<div class="s7" style="line-height:1.7">KEEP YOUR SAVES, SKINS, CANDY CORN AND PASS THE SAME ON EVERY DEVICE, INCLUDING THE APP ON YOUR HOME SCREEN.</div>
+ :`<div class="s7" style="line-height:1.7">KEEP YOUR SAVES, SKINS, COINS AND PASS THE SAME ON EVERY DEVICE, INCLUDING THE APP ON YOUR HOME SCREEN.</div>
   <button class="bt y" data-a="syncNew">CREATE A SYNC CODE</button>
   <div class="s7 dim">OR TYPE THE CODE FROM YOUR OTHER DEVICE:</div>
   <input class="txt" id="syncIn" maxlength="11" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDEF-1234" style="text-align:center;width:220px">
@@ -8305,7 +8309,7 @@ ACT.syncLink=async()=>{const el=document.getElementById('syncIn'),raw=String(el&
   syncApply(got.j.data);syncSet(Object.assign(st,{v:got.v,at:Date.now(),dirty:0}));closeModal();toast('LINKED · LOADING YOUR SAVES');setTimeout(()=>location.reload(),600);}
  catch(e){SY.err=String(e.message||e).toUpperCase();ACT.sync();}finally{SY.busy=0;}};
 /* ---------- ACCOUNTS: a username (only one person can have it) and a password. Everything this device saves
-   (franchise saves, skins, candy corn, the pass, custom plays) goes to the account by itself, and logging in on
+   (franchise saves, skins, coins, the pass, custom plays) goes to the account by itself, and logging in on
    another device brings it all over. Replaces sync codes (an old sync code keeps working until you log in). ---------- */
 var ACC={tab:'in',err:'',busy:0,rec:null,on:false};   /* var: the title screen can draw before this line runs */
 /* accounts show up once the relay knows about them (until the new relay is published, SYNC DEVICES stays) */
@@ -8325,7 +8329,7 @@ ACT.acct=()=>{if(!SHOP_ON)return;const st=syncGet(),when=t=>{if(!t)return'NOT YE
   <div class="row" style="gap:8px"><button class="bt y" data-a="acctKeep" data-v="acct">KEEP MY ACCOUNT'S</button><button class="bt" data-a="acctKeep" data-v="dev">KEEP THIS DEVICE'S</button></div></div>`);return;}
  if(st&&st.acct){modal(`<div class="mp" style="width:440px;align-items:center;text-align:center;gap:10px">${ttl('ACCOUNT',true)}
   <div class="s10">LOGGED IN AS <span class="yl">${esc(st.u.toUpperCase())}</span></div>
-  <div class="s7 dim" style="line-height:1.7">YOUR SAVES, SKINS, CANDY CORN, PASS AND PLAYS SAVE TO YOUR ACCOUNT BY THEMSELVES. LOG IN ON ANY DEVICE TO PICK UP WHERE YOU LEFT OFF.</div>
+  <div class="s7 dim" style="line-height:1.7">YOUR SAVES, SKINS, COINS, PASS AND PLAYS SAVE TO YOUR ACCOUNT BY THEMSELVES. LOG IN ON ANY DEVICE TO PICK UP WHERE YOU LEFT OFF.</div>
   <div class="s7 dim">SAVES AUTOMATICALLY · LAST SAVED: ${when(st.at)}${st.dirty?' · SAVING NOW':''}</div>${SY.err?`<div class="s7 rdt">LAST TRY: ${esc(SY.err)}</div>`:''}${err}
   <div class="row" style="gap:8px"><button class="bt y" data-a="close">CLOSE</button><button class="bt r" data-a="acctOut">LOG OUT</button></div></div>`);return;}
  const T=ACC.tab,tb=(v,l)=>`<button class="bt ${T===v?'y':''}" data-a="acctTab" data-v="${v}" style="padding:5px 8px 4px">${l}</button>`,inp=(id,ph,type,ml)=>`<input class="txt" id="${id}" type="${type||'text'}" maxlength="${ml||64}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${ph}" style="width:240px;text-align:center">`;
