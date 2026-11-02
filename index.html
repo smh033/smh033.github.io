@@ -1433,7 +1433,7 @@ function loadSkins(){const gen=SKINS.gen=(SKINS.gen||0)+1;let rem;if(SKINS.newer
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
   for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&!k.shop.cat&&SHOP_SECTION_OF[k.id])k.shop.cat=SHOP_SECTION_OF[k.id];if(k.code&&k.shop&&k.shop.price&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* a skin sold in the shop can't also be had with a code (the old codes); skins with only a code keep it */if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
   for(const k of list){if(k.trail)continue;const nm=String(k.name||k.id).toUpperCase();if(/SONIC/.test(nm))k.trail='speed';else if(/SHADOW THE HEDGEHOG/.test(nm)||String(k.id).toLowerCase().replace(/[^a-z]/g,'')==='shadowthehedgehog')k.trail='chaos';}   /* Sonic: blue speed streak · Shadow: red chaos streak */
-  SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));
+  SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));passRefund();
   for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{if(gen!==SKINS.gen)return;   /* an older picture finishing late never paints over the new one */SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}SHOPC.clear();clearTimeout(SKINS.rt);SKINS.rt=setTimeout(()=>{if(UI.scr!=='game')render();},150);};   /* one redraw after a batch of pictures, not one per picture */
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
    im.src=k.png?k.png:'skins/'+tries[0]+'?v='+SKINS.ver;}
@@ -1449,6 +1449,19 @@ const skinsUnlocked=()=>{try{return JSON.parse(localStorage.getItem(SKU_KEY)||'[
 const skinOpen=id=>{const k=SKINS.list.find(x=>x.id===id);if(k&&k.styleOf&&k.styleOf!==id)return skinOpen(k.styleOf);return !!k&&(!k.secret||skinsUnlocked().includes(id));};   /* "styleOf": an edit style comes with its main skin */
 const skinStyles=id=>SKINS.list.filter(x=>x.styleOf===id);
 const skinLabel=k=>{if(!k)return'';if(k.styleOf){const p=SKINS.list.find(x=>x.id===k.styleOf),n=skinStyles(k.styleOf).indexOf(k)+2;return String(p?p.name:k.styleOf).toUpperCase()+' · STYLE '+n;}return String(k.name||k.id).toUpperCase();};
+/* a skin that moves into the battle pass is taken back from anyone who bought it in the shop, and its price is refunded.
+   Runs once per pass (rf_bp_refund = the pass id); skins claimed from the pass itself are kept. */
+function passRefund(){let done='';try{done=localStorage.getItem('rf_bp_refund')||'';}catch(e){}if(done===BPASS.id)return;
+ if([...BP_SKINS].some(id=>!SKINS.list.find(x=>x.id===id)))return;   /* relay skins not loaded: try again next time */
+ const b=bpGet(),own=skinsUnlocked(),gone=[];let coins=0;
+ for(const r of BPASS.rewards){if(!r.skin||b.cl[r.tr+r.t]||!own.includes(r.skin))continue;const k=SKINS.list.find(x=>x.id===r.skin);if(!k.shop||!(+k.shop.price>0))continue;coins+=+k.shop.price;gone.push(r.skin);}
+ try{localStorage.setItem('rf_bp_refund',BPASS.id);}catch(e){}
+ if(!gone.length)return;
+ try{localStorage.setItem(SKU_KEY,JSON.stringify(own.filter(id=>!gone.includes(id))));}catch(e){}
+ const m=skinMap();for(const q in m)if(gone.includes(m[q]))delete m[q];try{localStorage.setItem(SKM_KEY,JSON.stringify(m));}catch(e){}
+ try{if(L&&L.players&&!L.net&&!L.exh){let ch=false;for(const p of L.players)if(p.team===L.user&&gone.includes(p.spr)){delete p.spr;ch=true;}if(ch&&typeof save==='function'&&!L.online)save();}}catch(e){}
+ try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}
+ bpTokAdd(coins);setTimeout(()=>toast('REFUNDED '+coins+' COINS · '+gone.map(id=>String(SKINS.list.find(x=>x.id===id).name||id).toUpperCase()).join(', ')+' MOVED TO THE BATTLE PASS'),1500);}
 function unlockSkin(id){const a=skinsUnlocked();if(!a.includes(id)){a.push(id);try{localStorage.setItem(SKU_KEY,JSON.stringify(a));}catch(e){}}}
 const skinMap=()=>{try{return JSON.parse(localStorage.getItem(SKM_KEY)||'{}')||{};}catch(e){return{};}};
 function skinMapSet(p){const m=skinMap(),k=lookKey(p);if(!k)return;if(p.spr)m[k]=p.spr;else delete m[k];try{localStorage.setItem(SKM_KEY,JSON.stringify(m));}catch(e){}}
@@ -2404,7 +2417,8 @@ ACT.codeGo=()=>{const i=$('#codeIn'),m=$('#codeMsg');if(!i)return;const c=(i.val
  const say=(t,col)=>{if(m){m.textContent=t;m.style.color=col;}};
  /* one-time codes: only the FIRST person anywhere who types it gets the skin. The claim is a record on the relay
     (create-only, so two people can't both win); only the code's hash is in this file. */
- const ONE={'d3ee806f21b2a428e5ca0b050222667024cf02e3806f016090a219e909ca597d':{id:'joebart-',slot:'QZJBRX'}};
+ const ONE={'d3ee806f21b2a428e5ca0b050222667024cf02e3806f016090a219e909ca597d':{id:'joebart-',slot:'QZJBRX'},
+  '9fc1564cefb0de37384e212b5996824ded2819298a0aa87d354bdbebc906f1f9':{id:'spiderman',slot:'MXZGDY'},'80aa27be13c72abec2547de92c702fc75b587df1a2e45c29a79d8154547c89a0':{id:'sonic',slot:'ZXDVSS'}};
  if(!ACT.codeGo.busy&&window.crypto&&crypto.subtle){const run=async()=>{const hx=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(c)))].map(b=>b.toString(16).padStart(2,'0')).join('');return ONE[hx];};
   ACT.codeGo.busy=1;run().then(async o=>{if(!o){ACT.codeGo.busy=0;ACT.codeGo.rest(c,i,say);return;}
    if(skinOpen(o.id)){ACT.codeGo.busy=0;say('YOU ALREADY HAVE THIS SKIN','#ffd23f');return;}
