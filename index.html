@@ -4794,11 +4794,13 @@ function resolveDef(){
 function creditD(f,k,x){if(!M.def||!f||f.side!=='D'||!f.pl)return;cr(f.pl,k,1);xpG(f.pl,x);}
 
 /* ---------- set up a play ---------- */
+/* the center: the team's 3rd lineman (best healthy one not already starting), so he shows his stars and plays like himself; a generic center only if there isn't one */
+function centerOL(d){try{const t=offT(),st=d.OL||[];const c=rosterOf(t).filter(p=>p.pos==='OL'&&!st.includes(p)&&!(p.inj>0)&&!p.bench).sort((a,b)=>ovr(b)-ovr(a))[0];return c||null;}catch(e){return null;}}
 function setupPlay(){
  const los=M.ballOn,by=M.ballY,d=M.def?M.odep:M.dep,od=M.def?M.dep:M.odep;M.los=los;
  const qb=mkF(d.QB[0],'O','QB',los-4.6,by),rb=mkF(d.RB[0],'O','RB',los-5.2,by+1.9);
  const w1=mkF(d.WR[0],'O','WR',los-0.8,clamp(by-14,3,50)),w2=mkF(d.WR[1],'O','WR',los-0.8,clamp(by+14,3,50)),te=mkF(d.TE[0],'O','TE',los-0.9,by+3.5);
- const ol=[mkF(d.OL[0],'O','OL',los-0.7,by-1.7),mkF(null,'O','OL',los-0.7,by),mkF(d.OL[1],'O','OL',los-0.7,by+1.7)];
+ const ol=[mkF(d.OL[0],'O','OL',los-0.7,by-1.7),mkF(centerOL(d),'O','OL',los-0.7,by),mkF(d.OL[1],'O','OL',los-0.7,by+1.7)];
  const dl=[mkF(od.DL[0],'D','DL',los+0.9,by-1),mkF(od.DL[1],'D','DL',los+0.9,by+1)];
  const lb=[mkF(od.LB[0],'D','LB',los+4.6,by-3.6),mkF(od.LB[1],'D','LB',los+4.6,by+3.8)];
  const c1=mkF(od.DB[0],'D','DB',los+rnd(1.6,6),w1.y),c2=mkF(od.DB[1],'D','DB',los+rnd(1.6,6),w2.y),sf=mkF(od.DB[2],'D','S',Math.min(119,los+rnd(13,17)),by+rnd(-4,4));
@@ -8250,7 +8252,7 @@ async function syncFetch(st,have){
  const v=+r.headers.get('x-v');return{v,j:await syncUnpack(await r.arrayBuffer(),st.code,st.pin)};}
 async function syncPush(st){SY.lastPush=Date.now();const dirtyAt=st.dirty||0;let r;
  if(st.acct){const body=await new Response(new Blob([JSON.stringify({rfSave:1,at:Date.now(),dev:st.dev,data:syncCollect()})]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
-  r=await fetch(acctUrl(st.u)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'gz','x-tok':st.tok},body,signal:olTimeout()});if(r.status===401){acctLoggedOut();throw new Error('LOGGED OUT');}}
+  r=await fetch(acctUrl(st.u)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'gz','x-tok':st.tok},body,signal:(()=>{try{return AbortSignal.timeout(60000);}catch(e){return undefined;}})()});if(r.status===401){acctLoggedOut();throw new Error('LOGGED OUT');}}
  else{const body=await syncPack(st);r=await fetch(syncUrl(st.code)+'?v='+(st.v||0),{method:'PUT',headers:{'x-enc':'raw'},body,signal:olTimeout()});}
  if(r.status===409)return false;if(!r.ok)throw new Error('SYNC SERVER ERROR '+r.status);
  const j=await r.json();const cur=syncGet()||st;cur.v=j.v;cur.at=Date.now();if((cur.dirty||0)<=dirtyAt)cur.dirty=0;syncSet(cur);return true;}
@@ -8316,10 +8318,13 @@ ACT.acct=()=>{if(!SHOP_ON)return;const st=syncGet(),when=t=>{if(!t)return'NOT YE
  if(ACC.rec){modal(`<div class="mp" style="width:460px;align-items:center;text-align:center;gap:10px">${ttl('YOUR RECOVERY CODE',true)}
   <div class="s7" style="line-height:1.7">IF YOU EVER FORGET YOUR PASSWORD, THIS CODE IS THE ONLY WAY BACK IN. WRITE IT DOWN OR SCREENSHOT IT NOW. YOU WON'T SEE IT AGAIN.</div>
   <div class="s16 yl" style="letter-spacing:2px;user-select:all">${esc(ACC.rec)}</div><button class="bt y" data-a="acctRecOk">I SAVED IT</button></div>`);return;}
+ if(ACC.choose&&ACC.pend){modal(`<div class="mp" style="width:460px;align-items:center;text-align:center;gap:10px">${ttl('WHICH SAVES?',true)}
+  <div class="s7" style="line-height:1.7">YOUR ACCOUNT ALREADY HAS PROGRESS, AND SO DOES THIS DEVICE. PICK WHICH ONE TO KEEP. THE OTHER ONE IS REPLACED.</div>
+  <div class="row" style="gap:8px"><button class="bt y" data-a="acctKeep" data-v="acct">KEEP MY ACCOUNT'S</button><button class="bt" data-a="acctKeep" data-v="dev">KEEP THIS DEVICE'S</button></div></div>`);return;}
  if(st&&st.acct){modal(`<div class="mp" style="width:440px;align-items:center;text-align:center;gap:10px">${ttl('ACCOUNT',true)}
   <div class="s10">LOGGED IN AS <span class="yl">${esc(st.u.toUpperCase())}</span></div>
   <div class="s7 dim" style="line-height:1.7">YOUR SAVES, SKINS, CANDY CORN, PASS AND PLAYS SAVE TO YOUR ACCOUNT BY THEMSELVES. LOG IN ON ANY DEVICE TO PICK UP WHERE YOU LEFT OFF.</div>
-  <div class="s7 dim">SAVES AUTOMATICALLY · LAST SAVED: ${when(st.at)}${st.dirty?' · SAVING NOW':''}</div>${err}
+  <div class="s7 dim">SAVES AUTOMATICALLY · LAST SAVED: ${when(st.at)}${st.dirty?' · SAVING NOW':''}</div>${SY.err?`<div class="s7 rdt">LAST TRY: ${esc(SY.err)}</div>`:''}${err}
   <div class="row" style="gap:8px"><button class="bt y" data-a="close">CLOSE</button><button class="bt r" data-a="acctOut">LOG OUT</button></div></div>`);return;}
  const T=ACC.tab,tb=(v,l)=>`<button class="bt ${T===v?'y':''}" data-a="acctTab" data-v="${v}" style="padding:5px 8px 4px">${l}</button>`,inp=(id,ph,type,ml)=>`<input class="txt" id="${id}" type="${type||'text'}" maxlength="${ml||64}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="${ph}" style="width:240px;text-align:center">`;
  const old=st&&st.code?`<div class="s7 dim" style="line-height:1.6">THIS DEVICE USES A SYNC CODE. MAKING AN ACCOUNT OR LOGGING IN REPLACES IT.</div>`:'';
@@ -8332,6 +8337,12 @@ ACT.acct=()=>{if(!SHOP_ON)return;const st=syncGet(),when=t=>{if(!t)return'NOT YE
   <div class="row" style="gap:8px"><button class="bt" data-a="close">CLOSE</button><button class="bt y" data-a="acctGo">${T==='up'?'CREATE ACCOUNT':T==='fix'?'RESET PASSWORD':'LOG IN'}</button></div></div>`);
  setTimeout(()=>{const i=$('#acU');if(i)i.focus();},50);};
 ACT.acctTab=d=>{ACC.tab=d.v;ACC.err='';ACT.acct();};
+function acctLocalHas(){try{for(let n=1;n<=SLOTS_N;n++)if(hasSave(n))return true;}catch(e){}return bpTok()>100||(bpGet().xp||0)>0;}   /* a day-one login bonus doesn't count as progress */
+async function acctTake(st){const got=await syncFetch(st,0);if(got){syncApply(got.j.data);st.v=got.v;}syncSet(Object.assign(st,{at:Date.now(),dirty:0}));closeModal();toast('LOGGED IN · LOADING YOUR SAVES');setTimeout(()=>location.reload(),600);}
+ACT.acctKeep=async d=>{const P=ACC.pend;ACC.pend=null;ACC.choose=0;if(!P)return;
+ try{if(d.v==='acct')return await acctTake(P.st);
+  syncSet(Object.assign(P.st,{v:P.j.v,dirty:Date.now()}));await syncPush(syncGet());const c=syncGet();c.at=Date.now();syncSet(c);closeModal();toast('THIS DEVICE\'S SAVES ARE NOW ON '+P.u.toUpperCase());render();}
+ catch(e){ACC.err=String(e.message||e).toUpperCase();ACT.acct();}};
 ACT.acctRecOk=()=>{ACC.rec=null;if(ACC.after){const f=ACC.after;ACC.after=null;f();}else ACT.acct();};
 ACT.acctGo=async()=>{if(ACC.busy)return;const v=id=>{const e=document.getElementById(id);return e?e.value:'';},u=acctName(v('acU')),T=ACC.tab;
  const fail=m=>{ACC.err=m;ACT.acct();};
@@ -8345,8 +8356,11 @@ ACT.acctGo=async()=>{if(ACC.busy)return;const v=id=>{const e=document.getElement
    ACC.rec=j.rec;ACC.after=()=>{closeModal();toast('ACCOUNT CREATED · WELCOME '+u.toUpperCase());render();};ACT.acct();return;}
   const j=await acctPost(u,T==='fix'?'reset':'login',T==='fix'?{rec:v('acR'),pw:v('acP')}:{pw:v('acP')});
   const st={acct:1,u,tok:j.tok,v:0,dev:syncDev(),dirty:0};
-  const done=async()=>{if(j.v>0){const got=await syncFetch(st,0);if(got){syncApply(got.j.data);st.v=got.v;}syncSet(Object.assign(st,{at:Date.now(),dirty:0}));closeModal();toast('LOGGED IN · LOADING YOUR SAVES');setTimeout(()=>location.reload(),600);}
-   else{syncSet(Object.assign(st,{dirty:Date.now()}));try{await syncPush(syncGet());}catch(e){}closeModal();toast('LOGGED IN AS '+u.toUpperCase());render();}};
+  const done=async()=>{
+   if(j.v>0&&acctLocalHas()){ACC.pend={st,j,u};ACC.choose=1;ACT.acct();return;}   /* both have progress: let them pick */
+   if(j.v>0)return acctTake(st);
+   /* nothing on the account yet: this device's saves go up (if it has any) */
+   syncSet(Object.assign(st,{dirty:acctLocalHas()?Date.now():0}));if(acctLocalHas()){try{await syncPush(syncGet());}catch(e){ACC.err='COULDN\'T UPLOAD YET, IT WILL KEEP TRYING';}}closeModal();toast('LOGGED IN AS '+u.toUpperCase());render();};
   if(j.rec){ACC.rec=j.rec;ACC.after=()=>{done().catch(e=>{ACC.err=String(e.message||e).toUpperCase();ACT.acct();});};ACT.acct();return;}   /* new password: new recovery code */
   await done();
  }catch(e){fail(String(e.message||e).toUpperCase());}finally{ACC.busy=0;}};
