@@ -1916,6 +1916,8 @@ function showAmerica(K){EGG.on=true;const st=$('#stage');if(!st){EGG.on=false;re
 /* ---------- BATTLE BPASS: Candy Corn are earned by playing, the premium track is bought with them ----------
    Each played game: +tokens and +pass XP (more for a win and touchdowns; a simmed game pays a third).
    Rewards: free and premium track per tier; skins unlock when you claim them. Kept on this device. */
+/* the Haunted Season pass is over: hidden from players (progress and purchases stay saved), candy corn still earned */
+const BP_HIDDEN=true;
 const BPASS={id:'haunted-2026',name:'HAUNTED SEASON',tiers:30,xp:135,cost:500,
  rewards:[
   {t:1,tr:'p',skin:'nikki'},{t:2,tr:'f',tok:20},{t:3,tr:'p',tok:40},{t:4,tr:'f',tok:20},{t:5,tr:'p',tok:40},{t:6,tr:'f',tok:25},
@@ -1938,7 +1940,7 @@ function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)retu
  const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
  const tok=ccx(SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k)),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
- setTimeout(()=>toast('+'+tok+' CANDY CORN · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
+ setTimeout(()=>toast(BP_HIDDEN?'+'+tok+' CANDY CORN':'+'+tok+' CANDY CORN · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
  if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}}
 function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
@@ -1970,7 +1972,7 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
  <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
   <div class="bpwrap scroll" id="bpw" onscroll="UI.bpX=this.scrollLeft" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)">${cols}</div></div>
  <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN CANDY CORN AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
-ACT.bp=()=>{if(!PASS_ON)return;if(!SKINS.ok)loadSkins();else skinsRecheck();UI.bpX=null;go('bpass');};
+ACT.bp=()=>{if(!PASS_ON)return;if(BP_HIDDEN){ACT.shop();return;}if(!SKINS.ok)loadSkins();else skinsRecheck();UI.bpX=null;go('bpass');};
 ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' CANDY CORN');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
 ACT.bpBuy=()=>{const b=bpGet();if(b.prem)return;if(bpTok()<BPASS.cost){toast('NOT ENOUGH CANDY CORN');return;}bpTokAdd(-BPASS.cost);b.prem=true;bpPut(b);sfx('td');toast('PREMIUM PASS UNLOCKED!');render();};
@@ -2034,7 +2036,7 @@ function dailyAfterGame(g){const d=dailyGet();let msgs=[];
  for(const id of d.ids){const c=CHALL.find(x=>x.id===id),st=d.ch[id]||(d.ch[id]={n:0,done:false});if(!c||st.done||!c.ok(g))continue;st.n++;if(st.n>=(c.need||1)){st.done=true;bpTokAdd(ccx(c.tok));msgs.push('CHALLENGE DONE: '+c.txt+' +'+ccx(c.tok));}}
  dailyPut(d);msgs.forEach((m,i)=>setTimeout(()=>toast(m),3300+i*2400));}
 function shopTabs(on){const t=(id,l)=>`<button class="bt ${on===id?'y':''}" data-a="${id}" style="padding:6px 10px 5px">${l}</button>`;
- return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${t('bp','BATTLE PASS')}${cc2On()?`<span class="s7" style="color:#ff9a1f;text-shadow:1px 1px 0 #000;margin-left:4px">🎃 2X CANDY CORN · ENDS SUN NIGHT</span>`:''}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
+ return`<div class="row" style="gap:6px;justify-content:center;width:100%"><button class="bt ico" data-a="go" data-s="title">${ICON.back}</button>${t('shop','ITEM SHOP')}${BP_HIDDEN?'':t('bp','BATTLE PASS')}${cc2On()?`<span class="s7" style="color:#ff9a1f;text-shadow:1px 1px 0 #000;margin-left:4px">🎃 2X CANDY CORN · ENDS SUN NIGHT</span>`:''}<div class="sp"></div><div class="row" style="gap:4px;align-items:center">${CUR(2)}<span class="yl s10 cct">${bpTok()}</span></div></div>`;}
 const SHOPC=new Map();
 function shopCard(k,big){const sec=big==='sec',R=RARITY[k.shop.rarity]||RARITY.rare,own=skinOpen(k.id),u=sec?5.6:big?8.5:3.4,W=sec?100:big?150:110,H=sec?96:big?144:57;   /* characters fill their cards; 'sec' = section cards, 4 to a row */
  let src=SHOPC.get(k.id+'|'+u)||'';if(!src&&SKINS.img[k.id]){const lk={spr:k.id,jersey:'#c00',trim:'#fff',helm:'#00c',skin:'#c90',pants:'#fff',socks:'#fff',key:'shop'+k.id+u};const cc=document.createElement('canvas');cc.width=W*3;cc.height=H*3;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,W/2,H-4,lk,{u,shadow:false,face:1});src=cc.toDataURL();SHOPC.set(k.id+'|'+u,src);}   /* 3x for sharp cards (ultra-HD skins keep their detail); drawn once, then reused */
@@ -2043,15 +2045,15 @@ function shopCard(k,big){const sec=big==='sec',R=RARITY[k.shop.rarity]||RARITY.r
   <div class="shnm"><div style="${(()=>{const nm=String(k.name||k.id),max=sec?8:big?10:7,w=sec?88:big?140:100,sz=Math.max(sec?4:5,Math.min(max,Math.floor(w/(nm.length*0.95))));return'font-size:'+sz+'px;line-height:'+(max+2)+'px;';})()}white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(k.name||k.id).toUpperCase())}</div><div class="s7" style="color:${R[1]}">${R[2]}${skinStyles(k.id).length?' · +'+skinStyles(k.id).length+' STYLE'+(skinStyles(k.id).length>1?'S':''):''}</div></div>
   <div class="shpr">${own?'<span class="grt">OWNED</span>':`${CUR(2)}<span class="cct">${(+k.shop.price).toLocaleString()}</span>`}</div></div>`;}
 function shopRegister(){
-SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday(),cat=UI.shopCat||'',hw=shopPool('halloween');if(cat&&!hw.length)UI.shopCat='';
+SCR.shop=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,d=dailyGet(),items=shopToday(),cat=UI.shopCat||'',hw=[];   /* Halloween tab is over */if(cat&&!hw.length)UI.shopCat='';
  clearInterval(window.__shopT);window.__shopT=setInterval(()=>{const e=document.getElementById('shopT');if(!e){clearInterval(window.__shopT);return;}e.textContent=shopLeft();if(shopLeft()==='00:00:00')setTimeout(render,1500);},1000);
  const ch=d.ids.map(id=>{const c=CHALL.find(x=>x.id===id),st=d.ch[id]||{n:0,done:false};if(!c)return'';return`<div class="row" style="gap:6px;align-items:center;${st.done?'opacity:.55':''}"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}${c.need?` (${Math.min(st.n,c.need)}/${c.need})`:''}</span><span class="s7 yl" style="white-space:nowrap">+${ccx(c.tok)}</span></div>`;}).join('');
  const grid=items.length>=4?`<div class="col" style="gap:6px">${shopCard(items[0])}${shopCard(items[1])}</div>${shopCard(items[2],true)}${shopCard(items[3],true)}`:items.map(k=>shopCard(k,true)).join('');
  return`<div class="screen" style="gap:6px">${shopTabs('shop')}
  <div class="row" style="width:100%;gap:8px;align-items:stretch;flex:1;min-height:0">
   <div class="col" style="width:178px;gap:6px">
-   <div class="shbox"><div class="shhd">${BPASS.name}</div><div class="row" style="gap:8px;align-items:center;padding:6px"><span class="s7">TIER</span><span class="s16">${tier}</span></div>
-    <div style="margin:0 6px 6px;height:8px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${tier>=BPASS.tiers?100:Math.round(into/BPASS.xp*100)}%;background:#ffe600"></div></div></div>
+   ${BP_HIDDEN?'':`<div class="shbox"><div class="shhd">${BPASS.name}</div><div class="row" style="gap:8px;align-items:center;padding:6px"><span class="s7">TIER</span><span class="s16">${tier}</span></div>
+    <div style="margin:0 6px 6px;height:8px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${tier>=BPASS.tiers?100:Math.round(into/BPASS.xp*100)}%;background:#ffe600"></div></div></div>`}
    <div class="shbox" style="flex:1;min-height:0;display:flex;flex-direction:column"><div class="shhd row" style="gap:4px;padding:0"><button class="shq${UI.shopQ?'':' on'}" data-a="shopQ" data-v="">DAILY</button><button class="shq${UI.shopQ?' on':''}" data-a="shopQ" data-v="1">WEEKLY</button></div>
     ${UI.shopQ?(()=>{const w=weeklyGet();return`<div class="col scroll" style="gap:6px;padding:6px;flex:1;min-height:0">${w.ids.map(id=>{const c=WEEKQ.find(x=>x.id===id),st=w.q[id]||{n:0,done:false};if(!c)return'';const pc=Math.min(100,Math.round(st.n/c.need*100));
       return`<div class="col" style="gap:3px;${st.done?'opacity:.55':''}"><div class="row" style="gap:6px;align-items:center"><span class="s7" style="flex:1;line-height:1.5">${st.done?'✓ ':''}${c.txt}</span><span class="s7 yl" style="white-space:nowrap">+${ccx(c.tok)}</span></div><div class="row" style="gap:5px;align-items:center"><div style="flex:1;height:5px;background:#0c1a33;border:1px solid #3a5a8a"><div style="height:100%;width:${pc}%;background:${st.done?'#7dff8a':'#ffe600'}"></div></div><span class="s7 dim">${Math.min(st.n,c.need).toLocaleString()}/${c.need.toLocaleString()}</span></div></div>`;}).join('')}
@@ -2385,7 +2387,7 @@ SCR.title=()=>{
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?'ITEM SHOP · PASS':'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?(BP_HIDDEN?'ITEM SHOP':'ITEM SHOP · PASS'):'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
   </div></div>`;
 };
