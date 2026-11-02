@@ -5066,7 +5066,7 @@ function scanContact(f,b,bp,def,a,maxDt){
   else if(inside)break;}
  return best;
 }
-function eligO(f){return SKILL.includes(f.role)&&!f.tried&&!(f.stun>0)&&!(f.down>0&&!(f.dive>0));}
+function eligO(f){return SKILL.includes(f.role)&&!f.oob&&!f.tried&&!(f.stun>0)&&!(f.down>0&&!(f.dive>0));}
 function eligD(f){return (f.role!=='DL'||userCtl(f))&&!f.tried&&!(f.stun>0)&&!f.eng&&!(f.down>0);}
 /* Outcome rules (all spatial first, ratings second):
    - only a receiver reaches it  -> catch; a drop is rare and more likely
@@ -5267,6 +5267,9 @@ function upLive(dt){
  separate(M.O);separate(M.D);
  // hands go up for a ball that is about to arrive
  if(b&&b.F&&!b.done){const rem=b.F.T-b.t;if(rem<0.42&&rem>-0.35)for(const f of[...M.O,...M.D]){if(f.down>0||f.stun>0||f.eng)continue;if((f.side==='O'&&SKILL.includes(f.role))||(f.side==='D'&&f.role!=='DL'&&f.role!=='COV')){if(Math.hypot(f.x-b.F.x1,f.y-b.F.y1)<2.4)f.reach=0.14;}}}
+ /* until the ball is caught, the offense's receivers stay in bounds (routes, overrunning a cut, chasing a throw);
+    one who still ends up out of bounds can't make the catch (NFL: he can't come back in and be first to touch it) */
+ if(!M.carrier)for(const f of M.O){if(f===M.qb)continue;if(f.y<0||f.y>53.33)f.oob=true;const y=clamp(f.y,0.5,52.83);if(y!==f.y){f.y=y;f.vy=0;}}
  for(const f of[...M.O,...M.D]){if(f!==M.carrier)f.y=clamp(f.y,-1,54.3);f.x=clamp(f.x,-2,121);}
  if(b){
   if(b.ret){
