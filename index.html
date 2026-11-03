@@ -2891,7 +2891,7 @@ SCR.player=()=>{
   <button class="bt ico" style="align-self:center" data-a="pnav" data-d="1">&gt;</button>
  </div>
  <div class="row" style="gap:8px"><button class="bt ico" data-a="pBack">${ICON.back}</button><div class="sp"></div>
-  ${mine?`<button class="bt" style="width:100px" data-a="pBench">${p.bench?'UNBENCH':'BENCH'}</button><button class="bt" style="width:118px" data-a="pBk">${p.bk?'MAKE STAR':'MAKE BACKUP'}</button>`:''}
+  ${mine?`<button class="bt" style="width:100px" data-a="pPos">POSITION</button><button class="bt" style="width:100px" data-a="pBench">${p.bench?'UNBENCH':'BENCH'}</button><button class="bt" style="width:118px" data-a="pBk">${p.bk?'MAKE STAR':'MAKE BACKUP'}</button>`:''}
   <button class="bt" style="width:100px" data-a="pStats">STATS</button>
   ${mine?`<button class="bt" style="width:100px" data-a="pMeet" ${met||L.cc<3?'disabled':''}>MEETING</button><button class="bt" style="width:100px" data-a="pTrade">TRADE</button>`:''}
  </div></div>`;
@@ -2913,6 +2913,29 @@ ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)l
  <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.filter(k=>!k.styleOf||skinOpen(k.id)).map(k=>skinOpen(k.id)?cell(k.id,skinLabel(k)):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">${(()=>{const r=BPASS.rewards.find(x=>x.skin===k.id);return r?'PASS T'+r.t:'SECRET';})()}</span></div>`).join('')}</div>
  ${SKINS.err?'<div class="s7 rdt">SKINS/SKINS.JSON HAS A MISTAKE (CHECK COMMAS AND QUOTES)</div>':SKINS.ok?'':'<div class="s7 dim">LOADING SKINS...</div>'}${SKINS.bad&&Object.keys(SKINS.bad).length?`<div class="s7 rdt" style="text-align:center">IMAGE FILE NOT FOUND: ${Object.keys(SKINS.bad).map(id=>esc((SKINS.list.find(x=>x.id===id)||{}).file||id)).join(', ')}</div>`:''}<button class="bt" data-a="close">DONE</button></div>`);};
 ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(d.v&&!skinOpen(d.v))return;p.spr=d.v||null;if(!p.spr)delete p.spr;skinMapSet(p);try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
+/* ---------- change a player's position ----------
+   Stars are worked out again from the attributes the new position uses. Ones he already has carry over
+   (an RB's catching for WR, a TE's blocking for OL); missing ones are filled in from how good he is overall:
+   body traits (speed, strength, stamina) 1 below, position skills (catching, blocking, tackling, accuracy) 2 below.
+   STRENGTH means arm for a QB and leg for a K, so each kind is kept apart (p.sx) and comes back if he moves back. */
+const STR_KIND=pos=>pos==='QB'?'arm':pos==='K'?'leg':'body',POS_SKILL=['cat','blk','tkl','acc','kac'];
+function posAttrs(p,np){const a=Object.assign({},p.a),sx=Object.assign({},p.sx||{}),ok=STR_KIND(p.pos),nk=STR_KIND(np);
+ const kn=POSDEF[p.pos].map(k=>p.a[k]).filter(v=>v!=null),base=kn.length?kn.reduce((x,y)=>x+y,0)/kn.length:4,fill=k=>clamp(Math.round(base-(POS_SKILL.includes(k)||k==='str'&&nk!=='body'?2:1)),1,10);
+ if(ok!==nk){if(a.str!=null)sx[ok]=a.str;a.str=sx[nk]!=null?sx[nk]:fill('str');}
+ for(const k of POSDEF[np])if(a[k]==null)a[k]=fill(k);
+ return{a,sx};}
+const posPreview=(p,np)=>np===p.pos?starsOf(p):starsOf(Object.assign({},p,{pos:np,a:posAttrs(p,np).a}));
+ACT.pPos=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;
+ const cell=np=>`<button class="bt ${np===p.pos?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 4px 5px" ${np===p.pos?'disabled':`data-a="pPos2" data-v="${np}"`}><span class="s10">${np}</span>${stars(posPreview(p,np))}</button>`;
+ modal(`<div class="mp" style="width:440px;align-items:center;gap:8px">${ttl('POSITION · '+esc(pname(p).toUpperCase()),true)}
+  <div class="s7 dim" style="text-align:center;line-height:1.8">HIS STARS AT EACH POSITION. SKILLS HE ALREADY HAS CARRY OVER; NEW ONES START A BIT LOWER. MOVE HIM BACK AND HE GETS HIS OLD RATINGS BACK.</div>
+  <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%">${POSL.map(cell).join('')}</div>
+  <button class="bt" data-a="close">CANCEL</button></div>`);};
+ACT.pPos2=d=>{const p=P(UI.sub.id),np=d.v;if(!p||p.team!==L.user||!POSDEF[np]||np===p.pos)return;const was=p.pos,t=p.team,r=posAttrs(p,np);
+ p.a=r.a;p.sx=r.sx;p.pos=np;p.pot=Math.max(p.pot||0,ovr(p));p.peak=Math.max(p.peak||0,ovr(p));
+ if(p.bk&&!bkFree(t,np)){p.bk=false;}   /* that position's backup spot is taken: he joins the stars */
+ PRC.clear();for(const k in AVC)delete AVC[k];
+ news(fullname(p)+' moves from '+was+' to '+np+'.');save();sfx('coin');closeModal();toast(pname(p).toUpperCase()+' IS NOW A '+np+' · '+starsOf(p)+' STARS');};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
 ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+myWk();const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
 ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`;
