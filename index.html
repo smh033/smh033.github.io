@@ -7497,16 +7497,42 @@ SCR.olcoaches=()=>{if(!olLive())return SCR.olmenu();const H=humans(),host=L.onli
  const rows=H.map(t=>{const on=(OL.on||[]).includes(t)||t===L.user,R=L.teams[t],w=W.filter(x=>x.t===t);
   const force=host&&t!==L.user&&w.length?w.slice(0,1).map(x=>`<button class="bt" style="padding:3px 6px 2px" data-a="olForceQ" data-k="${x.k}" data-t="${t}">${x.k==='sim'?'SIM GAME':x.k==='pick'?'AUTO PICK':'AUTO FINISH'}</button>`).join(''):'';
   const kick=host&&t!==L.user?`<button class="bt r" style="padding:3px 6px 2px" data-a="olKickQ" data-t="${t}">REMOVE</button>`:'';
-  return`<tr><td class="${on?'grt':'dim'}">●</td><td>${esc(abbr(t))}</td><td>${esc((seatOf(t)||{}).coach||'')}${t===L.online.host?' <span class="yl">HOST</span>':''}</td><td class="c">${R.w}-${R.l}${R.t?'-'+R.t:''}</td><td class="s7">${w.length?w.map(x=>esc(x.what)).join(' · '):'<span class="dim">DONE</span>'}</td><td class="r" style="white-space:nowrap">${force}${kick}</td></tr>`;}).join('');
+  const rest=host&&w.some(x=>x.g&&x.g.hs==null&&!x.blocked&&olH2H(x.g))?`<button class="bt" style="padding:3px 6px 2px" data-a="olSimRestQ" data-t="${t}">SIM REST</button>`:'';
+  return`<tr><td class="${on?'grt':'dim'}">●</td><td>${esc(abbr(t))}</td><td>${esc((seatOf(t)||{}).coach||'')}${t===L.online.host?' <span class="yl">HOST</span>':''}</td><td class="c">${R.w}-${R.l}${R.t?'-'+R.t:''}</td><td class="s7">${w.length?w.map(x=>esc(x.what)).join(' · '):'<span class="dim">DONE</span>'}</td><td class="r" style="white-space:nowrap">${rest}${force}${kick}</td></tr>`;}).join('');
  return`<div class="screen">
  <div class="row"><button class="bt ico" data-a="olBack">${ICON.back}</button><div class="grow">${ttl('LEAGUE '+L.online.code)}</div><div style="width:32px"></div></div>
  <div class="s7 yl" style="text-align:center">${olSettingsLine()} · ${H.length}/${L.online.max} COACHES</div>
  <div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th></th><th>TEAM</th><th>COACH</th><th class="c">REC</th><th>WAITING ON</th><th></th></tr>${rows}</table></div>
- <div class="row" style="gap:8px"><span class="s7 dim" style="line-height:1.7">${host?'AS HOST YOU CAN SIM OR AUTO-FINISH FOR A COACH WHO IS AWAY (NEUTRAL, NO BOOSTS).':'THE LEAGUE MOVES ON WHEN EVERY COACH IS DONE.'}</span><div class="sp"></div>${host?'':'<button class="bt r" data-a="olLeaveQ">LEAVE LEAGUE</button>'}<button class="bt" data-a="go" data-s="oltrades">TRADE OFFERS</button><button class="bt" data-a="olExit">LEAGUE MENU</button></div></div>`;};
+ <div class="row" style="gap:8px"><span class="s7 dim" style="line-height:1.7">${host?'AS HOST YOU CAN SIM OR AUTO-FINISH FOR A COACH WHO IS AWAY (NEUTRAL, NO BOOSTS). SIM REST: A COACH VS COACH GAME THAT STOPPED, FROM ITS SCORE.':'THE LEAGUE MOVES ON WHEN EVERY COACH IS DONE.'}</span><div class="sp"></div>${host?'':'<button class="bt r" data-a="olLeaveQ">LEAVE LEAGUE</button>'}<button class="bt" data-a="go" data-s="oltrades">TRADE OFFERS</button><button class="bt" data-a="olExit">LEAGUE MENU</button></div></div>`;};
 ACT.olBack=()=>olResume();
 ACT.olForceQ=d=>{const t=+d.t,what=d.k==='sim'?'SIM '+abbr(t)+'\'S GAME (A NORMAL SIM)':d.k==='pick'?'MAKE '+abbr(t)+'\'S DRAFT PICK (BEST AVAILABLE)':'FINISH '+abbr(t)+'\'S OFFSEASON STEP (EXPIRING CONTRACTS NOT KEPT ARE LET GO)';
  modal(`<div class="mp" style="width:380px;align-items:center;text-align:center">${ttl('COACH AWAY',true)}<div class="s7" style="line-height:1.9">${esc(what)}?</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="olForce2" data-k="${d.k}" data-t="${t}">DO IT</button></div></div>`);};
 ACT.olForce2=d=>{UI.modal=null;olTx(()=>olForce(d)).then(()=>render());};
+/* host: a coach vs coach game that stopped partway (someone quit). Enter the score and time left (filled in from
+   this device's saved copy of the game if it has one); only the time that's left is simmed. */
+ACT.olSimRestQ=d=>{const t=+d.t,x=olWaiting().find(y=>y.t===t&&y.g&&y.g.hs==null&&olH2H(y.g));if(!x)return;const g=x.g,code=olGameCode(g);
+ const sv=[olgGet(code,'host'),olgGet(code,'guest')].find(v=>v&&v.m&&v.m.sc),m=sv&&sv.m,hf=sv&&sv.team===g.h;
+ const hs=m?(hf?m.sc[0]:m.sc[1]):0,as=m?(hf?m.sc[1]:m.sc[0]):0,q=m?Math.min(5,m.qtr):1,ck=m&&m.qtr<=4?clamp(Math.round(m.clock),0,L.settings.qlen):L.settings.qlen;
+ UI.simRest={t,h:g.h,a:g.a};const num=(id,v)=>`<input class="txt" id="${id}" type="number" min="0" max="199" value="${v}" style="width:70px;text-align:center">`;
+ modal(`<div class="mp" style="width:420px;align-items:center;text-align:center">${ttl('SIM THE REST',true)}
+  <div class="s7 dim" style="line-height:1.8">${m?'FILLED IN FROM THE GAME SAVED ON THIS DEVICE. ':''}ENTER THE SCORE WHEN IT STOPPED; ONLY THE TIME THAT'S LEFT IS SIMMED.</div>
+  <div class="row ctr" style="gap:10px;align-items:center"><span class="s10">${esc(abbr(g.a))}</span>${num('srA',as)}<span class="s10">AT</span>${num('srH',hs)}<span class="s10">${esc(abbr(g.h))}</span></div>
+  <div class="row ctr" style="gap:10px;align-items:center"><span class="s7">QUARTER</span><select class="txt" id="srQ" style="width:80px">${[1,2,3,4,5].map(n=>`<option value="${n}"${n===q?' selected':''}>${n===5?'OT':'Q'+n}</option>`).join('')}</select>
+   <span class="s7">TIME LEFT</span><input class="txt" id="srT" value="${Math.floor(ck/60)}:${String(ck%60).padStart(2,'0')}" style="width:80px;text-align:center"></div>
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="olSimRest2">SIM IT</button></div></div>`);};
+ACT.olSimRest2=()=>{const o=UI.simRest,v=id=>(document.getElementById(id)||{}).value;if(!o)return;
+ const hs=Math.max(0,Math.round(+v('srH')||0)),as=Math.max(0,Math.round(+v('srA')||0)),q=clamp(Math.round(+v('srQ')||1),1,5),tm=String(v('srT')||'0').split(':'),
+  ck=clamp(tm.length>1?(+tm[0]||0)*60+(+tm[1]||0):(+tm[0]||0)*60,0,L.settings.qlen);
+ UI.modal=null;let done=null;
+ olTx(()=>{done=olSimRestTx(o,hs,as,q,ck);}).then(()=>{if(done){olgClear(olGameCode({h:o.h,a:o.a}));sfx('coin');toast('FINAL (SIMMED) · '+abbr(o.a)+' '+done[1]+' - '+done[0]+' '+abbr(o.h));}else toast('THAT GAME IS ALREADY IN');render();});};
+function olSimRestTx(o,hs,as,q,ck){if(L.online.host!==L.user)return null;let out=null;
+ const fin=g=>{const ql=L.settings.qlen,f=(q<=4?(4-q)*ql+ck:0)/(4*ql),H=teamRatings(g.h),A=teamRatings(g.a);
+  let h=hs+simPts(H.off,A.def,true,f),a=as+simPts(A.off,H.def,false,f);
+  if(h===a&&(L.phase==='PO'||Math.random()<.85)){if(Math.random()<0.5+(H.ovr-A.ovr)/200)h+=3;else a+=3;}
+  finishGame(g,h,a);news('The commissioner simmed the rest of '+abbr(g.a)+' at '+abbr(g.h)+' (it stopped at '+as+'-'+hs+'): '+a+'-'+h+'.');out=[h,a];};
+ if(L.phase==='REG')olAs(o.t,()=>{const g=userGame();if(g&&g.h===o.h&&g.a===o.a){fin(g);olMyWeekDone();}});
+ else{const g=curGames().find(x=>x.hs==null&&x.h===o.h&&x.a===o.a);if(g)fin(g);}
+ olGates();return out;}
 ACT.olKickQ=d=>modal(`<div class="mp" style="width:360px;align-items:center;text-align:center">${ttl('REMOVE COACH',true)}<div class="s7" style="line-height:1.9">${esc((seatOf(+d.t)||{}).coach||'')} LOSES ${esc(abbr(+d.t))} AND THE AI TAKES OVER.</div><div class="row"><button class="bt" data-a="close">CANCEL</button><button class="bt r" data-a="olKick2" data-t="${d.t}">REMOVE</button></div></div>`);
 ACT.olKick2=d=>{UI.modal=null;const t=+d.t;olTx(()=>{if(L.online.host!==L.user||t===L.user||!L.seats[t])return;news('Coach '+L.seats[t].coach+' is out; the AI takes over the '+T(t).name+'.');delete L.seats[t];olGates();}).then(()=>render());};
 /* ---------- hub bits ---------- */
