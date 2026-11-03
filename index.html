@@ -6119,7 +6119,10 @@ function drawAimInner(a,ai,q){
 /* Landing crosshair shown on the grass while a pass is in the air. */
 function drawTarget(){
  const b=M.ball;if(!b||!b.F||b.done||b.tip||M.phase!=='live')return;
- drawCross(wx(b.x1),wy(b.y1),'#ffe94a');
+ const sx=wx(b.x1),sy=wy(b.y1);
+ if(M.def){const r=7+2.5*Math.sin(M.tt*9);   /* on defense: a pulsing ring so you can find the spot fast and jump the route */
+  cx.save();cx.beginPath();cx.ellipse(sx,sy,r+3,(r+3)*0.6,0,0,Math.PI*2);cx.lineWidth=4;cx.strokeStyle='rgba(0,0,0,.5)';cx.stroke();cx.lineWidth=2;cx.strokeStyle='#ffe94a';cx.stroke();cx.restore();}
+ drawCross(sx,sy,'#ffe94a');
 }
 function drawCross(sx,sy,Y){const K='rgba(0,0,0,.55)';
  for(const[x,y,w,h]of[[-7,-1,4,2],[4,-1,4,2],[-1,-5,2,3],[-1,3,2,3]]){rect(sx+x-1,sy+y-1,w+2,h+2,K);}
@@ -6193,7 +6196,7 @@ function draw(){
  drawField();
  if(M.phase==='pre'&&!M.def)drawRoutes();
  if(M.phase==='pre'&&M.def&&!M.ov)drawDefArt();
- if(!M.def)drawTarget();if(M.aim)drawAimSpot();drawPlayers();drawBall();if(M.trick)drawTrickBall();if(M.netTB)drawBallAt(M.netTB.x,M.netTB.y,M.netTB.z,M.tt*20);if(M.loose)drawLoose();if(M.helmets)drawHelmets();
+ drawTarget();if(M.aim)drawAimSpot();   /* the landing crosshair shows on offense and on defense */drawPlayers();drawBall();if(M.trick)drawTrickBall();if(M.netTB)drawBallAt(M.netTB.x,M.netTB.y,M.netTB.z,M.tt*20);if(M.loose)drawLoose();if(M.helmets)drawHelmets();
  if(M.ov&&M.ov.type==='drive')drawDriveBall();
  if(M.night)nightFX();
  if(M.aim)drawAim();
