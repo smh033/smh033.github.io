@@ -4312,7 +4312,8 @@ function gameOver(){
  const achTxt=ach.length?`<div class="s7 yl" style="line-height:1.7">🏆 ${ach.map(a=>esc(a.n)).join(' · ')}</div>`:'';
  M.ov={html:()=>M.box?boxHTML():`<div class="mp" style="align-items:center;text-align:center">${ttl('FINAL'+(M.qtr>=5?' / OT':''),true)}<div class="row ctr" style="gap:16px;align-items:center;width:100%"><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(teamName(L.user).toUpperCase())}</span><span class="s16" style="flex:0 0 auto;white-space:nowrap">${M.sc[0]} - ${M.sc[1]}</span><span class="s10" style="flex:1 1 0;min-width:0;text-align:center;line-height:1.6">${esc(T(M.op).name.toUpperCase())}</span></div><div class="s16 ${W?'grt':Tt?'yl':'rdt'}">${W?'VICTORY!':Tt?'TIE GAME':'DEFEAT'}</div>${achTxt}<div class="row ctr" style="gap:8px">${canBox?'<button class="bt big" data-a="gBox">BOX SCORE</button>':''}<button class="bt y big" data-a="gAct" data-i="0">CONTINUE</button></div></div>`,acts:[finishMatch]};
 }
-function finishMatch(){if(L&&L.net)netsClear();if(L&&L.online&&!L.exh)olmClear();if(M&&M.olg&&L&&L.net)return olHostEnd();if(L&&L.net){const R=M.sc.slice(),op=M.op,u=L.user;NET.last=abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op);NET.glast=abbr(op)+' '+R[1]+' - '+R[0]+' '+abbr(u);netSend({t:'end',last:NET.glast});M=null;L=null;NET.stage='lobby';go('online');netLobbySend();return;}if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
+function finishMatch(){if(M&&M.netSim){const R=M.sc.slice(),op=M.op,u=L.user;M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('title');toast('FINAL (SIMMED) · '+abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op));return;}
+ if(L&&L.net)netsClear();if(L&&L.online&&!L.exh)olmClear();if(M&&M.olg&&L&&L.net)return olHostEnd();if(L&&L.net){const R=M.sc.slice(),op=M.op,u=L.user;NET.last=abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op);NET.glast=abbr(op)+' '+R[1]+' - '+R[0]+' '+abbr(u);netSend({t:'end',last:NET.glast});M=null;L=null;NET.stage='lobby';go('online');netLobbySend();return;}if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
  const ql=L.settings.qlen,rem=M.qtr<=4?(4-M.qtr)*ql+Math.max(0,M.clock):0,f=rem/(4*ql);
  const H=teamRatings(L.user),O=teamRatings(M.op);
@@ -6785,6 +6786,11 @@ function netGuestMsg(m){
   if(NET.lsT){const d=now-NET.lsT;if(d<1000){NET.iv+=(d-NET.iv)*0.1;NET.jit+=(Math.abs(d-NET.iv)-NET.jit)*0.1;}}NET.lsT=now;
   const e={tm:now,s:m,R:NET.R,ev:m.ev||null,ov:m.ov,done:false};NET.buf.push(e);if(NET.buf.length>40)NET.buf.splice(0,NET.buf.length-3);}
 }
+/* guest: keep the score, quarter and clock it sees (when they change, and every few seconds) so the game
+   can be simmed from that point if the host leaves for good */
+function netGuestKeep(){const k=M.sc.join('-')+'|'+M.qtr,now=performance.now();if(k===NET.keepK&&now-(NET.keepT||0)<5000)return;NET.keepK=k;NET.keepT=now;
+ const m={sc:M.sc.slice(),qtr:M.qtr,clock:M.clock};
+ if(M.olg&&OLG)olgPut({room:OLG.code,role:'guest',m});else{const c=netsGet();if(c&&c.role==='guest'&&c.code===NET.code){c.m=m;netsPut(c);}}}
 function netGuestStart(m){
  if(m.olg&&OLG){if(!OLG.live)OLG.L=L;OLG.live=true;olgPut({room:OLG.code,league:OL&&OL.code,role:'guest',tok:NET.tok,team:m.guest});}
  L=m.L;L.user=m.guest;L.custom=null;L.net=false;L.exh=true;indexPlayers();cfbSync(null);
@@ -6817,7 +6823,7 @@ function netApply(dt){dt=dt||0.016;const B=NET.buf;if(!B.length)return;const rt=
   pup.forEach((f,i)=>{if(ext&&!(f.down>0)){f.x+=f.vx*ext;f.y+=f.vy*ext;f.t+=ext;}const d=D&&D[i];if(d&&Math.hypot(f.x-d.x,f.y-d.y)<3){f.x=d.x+(f.x-d.x)*k;f.y=d.y+(f.y-d.y)*k;}NET.dsp[i]={x:f.x,y:f.y};});}
  const ph=s.ph==='replay'?'dead':s.ph;
  if(ph==='pre'&&!NET.wasPre){M.trick=null;M.called=null;M.aim=null;}NET.wasPre=ph==='pre';
- M.phase=ph;M.play=s.pl;M.sc=[s.sc[1],s.sc[0]];M.clock=s.clk;M.qtr=s.q;M.down=s.dn;M.ballOn=s.bo;M.ballY=s.by;M.los=s.los;M.fdX=s.fd;M.conv=s.cv;M.pc=s.pc;
+ M.phase=ph;M.play=s.pl;M.sc=[s.sc[1],s.sc[0]];M.clock=s.clk;M.qtr=s.q;M.down=s.dn;M.ballOn=s.bo;M.ballY=s.by;M.los=s.los;M.fdX=s.fd;M.conv=s.cv;M.pc=s.pc;netGuestKeep();
  M.thrown=s.th;M.retKind=s.rk;M.caught=s.cg;M.fair=s.fa;M.dcall=s.dc;M.plays=s.np;M.res=s.rs?{kind:s.rs}:null;
  const gdef=!s.def;M.def=gdef;{let ud=NET.gdir==='L'?-1:1;if(NET.gdir==='S'&&s.q>=3)ud=-ud;M.udir=ud;M.dir=gdef?-ud:ud;}   /* the guest's own throwing direction */
  M.to=s.gt;M.oto=s.ht;M.cp=s.gcp;M.runoff=s.ro;M.tbOK=!!s.tk&&!gdef;M.land=s.la?{x:s.la[0],y:s.la[1]}:null;M.kr=at(s.kr);
@@ -6938,11 +6944,18 @@ function netsHostSave(act,who){if(act==='final'){netsClear();return;}
    firstRecv:M.firstRecv,udir:M.udir,dcall:M.dcall,went4:!!M.went4,conv:!!M.conv,ballOn:M.ballOn,ballY:M.ballY,down:M.down,fdX:M.fdX,uU:M.uU,uO:M.uO}});}
 function netsBoot(){const c=netsGet();let s=null;try{s=JSON.parse(localStorage.getItem(NETS_SKEY)||'null');}catch(e){}
  if(!c||!s){netsClear();return;}
- const g=s.g,sc=c.role==='host'&&c.m?c.m.sc:null,mine=c.role==='host'?c.host:s.guest,op=mine===g.h?g.a:g.h;
+ const g=s.g,sc=c.m?c.m.sc:null,mine=c.role==='host'?c.host:s.guest,op=mine===g.h?g.a:g.h;
  modal(`<div class="mp" style="width:400px;align-items:center;text-align:center">${ttl('ONLINE GAME',true)}<div class="s7" style="line-height:2">YOUR GAME VS ${esc(T(op).name.toUpperCase())} DIDN'T FINISH${sc?'<br>'+esc(abbr(mine))+' '+sc[0]+' - '+sc[1]+' '+esc(abbr(op))+' · Q'+Math.min(4,c.m.qtr):''}<br>CODE ${esc(c.code)}</div>
   <div class="s7 yl" style="line-height:1.8">${c.role==='host'?'RESUME, THEN YOUR FRIEND OPENS THE GAME AND TAPS RESUME TOO':'RESUME, AND MAKE SURE THE HOST HAS THE GAME OPEN'}</div>
-  <div class="row" style="gap:8px"><button class="bt" data-a="netsForget">FORGET IT</button><button class="bt y" data-a="netsResume">RESUME</button></div></div>`);}
+  <div class="row" style="gap:8px"><button class="bt" data-a="netsForget">FORGET IT</button>${c.m?'<button class="bt" data-a="netsSim">SIM THE REST</button>':''}<button class="bt y" data-a="netsResume">RESUME</button></div>
+  ${c.m?'<div class="s7 dim" style="line-height:1.8">THEY LEFT? SIM THE REST KEEPS THE SCORE AND SIMS THE TIME THAT\'S LEFT.</div>':''}</div>`);}
 ACT.netsForget=()=>{netsClear();closeModal();};
+/* the other player left for good: keep the score and sim the time that's left (simmed: a third of the coins) */
+function simFromSave(m){Object.assign(M,{sc:m.sc.slice(),qtr:m.qtr,clock:m.clock,simmed:true});if(m.ps)M.ps=m.ps;if(m.ts)M.ts=m.ts;simRest();}
+ACT.netsSim=()=>{const c=netsGet();let s=null;try{s=JSON.parse(localStorage.getItem(NETS_SKEY)||'null');}catch(e){}closeModal();if(!c||!s||!c.m){toast('THAT GAME IS GONE');return;}
+ const host=c.role==='host';if(L&&!L.exh&&!L.net)window.__franchL=L;
+ L=JSON.parse(JSON.stringify(s.L));L.user=host?c.host:s.guest;L.net=false;L.exh=true;if(!host)L.custom=null;indexPlayers();cfbSync(null);
+ netsClear();startMatch(s.g,host?{uU:s.hu,uO:s.gu}:{uU:s.gu,uO:s.hu});M.netSim=true;simFromSave(c.m);};
 ACT.netsResume=async()=>{const c=netsGet();let s=null;try{s=JSON.parse(localStorage.getItem(NETS_SKEY)||'null');}catch(e){}closeModal();if(!c||!s){toast('THAT GAME IS GONE');return;}
  if(c.role==='host')return netsResumeHost(c,s);return netsResumeGuest(c,s);};
 async function netsResumeHost(c,s){
@@ -7534,8 +7547,18 @@ SCR.olroom=()=>{if(!OLG||!olLive())return SCR.hub();const op=OLG.h===L.user?OLG.
  ${(()=>{const sv=olgGet(OLG.code,OLG.host?'host':'guest');if(!sv)return'';const m=sv.m;return`<div class="s7 yl">GAME IN PROGRESS${m?' · '+esc(abbr(L.user))+' '+m.sc[0]+' - '+m.sc[1]+' '+esc(abbr(op))+' · Q'+Math.min(4,m.qtr):''} · PICKS UP WHERE YOU LEFT OFF</div>`;})()}
  <div class="yl blink">${esc(NET.status&&!NET.connOpen&&/RECONNECT|BACKUP/.test(NET.status)?NET.status:st)}</div>
  ${NET.err?`<div class="rdt s7" style="max-width:520px;text-align:center;line-height:1.8">${esc(NET.err)}</div>${/OLD VERSION/.test(NET.err)?'<button class="bt y" data-a="netReload">RELOAD</button>':''}`:''}
- <div class="s7 dim" style="max-width:520px;text-align:center;line-height:1.8">BOTH COACHES NEED THIS SCREEN OPEN. ${esc(abbr(OLG.h))} (HOME) RUNS THE GAME. NO SIMMING: THIS ONE IS PLAYED. IF SOMEONE DROPS OUT OR YOU TAKE A BREAK, THE SCORE IS SAVED: TAP PLAY AGAIN TO PICK IT UP.</div>
- <button class="bt" data-a="olRoomCancel">BACK</button></div>`;};
+ <div class="s7 dim" style="max-width:520px;text-align:center;line-height:1.8">BOTH COACHES NEED THIS SCREEN OPEN. ${esc(abbr(OLG.h))} (HOME) RUNS THE GAME. IF SOMEONE DROPS OUT OR YOU TAKE A BREAK, THE SCORE IS SAVED: TAP PLAY AGAIN TO PICK IT UP.${olSimOK()?' IF THEY LEFT FOR GOOD, SIM THE REST KEEPS THE SCORE AND SIMS THE TIME THAT\'S LEFT.':''}</div>
+ <div class="row" style="gap:8px"><button class="bt" data-a="olRoomCancel">BACK</button>${olSimOK()?'<button class="bt" data-a="olSim">SIM THE REST</button>':''}</div></div>`;};
+/* coach vs coach game that stopped partway: the score this coach has saved (home: every snap, away: what it saw) */
+function olSimSave(){const sv=OLG&&olgGet(OLG.code,OLG.host?'host':'guest');return sv&&sv.m&&sv.m.sc?sv.m:null;}
+function olSimOK(){return !!(OLG&&!OLG.live&&!NET.connOpen&&olSimSave());}
+ACT.olSim=()=>{const m=olSimSave();if(!m||!olSimOK())return;const op=OLG.h===L.user?OLG.a:OLG.h;
+ modal(`<div class="mp" style="width:380px;align-items:center;text-align:center">${ttl('SIM THE REST?',true)}<div class="s10">${esc(abbr(L.user))} ${m.sc[0]} - ${m.sc[1]} ${esc(abbr(op))} · ${m.qtr>=5?'OT':'Q'+m.qtr+' '+Math.floor(Math.max(0,m.clock)/60)+':'+String(Math.floor(Math.max(0,m.clock)%60)).padStart(2,'0')}</div>
+  <div class="s7 dim" style="line-height:1.8">THE SCORE STAYS AND THE REST OF THE GAME IS SIMMED. IT COUNTS IN THE STANDINGS FOR BOTH TEAMS.</div>
+  <div class="row" style="gap:8px"><button class="bt" data-a="close">CANCEL</button><button class="bt y" data-a="olSim2">SIM IT</button></div></div>`);};
+ACT.olSim2=()=>{const m=olSimSave();if(!m||!olSimOK())return closeModal();const g0={h:OLG.h,a:OLG.a},u=OLG.u;UI.modal=null;
+ olTx(null).then(()=>{const g=userGame();if(!g||g.h!==g0.h||g.a!==g0.a){toast('THAT GAME IS ALREADY IN');netReset();olRoomClose();return olResume();}
+  netSend({t:'bye'});netReset();olgClear(OLG&&OLG.code);olRoomClose();startMatch(g,u||defaultUnis(g));simFromSave(m);});};
 /* host: both are in, start (from netHostMsg once the friend's version checks out) */
 function olNetGo(){if(!OLG||!OLG.host||NET.role!=='host'||!NET.connOpen||NET.stage==='game'||NET.oldV)return;
  const g=userGame();if(!g||g.h!==OLG.h||g.a!==OLG.a){NET.err='THIS GAME IS ALREADY IN.';return render();}
