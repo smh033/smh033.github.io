@@ -1991,7 +1991,7 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
   <div class="sp"></div>${claimable?`<button class="bt" data-a="bpClaimAll">CLAIM ALL (${claimable})</button>`:''}</div>
  <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
   <div class="bpwrap scroll" id="bpw" onscroll="UI.bpX=this.scrollLeft" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)">${cols}</div></div>
- <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN COINS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMED GAMES EARN A THIRD</div></div>`;};
+ <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN COINS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMING THE REST OF A GAME EARNS A THIRD · SIMMED GAMES EARN NOTHING</div></div>`;};
 ACT.bp=()=>{if(!PASS_ON)return;if(BP_HIDDEN){ACT.shop();return;}if(!SKINS.ok)loadSkins();else skinsRecheck();UI.bpX=null;go('bpass');};
 ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' COINS');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
@@ -2777,7 +2777,7 @@ function pregameHTML(g){
 ACT.adv=()=>{UI.modal=null;advanceWeek();resumeFlow();};
 ACT.simpo=()=>{UI.modal=null;while(L.phase==='PO'&&!userGame())advanceWeek();resumeFlow();};
 ACT.play=()=>{if(L.online&&!(UI.scr==='olroom'))return olPlay(false);const g=userGame();if(!g)return;const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);};
-ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});try{bpAfterGame(home?hs:as,home?as:hs,null,g,true,{});}catch(e){console.warn('pass',e);}};   /* simmed games pay a third */
+ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});};   /* a game simmed from the start pays no coins or pass XP (sim part of a game you played: a third) */
 function simStats(us,th){
  const lu=lineup(L.user),ps={},S=p=>p?(ps[p.id]=ps[p.id]||{xp:0}):null,add=(p,k,v)=>{const s=S(p);if(s)s[k]=(s[k]||0)+v;};
  const tds=Math.floor(us/7),py=Math.round(rnd(140,300)*(0.7+us/60)),ry=Math.round(rnd(50,140));
@@ -4331,7 +4331,7 @@ SCR.ach=()=>{const a=achGet(),n=ACH.filter(x=>a.u[x.id]).length;
  <div class="grow scroll"><div class="achg">${cards}</div></div></div>`;};
 function gameOver(){
  if(M.prac)return pracEnd();
- try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd});}catch(e){console.warn('pass',e);}
+ if(!(M.simmed&&!M.plays))try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd});}catch(e){console.warn('pass',e);}   /* simmed before a single snap was played: no coins */
  olmSave('final');tallyQ();
  let ach=[];try{ach=achAfterGame();}catch(e){console.warn('ach',e);}
  M.phase='ov';M.box=false;const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1],canBox=!(L&&L.net);
@@ -6981,7 +6981,7 @@ function netsBoot(){const c=netsGet();let s=null;try{s=JSON.parse(localStorage.g
   ${c.m?'<div class="s7 dim" style="line-height:1.8">THEY LEFT? SIM THE REST KEEPS THE SCORE AND SIMS THE TIME THAT\'S LEFT.</div>':''}</div>`);}
 ACT.netsForget=()=>{netsClear();closeModal();};
 /* the other player left for good: keep the score and sim the time that's left (simmed: a third of the coins) */
-function simFromSave(m){Object.assign(M,{sc:m.sc.slice(),qtr:m.qtr,clock:m.clock,simmed:true});if(m.ps)M.ps=m.ps;if(m.ts)M.ts=m.ts;simRest();}
+function simFromSave(m){Object.assign(M,{sc:m.sc.slice(),qtr:m.qtr,clock:m.clock,simmed:true,plays:Math.max(1,m.plays||0)});   /* it was played up to here: counts as playing some of it */if(m.ps)M.ps=m.ps;if(m.ts)M.ts=m.ts;simRest();}
 ACT.netsSim=()=>{const c=netsGet();let s=null;try{s=JSON.parse(localStorage.getItem(NETS_SKEY)||'null');}catch(e){}closeModal();if(!c||!s||!c.m){toast('THAT GAME IS GONE');return;}
  const host=c.role==='host';if(L&&!L.exh&&!L.net)window.__franchL=L;
  L=JSON.parse(JSON.stringify(s.L));L.user=host?c.host:s.guest;L.net=false;L.exh=true;if(!host)L.custom=null;indexPlayers();cfbSync(null);
