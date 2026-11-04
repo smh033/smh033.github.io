@@ -1007,8 +1007,12 @@ function seasonLineForAI(t){
 }
 const offScore=s=>s.pyd/22+s.ptd*4-s.pint*3+(s.ryd+s.wyd)/10+(s.rtd+s.wtd)*6+s.rec*0.3;
 const defScore=s=>s.tkl+s.sck*5+s.dint*7+(s.pbu||0)*1.5;
+/* QBR: the NFL passer rating (0 to 158.3) from completions, attempts, yards, TDs and INTs. Shown for a game and a season. */
+function qbr(s){const a=s&&s.att||0;if(!a)return null;const c=x=>clamp(x,0,2.375);
+ return(c(((s.cmp||0)/a-0.3)*5)+c(((s.pyd||0)/a-3)*0.25)+c((s.ptd||0)/a*20)+c(2.375-(s.pint||0)/a*25))/6*100;}
+const qbrTxt=s=>{const r=qbr(s);return r==null?'-':r.toFixed(1);};
 function statLine(p){const s=p.s;
- if(p.pos==='QB')return`${s.pyd} YDS · ${s.ptd} TD · ${s.pint} INT`;
+ if(p.pos==='QB')return`${s.pyd} YDS · ${s.ptd} TD · ${s.pint} INT`+(s.att?` · ${qbrTxt(s)} QBR`:'');
  if(p.pos==='RB')return`${s.ryd} RUSH YDS · ${s.rtd+s.wtd} TD`;
  if(p.pos==='WR'||p.pos==='TE')return`${s.rec} REC · ${s.wyd} YDS · ${s.wtd} TD`;
  if(p.pos==='K')return`${s.fgm}/${s.fga} FG`;
@@ -2820,7 +2824,7 @@ ACT.rnav=d=>{let t=UI.sub.t!=null?UI.sub.t:L.user;t=(t+ +d.d+32)%32;UI.sub.t=t;r
 ACT.rinfo=()=>modal(`<div class="mp" style="width:440px">${ttl('ROSTER',true)}<div style="line-height:2">YOU CAN HAVE ${rmax()} STAR PLAYERS, PLUS ONE BACKUP AT EACH POSITION (TAP BACKUPS). A BACKUP PLAYS WHEN NO STAR CAN TAKE HIS SPOT (INJURY, BENCH). ANY OTHER EMPTY SPOT ON THE FIELD IS A GENERIC PLAYER (1.5 STARS).<br>OFFENSE STARS COME FROM QB, RB, WR, TE AND OL. DEFENSE STARS COME FROM DL, LB AND DB.<br>THE GREEN BAR IS CONDITION. TIRED PLAYERS PLAY WORSE.<br>TAP A PLAYER TO UPGRADE, EXTEND OR RELEASE.</div><button class="bt" data-a="close">OK</button></div>`);
 function pmHTML(p,o){
  o=o||{};const mine=p.team===L.user,t=p.team>=0?p.team:L.user,need=xpNeed(p.lvl),st=p.s;
- const sl=p.pos==='QB'?`${st.cmp}/${st.att} ${st.pyd} YDS ${st.ptd} TD ${st.pint} INT`:(p.pos==='RB')?`${st.ryd} RUSH YDS ${st.rtd} TD ${st.wyd} REC YDS`:(p.pos==='WR'||p.pos==='TE')?`${st.rec} REC ${st.wyd} YDS ${st.wtd} TD`:p.pos==='K'?`${st.fgm}/${st.fga} FG`:p.pos==='OL'?`${st.gp} GAMES`:`${st.tkl} TCK ${st.sck} SACK ${st.dint} INT ${st.pbu||0} PBU`;
+ const sl=p.pos==='QB'?`${st.cmp}/${st.att} ${st.pyd} YDS ${st.ptd} TD ${st.pint} INT${st.att?' '+qbrTxt(st)+' QBR':''}`:(p.pos==='RB')?`${st.ryd} RUSH YDS ${st.rtd} TD ${st.wyd} REC YDS`:(p.pos==='WR'||p.pos==='TE')?`${st.rec} REC ${st.wyd} YDS ${st.wtd} TD`:p.pos==='K'?`${st.fgm}/${st.fga} FG`:p.pos==='OL'?`${st.gp} GAMES`:`${st.tkl} TCK ${st.sck} SACK ${st.dint} INT ${st.pbu||0} PBU`;
  const rows=POSDEF[p.pos].map(k=>`<div class="row" style="gap:6px"><span style="width:118px">${ATTR[k]}</span>${pips(p.a[k])}${mine?`<button class="bt" style="padding:2px 5px 1px" data-a="spAdd" data-id="${p.id}" data-k="${k}" ${p.sp>0&&p.a[k]<10?'':'disabled'}>+</button>`:''}</div>`).join('');
  let btns='';
  if(o.sign){const c=ccCost(p),full=!rosRoom(L.user,p.pos),asBk=!full&&mainN(L.user)>=rmax(),ok=L.cc>=c&&capRoom()>=p.sal;btns=`<button class="bt" data-a="close">BACK</button><button class="bt y" data-a="sign" data-id="${p.id}" ${ok?'':'disabled'}>SIGN · ${c} <i class="cc"></i></button>${full?'<span class="s7 rdt">ROSTER FULL: YOU WILL RELEASE SOMEONE</span>':asBk?'<span class="s7 yl">STARS FULL: SOMEONE MOVES TO A BACKUP SPOT</span>':''}${capRoom()<p.sal?'<span class="s7 rdt">NOT ENOUGH CAP</span>':''}`;}
@@ -2938,8 +2942,8 @@ ACT.pPos2=d=>{const p=P(UI.sub.id),np=d.v;if(!p||p.team!==L.user||!POSDEF[np]||n
  news(fullname(p)+' moves from '+was+' to '+np+'.');save();sfx('coin');closeModal();toast(pname(p).toUpperCase()+' IS NOW A '+np+' · '+starsOf(p)+' STARS');};
 ACT.pBench=()=>{const p=P(UI.sub.id);p.bench=!p.bench;if(p.bench)p.mor=clamp(p.mor-10,0,100);save();render();toast(p.bench?'BENCHED: HE WILL NOT PLAY':'BACK IN THE LINEUP');};
 ACT.pMeet=()=>{const p=P(UI.sub.id);if(L.cc<3)return;L.cc-=3;p.met=L.season*100+myWk();const g=p.mor<50?25:15;p.mor=clamp(p.mor+g,0,100);sfx('coin');save();render();toast('MEETING WENT WELL: MORALE +'+g);};
-ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`;
- const R=[['GAMES',x=>x.gp]];if(p.pos==='QB')R.push(['COMPLETIONS',x=>x.cmp],['ATTEMPTS',x=>x.att],['PASS YARDS',x=>x.pyd],['PASS TDS',x=>x.ptd],['INTERCEPTIONS',x=>x.pint],['RUSH YARDS',x=>x.ryd]);
+ACT.pStats=()=>{const p=P(UI.sub.id),s=p.s,c=p.c;const row=(l,f)=>f?`<tr><td>${l}</td><td class="r">${f(s)}</td><td class="r">${f(c)+f(s)}</td></tr>`:`<tr><td>${l}</td><td class="r">${qbrTxt(s)}</td><td class="r dim">-</td></tr>`;   /* QBR: this season only */
+ const R=[['GAMES',x=>x.gp]];if(p.pos==='QB')R.push(['COMPLETIONS',x=>x.cmp],['ATTEMPTS',x=>x.att],['PASS YARDS',x=>x.pyd],['PASS TDS',x=>x.ptd],['INTERCEPTIONS',x=>x.pint],['QBR',null],['RUSH YARDS',x=>x.ryd]);
  else if(['RB','WR','TE'].includes(p.pos))R.push(['CARRIES',x=>x.car],['RUSH YARDS',x=>x.ryd],['RUSH TDS',x=>x.rtd],['RECEPTIONS',x=>x.rec],['REC YARDS',x=>x.wyd],['REC TDS',x=>x.wtd],['FUMBLES',x=>x.fum]);
  else if(p.pos==='K')R.push(['FG MADE',x=>x.fgm],['FG ATTEMPTS',x=>x.fga]);
  else if(p.pos!=='OL')R.push(['TACKLES',x=>x.tkl],['SACKS',x=>x.sck],['INTERCEPTIONS',x=>x.dint],['PASS BREAKUPS',x=>x.pbu||0]);
@@ -4273,7 +4277,7 @@ function boxHTML(){tallyQ();const ot=M.qs[4][0]||M.qs[4][1]||M.qtr>=5,cols=ot?[0
  const qt=`<table class="bxs"><tr class="h"><td class="l">TEAM</td>${cols.map(c=>`<td>${c<4?c+1:'OT'}</td>`).join('')}<td>T</td></tr>${row(L.user,0)}${row(M.op,1)}</table>`;
  const line=(lab,v)=>`<tr><td class="l dim">${lab}</td><td class="v">${v}</td></tr>`,N=r=>esc(pname(r[0]).toUpperCase());
  const P=top(x=>x.pyd||0),Ru=top(x=>x.ryd||0),Rc=top(x=>x.wyd||0),D=top(x=>(x.tkl||0)+(x.sck||0)*3+(x.dint||0)*4),K=top(x=>x.fga||0);
- const ld=[P&&line('PASSING',`${N(P)} · ${P[1].cmp||0}/${P[1].att||0} · ${P[1].pyd} YDS · ${P[1].ptd||0} TD${P[1].pint?' · '+P[1].pint+' INT':''}`),
+ const ld=[P&&line('PASSING',`${N(P)} · ${P[1].cmp||0}/${P[1].att||0} · ${P[1].pyd} YDS · ${P[1].ptd||0} TD${P[1].pint?' · '+P[1].pint+' INT':''}${P[1].att?' · '+qbrTxt(P[1])+' QBR':''}`),
   Ru&&line('RUSHING',`${N(Ru)} · ${Ru[1].car||0} CAR · ${Ru[1].ryd} YDS${Ru[1].rtd?' · '+Ru[1].rtd+' TD':''}`),
   Rc&&line('RECEIVING',`${N(Rc)} · ${Rc[1].rec||0} REC · ${Rc[1].wyd} YDS${Rc[1].wtd?' · '+Rc[1].wtd+' TD':''}`),
   D&&line('DEFENSE',`${N(D)} · ${D[1].tkl||0} TKL${D[1].sck?' · '+D[1].sck+' SCK':''}${D[1].dint?' · '+D[1].dint+' INT':''}`),
