@@ -1956,7 +1956,7 @@ function bpPut(b){try{localStorage.setItem(BP_KEY,JSON.stringify(b));}catch(e){}
 const bpTier=b=>Math.min(BPASS.tiers,Math.floor(b.xp/BPASS.xp));
 function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)return;const b=bpGet();ex=ex||{};
  const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
- const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?1/3:1;
+ const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?(ex.played!=null?ex.played:1/3):1;   /* sim the rest of a game: paid for the share you played */
  const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
  const tok=ccx(SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k)),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
@@ -1991,7 +1991,7 @@ SCR.bpass=()=>{const b=bpGet(),tier=bpTier(b),into=b.xp-tier*BPASS.xp,full=tier>
   <div class="sp"></div>${claimable?`<button class="bt" data-a="bpClaimAll">CLAIM ALL (${claimable})</button>`:''}</div>
  <div class="row" style="width:100%;gap:4px"><div style="flex:0 0 52px;display:flex;flex-direction:column;gap:4px;padding-top:21px"><div class="s7" style="height:74px;display:flex;align-items:center">FREE</div><div class="s7 yl" style="height:74px;display:flex;align-items:center">PREMIUM</div></div>
   <div class="bpwrap scroll" id="bpw" onscroll="UI.bpX=this.scrollLeft" onwheel="this.scrollLeft+=(Math.abs(event.deltaX)>Math.abs(event.deltaY)?event.deltaX:event.deltaY);event.preventDefault()" onpointerdown="bpDrag(event,this)">${cols}</div></div>
- <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN COINS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIMMING THE REST OF A GAME EARNS A THIRD · SIMMED GAMES EARN NOTHING</div></div>`;};
+ <div class="s7 dim" style="text-align:center;line-height:1.7">PLAY GAMES TO EARN COINS AND PASS XP · WINS AND TOUCHDOWNS EARN MORE · SIM THE REST OF A GAME AND YOU EARN FOR THE PART YOU PLAYED · SIMMED GAMES EARN NOTHING</div></div>`;};
 ACT.bp=()=>{if(!PASS_ON)return;if(BP_HIDDEN){ACT.shop();return;}if(!SKINS.ok)loadSkins();else skinsRecheck();UI.bpX=null;go('bpass');};
 ACT.bpClaim=d=>{const b=bpGet(),r=BPASS.rewards.find(x=>x.tr+x.t===d.k);if(r&&bpClaim(b,r)){bpPut(b);sfx('coin');toast(r.skin?'UNLOCKED '+String((SKINS.list.find(x=>x.id===r.skin)||{}).name||r.skin).toUpperCase()+'!':'+'+r.tok+' COINS');}render();};
 ACT.bpClaimAll=()=>{const b=bpGet();let n=0;for(const r of BPASS.rewards)if(bpClaim(b,r))n++;bpPut(b);if(n){sfx('td');toast('CLAIMED '+n+' REWARDS');}render();};
@@ -2777,7 +2777,7 @@ function pregameHTML(g){
 ACT.adv=()=>{UI.modal=null;advanceWeek();resumeFlow();};
 ACT.simpo=()=>{UI.modal=null;while(L.phase==='PO'&&!userGame())advanceWeek();resumeFlow();};
 ACT.play=()=>{if(L.online&&!(UI.scr==='olroom'))return olPlay(false);const g=userGame();if(!g)return;const ua=UI.scr==='pregame'?{uU:UI.sub.uU,uO:UI.sub.uO}:null;UI.modal=null;startMatch(g,ua);};
-ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});};   /* a game simmed from the start pays no coins or pass XP (sim part of a game you played: a third) */
+ACT.simg=()=>{const g=userGame();if(!g||olH2H(g))return;if(L.online){const c=olmFor(g);if(c){UI.modal=null;olmResumeGame(c);if(M&&c.act!=='final')simRest();return;}}UI.modal=null;const[hs,as]=simScore(g.h,g.a,L.phase==='PO');const home=g.h===L.user;postGame(g,{sc:home?[hs,as]:[as,hs],ps:simStats(home?hs:as,home?as:hs),op:home?g.a:g.h,simmed:true});};   /* a game simmed from the start pays no coins or pass XP (sim the rest of one you played: paid for the part you played) */
 function simStats(us,th){
  const lu=lineup(L.user),ps={},S=p=>p?(ps[p.id]=ps[p.id]||{xp:0}):null,add=(p,k,v)=>{const s=S(p);if(s)s[k]=(s[k]||0)+v;};
  const tds=Math.floor(us/7),py=Math.round(rnd(140,300)*(0.7+us/60)),ry=Math.round(rnd(50,140));
@@ -4331,7 +4331,7 @@ SCR.ach=()=>{const a=achGet(),n=ACH.filter(x=>a.u[x.id]).length;
  <div class="grow scroll"><div class="achg">${cards}</div></div></div>`;};
 function gameOver(){
  if(M.prac)return pracEnd();
- if(!(M.simmed&&!M.plays))try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd});}catch(e){console.warn('pass',e);}   /* simmed before a single snap was played: no coins */
+ if(!(M.simmed&&!M.plays))try{bpAfterGame(M.sc[0],M.sc[1],M.ts&&M.ts.td,M.g,M.simmed,{online:!!(L&&L.net),pyd:M.ts&&M.ts.pyd,ryd:M.ts&&M.ts.ryd,played:M.played});}catch(e){console.warn('pass',e);}   /* simmed before a single snap was played: no coins */
  olmSave('final');tallyQ();
  let ach=[];try{ach=achAfterGame();}catch(e){console.warn('ach',e);}
  M.phase='ov';M.box=false;const W=M.sc[0]>M.sc[1],Tt=M.sc[0]===M.sc[1],canBox=!(L&&L.net);
@@ -4342,7 +4342,7 @@ function gameOver(){
 function finishMatch(){if(M&&M.netSim){const R=M.sc.slice(),op=M.op,u=L.user;M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();go('title');toast('FINAL (SIMMED) · '+abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op));return;}
  if(L&&L.net)netsClear();if(L&&L.online&&!L.exh)olmClear();if(M&&M.olg&&L&&L.net)return olHostEnd();if(L&&L.net){const R=M.sc.slice(),op=M.op,u=L.user;NET.last=abbr(u)+' '+R[0]+' - '+R[1]+' '+abbr(op);NET.glast=abbr(op)+' '+R[1]+' - '+R[0]+' '+abbr(u);netSend({t:'end',last:NET.glast});M=null;L=null;NET.stage='lobby';go('online');netLobbySend();return;}if(L&&L.collegeDynasty){const sc=M.sc.slice(),home=M.home,g=window.__collegeDynastyPlayingGame;M=null;L=null;collegeRestoreTeams();window.__collegeDynastyPlayingGame=null;colDynPlayed(g,home?sc[0]:sc[1],home?sc[1]:sc[0]);return;}if(L&&L.exh){const R=M.sc.slice(),op=M.op;M=null;const s=window.__h2hSub||{};s.last=abbr(L.user)+' '+R[0]+' - '+R[1]+' '+abbr(op)+(R[0]>R[1]?' · WIN':R[0]<R[1]?' · LOSS':' · TIE');if(L.college)COLLEGE_STATE.last=s.last;UI.sub=s;go(L.college?'college':'h2h',s);return;}const g=M.g,R={sc:[M.sc[0],M.sc[1]],ps:M.ps,op:M.op,team:M.ts};M=null;postGame(g,R);}
 function simRest(){
- const ql=L.settings.qlen,rem=M.qtr<=4?(4-M.qtr)*ql+Math.max(0,M.clock):0,f=rem/(4*ql);
+ const ql=L.settings.qlen,rem=M.qtr<=4?(4-M.qtr)*ql+Math.max(0,M.clock):0,f=rem/(4*ql);M.simmed=true;M.played=clamp(1-f,0,1);   /* coins and pass XP pay for the part that was played */
  const H=teamRatings(L.user),O=teamRatings(M.op);
  M.sc[0]+=simPts(H.off,O.def,M.home,f);M.sc[1]+=simPts(O.off,H.def,!M.home,f);   // simulate only the drives that are left
  if(M.sc[0]===M.sc[1]&&(L.phase==='PO'||Math.random()<.85)){if(Math.random()<0.5+(H.ovr-O.ovr)/200)M.sc[0]+=3;else M.sc[1]+=3;}
