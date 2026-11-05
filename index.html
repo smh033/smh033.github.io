@@ -1166,6 +1166,7 @@ function runOffseasonAging(){
  /* grade each player against others at his position this season */
  const raw=new Map(),sum={},cnt={};for(const p of L.players){if(p.team<0||!((p.s||{}).gp>=5))continue;const g=perfGrade(p);raw.set(p.id,g);sum[p.pos]=(sum[p.pos]||0)+g;cnt[p.pos]=(cnt[p.pos]||0)+1;}
  for(const p of L.players.slice()){
+  if(p.team===-2)continue;   /* next season's draft class (looked at during the playoffs): they enter the draft as shown */
   const good=goodSeason(p);retAgeOf(p);const perf=raw.has(p.id)?raw.get(p.id)-sum[p.pos]/cnt[p.pos]:null;
   for(const k in p.s)p.c[k]=(p.c[k]||0)+p.s[k];p.s=newStats();
   p.age++;p.seasons++;p.inj=0;p.cond=100;
@@ -1207,10 +1208,17 @@ function genProspect(){
  const pg=p.pot-ovr(p)+rnd(-0.8,0.8);p.potg=pg>2.6?'A':pg>1.8?'B':pg>1?'C':'D';
  return p;
 }
+/* next season's draft class can be looked at during the playoffs (DRAFT CLASS on the hub): it's made then and kept
+   in L.nextClass, and the draft starts from those same players (more are added if there are extra picks) */
+function nextClassSize(){const H=L.seats?humans():[L.user];return 28+(L.seats?(H.length-1)*3:0);}
+function nextClassEnsure(){if(L.nextClass&&L.nextClass.year===L.year)return;nextClassDrop();const ids=[];for(let i=0;i<nextClassSize();i++){const p=genProspect();addPlayer(p);ids.push(p.id);}L.nextClass={year:L.year,ids};}
+function nextClassDrop(){if(!L.nextClass)return;for(const id of L.nextClass.ids){const p=P(id);if(p&&p.team===-2)removePlayer(p);}L.nextClass=null;}
+function draftPoolOf(n){const pool=[],C=L.nextClass;if(C&&C.year===L.year)for(const id of C.ids){const p=P(id);if(p&&p.team===-2)pool.push(id);}else nextClassDrop();
+ L.nextClass=null;while(pool.length<n){const p=genProspect();addPlayer(p);pool.push(p.id);}return pool;}
 function setupDraft(founding){
  if(L.seats&&!L.cfbTeams)return olSetupDraft(founding);
  if(L.cfbTeams&&!founding)return setupRecruiting();
- const extra=founding?0:Math.max(0,(L.picks||[1,1,1]).reduce((a,b)=>a+b,0)-3),n=(founding?40:28)+extra*2,pool=[];for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
+ const extra=founding?0:Math.max(0,(L.picks||[1,1,1]).reduce((a,b)=>a+b,0)-3),n=(founding?40:28)+extra*2,pool=founding?[]:draftPoolOf(n);if(founding)for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
  let slot;
  if(founding)slot=ri(6,20);
  else{const po=L.po,key=t=>{if(po.champ===t)return 1000;if(po.runner===t)return 900;if(inPlayoffs(t))return 100+(po.elim[t]||0)*100+tpct(L.teams[t])*10;return tpct(L.teams[t])*10;};const ids=L.teams.map(t=>t.id).sort((a,b)=>key(a)-key(b));slot=ids.indexOf(L.user);}
@@ -2699,7 +2707,7 @@ SCR.hub=()=>{if(L.nflPower)NFL_POWER=L.nflPower;if(!L.homeBal&&L.phase==='REG'){
   <button class="bt ico" data-a="settings">${ICON.wrench}</button>
   <button class="bt grow" data-a="go" data-s="fo">FRONT OFFICE</button>
   <button class="bt grow" data-a="go" data-s="roster">ROSTER</button>
-  <button class="bt grow" data-a="go" data-s="hof">HALL OF FAME</button>
+  ${L.phase==='PO'&&!L.cfbTeams?'<button class="bt grow" data-a="dcPrev">DRAFT CLASS</button>':'<button class="bt grow" data-a="go" data-s="hof">HALL OF FAME</button>'}
   <button class="bt grow" data-a="pdOpen">MY PLAYS</button>
   <button class="bt y grow" data-a="hubGo">CONTINUE &gt;</button>
  </div></div>`;
@@ -3345,6 +3353,16 @@ SCR.draft=()=>{
  <div class="row"><span class="s7 dim">SCOUTING IS A GUESS: TRUE STARS SHOW AFTER YOU PICK. AFTER EVERY ROUND OTHER TEAMS TAKE PLAYERS.</span><div class="sp"></div>${D.done?'<button class="bt y big" data-a="dfin">FINISH &gt;</button>':D.q&&!olMyPick()?`${inDraft()?'<button class="bt" data-a="trOpen">TRADE</button>':''}<button class="bt" data-a="go" data-s="olcoaches">COACHES</button>`:`${inDraft()?'<button class="bt" data-a="trOpen">TRADE</button>':''}<button class="bt" data-a="dskip">SKIP (AUTO PICK)</button>`}</div></div>`;
 };
 ACT.dff=d=>{UI.sub.f=d.f;render();};
+ACT.dcPrev=()=>{if(L.phase!=='PO'||L.cfbTeams)return;if(L.online)return olTx(nextClassEnsure).then(()=>{if(L.nextClass)go('dclass',{f:'ALL'});});nextClassEnsure();save();go('dclass',{f:'ALL'});};
+SCR.dclass=()=>{const C=L.nextClass;if(!C||L.phase!=='PO')return SCR.hub();const f=UI.sub.f||'ALL';
+ let pool=C.ids.map(P).filter(p=>p&&p.team===-2);if(f!=='ALL')pool=pool.filter(p=>p.pos===f);pool.sort((a,b)=>(b.scout[0]+b.scout[1])-(a.scout[0]+a.scout[1]));
+ const rows=pool.map(p=>`<tr><td><span class="${sideOf(p.pos)==='D'?'rdt':sideOf(p.pos)==='K'?'yl':'cyt'}">${p.pos}</span></td><td>${esc(pname(p).toUpperCase())}</td><td class="c">${p.age}</td><td>${stars(p.scout[0],'xs')}${p.scout[1]>p.scout[0]?' - '+stars(p.scout[1],'xs'):''}</td><td class="c">${p.potg}</td></tr>`).join('');
+ return`<div class="screen">
+ <div class="row"><button class="bt ico" data-a="go" data-s="hub">${ICON.back}</button><div class="grow">${ttl(L.year+' DRAFT CLASS')}</div><div class="coin">PICKS ${(L.picks||[1,1,1]).join(' - ')}</div></div>
+ <div class="row ctr" style="gap:3px">${['ALL',...POSL].map(x=>`<span class="chip ${f===x?'on':''}" data-a="dcf" data-f="${x}">${x}</span>`).join('')}</div>
+ <div class="box grow scroll" style="padding:4px 6px"><table class="tbl"><tr><th>POS</th><th>NAME</th><th class="c">AGE</th><th>SCOUTED</th><th class="c">POT</th></tr>${rows||'<tr><td colspan="5" class="dim">NO PROSPECTS AT THIS POSITION</td></tr>'}</table></div>
+ <div class="s7 dim" style="text-align:center;line-height:1.7">NEXT SEASON'S PROSPECTS (${C.ids.length}). THE DRAFT STARTS AFTER THE ${esc(champName())} WITH THESE SAME PLAYERS. SCOUTING IS A GUESS: TRUE STARS SHOW AFTER YOU PICK.</div></div>`;};
+ACT.dcf=d=>{UI.sub.f=d.f;render();};
 ACT.dpick=d=>{const p=P(+d.id);if(!p||!L.draft||L.draft.done)return;needSpotThen(()=>{if(!L.draft||L.draft.pool.indexOf(p.id)<0)return;if(L.online)return olDraftTx(p.id);draftPick(p);sfx('coin');save();
  UI.modal=null;modal(`<div class="mp" style="width:420px;align-items:center;text-align:center">${ttl('DRAFTED!',true)}<div class="row ctr" style="gap:12px">${pcard(p,L.user,{act:'close'})}<div class="col" style="align-items:flex-start;gap:5px">${POSDEF[p.pos].map(k=>`<div class="row s7" style="gap:5px"><span style="width:100px">${ATTR[k]}</span>${pips(p.a[k])}</div>`).join('')}<div class="s7">POTENTIAL ${p.potg}</div></div></div><button class="bt y" data-a="close">NICE</button></div>`);},p.pos);};
 const pickValue=()=>[8,5,3,2,2,1,1][Math.min(6,(L.draft&&L.draft.round)||0)];
@@ -7363,7 +7381,7 @@ function olWaiting(){
 function olSetupDraft(founding){
  const H=humans();
  const extra=founding?0:H.reduce((s,t)=>s+Math.max(0,((seatOf(t)||{}).picks||[1,1,1]).reduce((a,b)=>a+b,0)-3),0);
- const n=(founding?40:28)+(H.length-1)*(founding?5:3)+extra*2,pool=[];for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
+ const n=(founding?40:28)+(H.length-1)*(founding?5:3)+extra*2,pool=founding?[]:draftPoolOf(n);if(founding)for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
  const po=L.po,key=t=>{if(!po)return tpct(L.teams[t]);if(po.champ===t)return 1000;if(po.runner===t)return 900;if(inPlayoffs(t))return 100+(po.elim[t]||0)*100+tpct(L.teams[t])*10;return tpct(L.teams[t])*10;};
  const ids=L.teams.map(t=>t.id).sort((a,b)=>key(a)-key(b)),slots={},rd={};
  for(const t of H){slots[t]=founding?ri(6,20):ids.indexOf(t);rd[t]=founding?[1,1,3]:((seatOf(t)||{}).picks||[1,1,1]).slice();}
