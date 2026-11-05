@@ -2927,7 +2927,7 @@ ACT.pSkin=()=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(!SKINS.ok)l
  const prev=id=>{const lk=lookFor(Object.assign({},p,{spr:id||null}),L.user);const cc=document.createElement('canvas');cc.width=108;cc.height=153;const g=cc.getContext('2d');g.scale(3,3);drawMan(g,18,49.5,lk,{u:3,shadow:false,face:1});return cc.toDataURL();};
  const cell=(id,nm)=>`<button class="bt ${(p.spr||null)===(id||null)?'y':''}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 4px;min-width:0" data-a="pSkin2" data-v="${esc(id||'')}"><img src="${prev(id)}" width="36" height="51" style="image-rendering:pixelated"><span class="s7" style="max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(nm)}</span></button>`;
  modal(`<div class="mp" style="width:520px;align-items:center;gap:8px">${ttl('SKIN · '+esc(pname(p).toUpperCase()),true)}
- <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.filter(k=>!k.styleOf||skinOpen(k.id)).map(k=>skinOpen(k.id)?cell(k.id,skinLabel(k)):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">${(()=>{const r=BPASS.rewards.find(x=>x.skin===k.id);return r?'PASS T'+r.t:'SECRET';})()}</span></div>`).join('')}</div>
+ <div class="scroll" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:100%;max-height:220px">${cell(null,'NONE')}${SKINS.list.filter(k=>!k.hidden&&(!k.styleOf||skinOpen(k.id))).map(k=>skinOpen(k.id)?cell(k.id,skinLabel(k)):`<div class="bt dis" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px 4px;opacity:.55;cursor:default"><div style="width:36px;height:51px;display:flex;align-items:center;justify-content:center" class="s16">?</div><span class="s7">${(()=>{const r=BPASS.rewards.find(x=>x.skin===k.id);return r?'PASS T'+r.t:'SECRET';})()}</span></div>`).join('')}</div>
  ${SKINS.err?'<div class="s7 rdt">SKINS/SKINS.JSON HAS A MISTAKE (CHECK COMMAS AND QUOTES)</div>':SKINS.ok?'':'<div class="s7 dim">LOADING SKINS...</div>'}${SKINS.bad&&Object.keys(SKINS.bad).length?`<div class="s7 rdt" style="text-align:center">IMAGE FILE NOT FOUND: ${Object.keys(SKINS.bad).map(id=>esc((SKINS.list.find(x=>x.id===id)||{}).file||id)).join(', ')}</div>`:''}<button class="bt" data-a="close">DONE</button></div>`);};
 ACT.pSkin2=d=>{const p=P(UI.sub.id);if(!p||p.team!==L.user)return;if(d.v&&!skinOpen(d.v))return;p.spr=d.v||null;if(!p.spr)delete p.spr;skinMapSet(p);try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}save();sfx('tick');ACT.pSkin();render();};
 /* ---------- change a player's position ----------
@@ -6127,22 +6127,20 @@ function streakTrail(st,sx,sy,kind){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)r
  if(kind==='chaos')for(let j=0;j<3;j++){if(Math.random()<0.5)continue;cx.globalAlpha=k;cx.fillStyle=Math.random()<0.5?'#ff3b3b':'#ffd23a';cx.fillRect(Math.round(sx+ux*Math.random()*20*u+(Math.random()-0.5)*8),Math.round(sy-st.jy-Math.random()*30*u),2,2);}
  cx.restore();}
 /* "trail": "boov" (Oh, from Home): a Boov's skin changes colour with his mood. Running with a defender close
-   behind he turns yellow (scared: Boov run away), in the open field he turns pink (happy), otherwise he stays
-   his own purple. Little bubbles float up behind him like Boov bubble ships. No afterimages. */
-function boovMood(st){if(!M)return null;const opp=st.side==='O'?M.D:st.side==='D'?M.O:[];let d=99;for(const f of opp)d=Math.min(d,Math.hypot(f.x-st.x,f.y-st.y));return d<4?'#ffe14a':d>9?'#ff6fc8':null;}
+   he turns yellow (scared: Boov run away), in the open field he turns pink (happy), otherwise he stays purple.
+   The colours are their own drawn sheets: "<id>-yellow" and "<id>-pink" (hidden skins in skins/skins.json).
+   Little bubbles float up behind him like Boov bubble ships. */
+function boovMood(st){if(!M)return null;const opp=st.side==='O'?M.D:st.side==='D'?M.O:[];let d=99;for(const f of opp)d=Math.min(d,Math.hypot(f.x-st.x,f.y-st.y));return d<4?'yellow':d>9?'pink':null;}
+const BOOV_LK=new WeakMap();
+function boovLook(st){const lk=st.lk;if(!lk||!lk.spr||!st.o.run)return lk;const K=SKINS.list.find(x=>x.id===lk.spr);if(!K||K.trail!=='boov')return lk;
+ const m=boovMood(st),alt=m&&K.id+'-'+m;if(!alt||!SKINS.img[alt])return lk;
+ let c=BOOV_LK.get(lk);if(!c){c={};BOOV_LK.set(lk,c);}return c[alt]||(c[alt]=Object.assign({},lk,{spr:alt,key:(lk.key||'')+'|'+alt}));}
 function boovTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;const u=st.o.u||2,k=Math.min(1,(sp-2.5)/4),now=performance.now()/1000;
  cx.save();
  for(let j=0;j<6;j++){const ph=(now*0.9+j*0.17+st.x*0.07)%1,back=(0.15+(j%3)*0.12)*sp,bx=wx(st.x-st.vx/sp*back*0.6)+Math.sin(now*3+j*2)*3*u,by=wy(st.y-st.vy/sp*back*0.6)-st.jy-8*u-ph*26*u,r=(1.2+(j%3)*0.7)*u;
   cx.globalAlpha=k*0.85*(1-ph);cx.strokeStyle='#bfefff';cx.lineWidth=1;cx.beginPath();cx.arc(Math.round(bx),Math.round(by),r,0,Math.PI*2);cx.stroke();
   cx.fillStyle='rgba(190,240,255,.25)';cx.fill();cx.fillStyle='#ffffff';cx.fillRect(Math.round(bx-r*0.45),Math.round(by-r*0.5),1,1);}
  cx.restore();}
-/* recolour a sprite to one hue, keeping its shading and outlines (the 'color' blend keeps each pixel's brightness) */
-const BOOV_T=new WeakMap();
-function boovTint(c,col){let m=BOOV_T.get(c);if(!m){m=new Map();BOOV_T.set(c,m);}let t=m.get(col);if(t)return t;
- t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);
- g.globalCompositeOperation='color';g.fillStyle=col;g.fillRect(0,0,t.width,t.height);g.globalCompositeOperation='destination-in';g.drawImage(c,0,0);m.set(col,t);return t;}
-function boovSelf(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='boov'||!st.o.run)return;const col=boovMood(st);if(!col)return;
- const o=st.o,u=o.u||2,spr=sprite(st.lk,o);cx.save();cx.globalAlpha=0.92;cx.drawImage(boovTint(spr,col),sx-24*u,sy-st.jy-34*u);cx.restore();}
 function glitchNow(st){if(!st.lk||!st.lk.spr||!st.o.run||Math.hypot(st.vx,st.vy)<2.5)return false;const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='glitch')return false;
  const now=performance.now(),key=st.lk.key||st.lk.spr;let g=GLITCH_T.get(key);if(!g){g={until:0,next:now+300+Math.random()*700};GLITCH_T.set(key,g);}
  if(now>=g.next){g.until=now+70+Math.random()*90;g.next=now+450+Math.random()*900;}return now<g.until;}
@@ -6152,7 +6150,7 @@ function glitchSelf(st,sx,sy){const o=st.o,u=o.u||2,spr=sprite(st.lk,o),x=sx-24*
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
  if(st.lk&&st.lk.spr&&st.o.run)skinTrail(st,sx,sy);
- if(glitchNow(st))glitchSelf(st,sx,sy);else if(st.lk&&st.lk.spr&&SKINS.img[st.lk.spr]&&HIK>1)drawSkinHi(sx,sy-st.jy,st.lk,st.o);else drawSpr(cx,sx,sy-st.jy,st.lk,st.o);if(st.lk&&st.lk.spr)boovSelf(st,sx,sy);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
+ const blk=boovLook(st);if(glitchNow(st))glitchSelf(st,sx,sy);else if(blk&&blk.spr&&SKINS.img[blk.spr]&&HIK>1)drawSkinHi(sx,sy-st.jy,blk,st.o);else drawSpr(cx,sx,sy-st.jy,blk,st.o);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
  if(st.star&&!st.dn&&M.phase!=='kick')miniStar(sx,sy-40-st.jy);}
 function drawPlayers(){
  const all=[...M.O,...M.D].sort((a,b)=>a.y-b.y),holder=curHolder();
