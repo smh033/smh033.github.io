@@ -2568,7 +2568,7 @@ function tlNodes(){
  const t=L.user,nodes=[];
  const wk=w=>{const g=teamGame(w,t);if(!g)return{a:'WEEK '+w,b:'BYE',res:null,w};const home=g.h===t,op=home?g.a:g.h;let res=null;if(g.hs!=null){const us=home?g.hs:g.as,th=home?g.as:g.hs;res={c:us>th?'w':us<th?'l':'t',txt:(us>th?'W':us<th?'L':'T')+' '+us+'-'+th};}return{a:'WEEK '+w,b:(home?'vs ':'at ')+T(op).name.toUpperCase(),res,w};};
  if(L.phase==='REG'){const w=myWk();nodes.push(w>1?wk(w-1):null,wk(w),w<18?wk(w+1):{a:L.cfbTeams?ROUNDS[0]:T(t).conf+' WILD CARD',b:'',res:null});}
- else if(L.phase==='PO'){const r=L.po.cur,g=L.po.rounds[r].find(x=>x.h===t||x.a===t);
+ else if(L.phase==='PO'){const r=L.po.cur,g=(L.po.rounds[r]||[]).find(x=>x.h===t||x.a===t);
   const pr=r>0?L.po.rounds[r-1].find(x=>x.h===t||x.a===t):null;
   const lbl=i=>i===3?champName():L.cfbTeams?ROUNDS[i]:T(t).conf+' '+ROUNDS[i];
   const nd=(gg,i)=>{if(!gg)return{a:lbl(i),b:'',res:null};const home=gg.h===t,op=home?gg.a:gg.h;let res=null;if(gg.hs!=null){const us=home?gg.hs:gg.as,th=home?gg.as:gg.hs;res={c:us>th?'w':'l',txt:(us>th?'W ':'L ')+us+'-'+th};}return{a:lbl(i),b:(home?'vs ':'at ')+T(op).name.toUpperCase(),res};};
@@ -7209,13 +7209,21 @@ function olMount(c){
  bkCapUp(c);L=c;const S=L.seats[OL.me];if(S.wk==null)S.wk=L.phase==='REG'?L.week:1;   /* leagues from before play-ahead */
  const D=olSeatNew(S.coach,S.tkh,S.pinh);for(const k in D)if(S[k]===undefined)S[k]=D[k];
  for(const k of OL_SEAT_KEYS)L[k]=S[k];const ss=S.set||{};for(const k of OL_SET_KEYS)if(ss[k]!==undefined)L.settings[k]=ss[k];
- L.user=OL.me;indexPlayers();if(L.nflPower)NFL_POWER=L.nflPower;applyCustomTeam();}
+ L.user=OL.me;indexPlayers();if(L.nflPower)NFL_POWER=L.nflPower;applyCustomTeam();if(olPoFix())setTimeout(()=>{if(OL)olDirty();},0);}
+/* a playoff round number past the last round (a bad merge): go back to the unfinished round; teams whose game there
+   has no score aren't out yet. The games are then played as normal. */
+function olPoFix(){const po=L&&L.po;if(L.phase!=='PO'||!po||!Array.isArray(po.rounds)||!po.rounds.length||po.champ!=null||po.rounds[po.cur])return false;
+ const r=po.rounds.length-1;po.cur=r;for(const g of po.rounds[r])if(g.hs==null){for(const t of[g.h,g.a])if(po.elim&&po.elim[t]===r)delete po.elim[t];}
+ news('The playoff bracket was repaired: round '+(r+1)+' picks up where it stopped.');return true;}
 /* ---------- three-way merge: b = last synced, l = mine, s = the server's ---------- */
 function olEq(a,b){if(a===b)return true;if(!a||!b||typeof a!=='object'||typeof b!=='object')return false;return JSON.stringify(a)===JSON.stringify(b);}
 const olIsO=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const olIdArr=a=>Array.isArray(a)&&a.length>0&&a.every(x=>olIsO(x)&&x.id!=null);
 function olMerge(b,l,s,key){
  if(olEq(l,b))return s;if(olEq(s,b)||olEq(l,s))return l;
+ /* the playoffs: when one side has moved on a round, take that side's whole bracket (merging the rounds list
+    piece by piece once kept the new round number but dropped the new round, and every coach got stuck) */
+ if(key==='po'&&olIsO(l)&&olIsO(s)&&(l.cur!==s.cur||(l.champ!=null)!==(s.champ!=null)))return s.champ!=null?s:l.champ!=null?l:s.cur>l.cur?s:l;
  if(olIsO(l)&&olIsO(s)){const B=olIsO(b)?b:{},o={};
   for(const k of new Set([...Object.keys(s),...Object.keys(l)])){const inL=k in l,inS=k in s,inB=k in B;
    if(inL&&inS)o[k]=olMerge(B[k],l[k],s[k],k);
