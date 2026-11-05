@@ -6021,7 +6021,7 @@ function plState(f,holder){
  const oneh=f.oneh>0&&!dn,reach=!oneh&&!hasB&&!dn&&!hur&&(jy>0||f.reach>0);
  if(M.celeb&&f===M.celeb.who&&(M.phase==='dead'||M.phase==='replay')){const dp=dancePose(M.celeb);
   return{x:f.x,y:f.y,jy:dp.jy,lk:f.lk,star:f.star,dn:dp.down,o:{u:2,face:f.face*M.dir,pose:dp.pose,pk:dp.pk,down:dp.down,glow:f.star,shadow:!dp.jy}};}
- return{x:f.x,y:f.y,vx:f.vx||0,vy:f.vy||0,jy,lk:f.lk,star:f.star,dn,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
+ return{x:f.x,y:f.y,vx:f.vx||0,vy:f.vy||0,jy,lk:f.lk,star:f.star,dn,side:f.side,o:{u:2,face:f.face*M.dir,hurdle:hur,run:f.mv&&!(f.down>0)&&!jy&&!reach&&!oneh,t:f.t,down:dn,dive:f.dive>0,ball:hasB&&!oneh,throw:(f===M.qb&&(!!M.aim||f.throwT>0)),glow:f.star,shadow:!jy,reach,oneh}};
 }
 /* Helmet logos are drawn on a separate full-resolution layer over the pixel-art canvas: at the game's
    640x360 resolution a helmet is only ~14 px wide, far too small for a logo to read. The layer uses the
@@ -6126,18 +6126,23 @@ function streakTrail(st,sx,sy,kind){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)r
  for(let j=0;j<3;j++){if(Math.random()<0.4)continue;const dx=ux*(4+Math.random()*14)*u,r=1+Math.random()*2.2;cx.globalAlpha=k*0.7;cx.fillStyle=C.dust;cx.beginPath();cx.arc(sx+dx,sy-st.jy-1-Math.random()*3,r*u*0.6,0,Math.PI*2);cx.fill();}
  if(kind==='chaos')for(let j=0;j<3;j++){if(Math.random()<0.5)continue;cx.globalAlpha=k;cx.fillStyle=Math.random()<0.5?'#ff3b3b':'#ffd23a';cx.fillRect(Math.round(sx+ux*Math.random()*20*u+(Math.random()-0.5)*8),Math.round(sy-st.jy-Math.random()*30*u),2,2);}
  cx.restore();}
-/* "trail": "boov" (Oh, from Home): Boov change colour with their mood, so the afterimages shift through the mood
-   colours (purple, green, yellow, pink, red), and little bubbles float up behind him like Boov bubble ships */
-const BOOV=['#9a5cff','#3ee06a','#ffe14a','#ff6fc8','#ff4a4a'];
-function boovTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;const o=st.o,u=o.u||2,k=Math.min(1,(sp-2.5)/4),n=4,T=0.065,now=performance.now()/1000,mood=Math.floor(now/0.55);
+/* "trail": "boov" (Oh, from Home): a Boov's skin changes colour with his mood. Running with a defender close
+   behind he turns yellow (scared: Boov run away), in the open field he turns pink (happy), otherwise he stays
+   his own purple. Little bubbles float up behind him like Boov bubble ships. No afterimages. */
+function boovMood(st){if(!M)return null;const opp=st.side==='O'?M.D:st.side==='D'?M.O:[];let d=99;for(const f of opp)d=Math.min(d,Math.hypot(f.x-st.x,f.y-st.y));return d<4?'#ffe14a':d>9?'#ff6fc8':null;}
+function boovTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;const u=st.o.u||2,k=Math.min(1,(sp-2.5)/4),now=performance.now()/1000;
  cx.save();
- for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy),spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));
-  cx.globalAlpha=k*0.6*(1-(i-1)/(n+1));cx.drawImage(trailTint(spr,BOOV[(mood+i)%BOOV.length]),gx-24*u,gy-34*u);}
- /* bubbles: each one rises and fades from a spot he just ran through, then starts again */
- for(let j=0;j<6;j++){const ph=(now*0.9+j*0.17+(st.x*0.07))%1,i=1+(j%n),bx=wx(st.x-st.vx*i*T)+Math.sin(now*3+j*2)*3*u,by=wy(st.y-st.vy*i*T)-st.jy-8*u-ph*26*u,r=(1.2+(j%3)*0.7)*u;
+ for(let j=0;j<6;j++){const ph=(now*0.9+j*0.17+st.x*0.07)%1,back=(0.15+(j%3)*0.12)*sp,bx=wx(st.x-st.vx/sp*back*0.6)+Math.sin(now*3+j*2)*3*u,by=wy(st.y-st.vy/sp*back*0.6)-st.jy-8*u-ph*26*u,r=(1.2+(j%3)*0.7)*u;
   cx.globalAlpha=k*0.85*(1-ph);cx.strokeStyle='#bfefff';cx.lineWidth=1;cx.beginPath();cx.arc(Math.round(bx),Math.round(by),r,0,Math.PI*2);cx.stroke();
   cx.fillStyle='rgba(190,240,255,.25)';cx.fill();cx.fillStyle='#ffffff';cx.fillRect(Math.round(bx-r*0.45),Math.round(by-r*0.5),1,1);}
  cx.restore();}
+/* recolour a sprite to one hue, keeping its shading and outlines (the 'color' blend keeps each pixel's brightness) */
+const BOOV_T=new WeakMap();
+function boovTint(c,col){let m=BOOV_T.get(c);if(!m){m=new Map();BOOV_T.set(c,m);}let t=m.get(col);if(t)return t;
+ t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);
+ g.globalCompositeOperation='color';g.fillStyle=col;g.fillRect(0,0,t.width,t.height);g.globalCompositeOperation='destination-in';g.drawImage(c,0,0);m.set(col,t);return t;}
+function boovSelf(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='boov'||!st.o.run)return;const col=boovMood(st);if(!col)return;
+ const o=st.o,u=o.u||2,spr=sprite(st.lk,o);cx.save();cx.globalAlpha=0.92;cx.drawImage(boovTint(spr,col),sx-24*u,sy-st.jy-34*u);cx.restore();}
 function glitchNow(st){if(!st.lk||!st.lk.spr||!st.o.run||Math.hypot(st.vx,st.vy)<2.5)return false;const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='glitch')return false;
  const now=performance.now(),key=st.lk.key||st.lk.spr;let g=GLITCH_T.get(key);if(!g){g={until:0,next:now+300+Math.random()*700};GLITCH_T.set(key,g);}
  if(now>=g.next){g.until=now+70+Math.random()*90;g.next=now+450+Math.random()*900;}return now<g.until;}
@@ -6147,7 +6152,7 @@ function glitchSelf(st,sx,sy){const o=st.o,u=o.u||2,spr=sprite(st.lk,o),x=sx-24*
 function drawPS(st){const sx=wx(st.x),sy=wy(st.y);if(sx<-30||sx>CW+30)return;
  if(st.jy){cx.fillStyle='rgba(0,0,0,.3)';cx.fillRect(sx-10,sy-2,20,4);}
  if(st.lk&&st.lk.spr&&st.o.run)skinTrail(st,sx,sy);
- if(glitchNow(st))glitchSelf(st,sx,sy);else if(st.lk&&st.lk.spr&&SKINS.img[st.lk.spr]&&HIK>1)drawSkinHi(sx,sy-st.jy,st.lk,st.o);else drawSpr(cx,sx,sy-st.jy,st.lk,st.o);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
+ if(glitchNow(st))glitchSelf(st,sx,sy);else if(st.lk&&st.lk.spr&&SKINS.img[st.lk.spr]&&HIK>1)drawSkinHi(sx,sy-st.jy,st.lk,st.o);else drawSpr(cx,sx,sy-st.jy,st.lk,st.o);if(st.lk&&st.lk.spr)boovSelf(st,sx,sy);LOGO_Q.push({sx,sy:sy-st.jy,lk:st.lk,o:st.o});
  if(st.star&&!st.dn&&M.phase!=='kick')miniStar(sx,sy-40-st.jy);}
 function drawPlayers(){
  const all=[...M.O,...M.D].sort((a,b)=>a.y-b.y),holder=curHolder();
