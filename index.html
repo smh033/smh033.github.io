@@ -1449,7 +1449,7 @@ function loadSkins(){const gen=SKINS.gen=(SKINS.gen||0)+1;let rem;if(SKINS.newer
    if(r.hidden){if(i>=0)list.splice(i,1);continue;}
    if(i>=0)Object.assign(list[i],r);else list.push(Object.assign({file:'(added online)'},r));}
   for(const k of list){if(k.shop===undefined&&SHOP_DEFAULTS[k.id]){const D=SHOP_DEFAULTS[k.id];k.shop={price:D.price,rarity:D.rarity};if(D.show&&!k.codeShow)k.codeShow=D.show;}if(k.shop&&!k.shop.cat&&SHOP_SECTION_OF[k.id])k.shop.cat=SHOP_SECTION_OF[k.id];if(k.code&&k.shop&&k.shop.price&&String(k.code).toLowerCase()!=='travvypatty'){k.code=null;}   /* a skin sold in the shop can't also be had with a code (the old codes); skins with only a code keep it */if(k.shop&&k.shop.price)k.egg=null;   /* null = taken out of the shop in the fitter */}
-  for(const k of list){if(k.trail)continue;const nm=String(k.name||k.id).toUpperCase();if(/SONIC/.test(nm))k.trail='speed';else if(/SHADOW THE HEDGEHOG/.test(nm)||String(k.id).toLowerCase().replace(/[^a-z]/g,'')==='shadowthehedgehog')k.trail='chaos';}   /* Sonic: blue speed streak · Shadow: red chaos streak */
+  for(const k of list){if(k.trail)continue;const nm=String(k.name||k.id).toUpperCase();if(/SONIC/.test(nm))k.trail='speed';else if(/SHADOW THE HEDGEHOG/.test(nm)||String(k.id).toLowerCase().replace(/[^a-z]/g,'')==='shadowthehedgehog')k.trail='chaos';else if(nm==='OH'||String(k.id).toLowerCase()==='oh')k.trail='boov';}   /* Sonic: blue speed streak · Shadow: red chaos streak · Oh (Home): Boov mood colours and bubbles */
   SKINS.list=list;SKINS.ok=true;skinResetCheck(Math.max(+j.reset||0,+(R&&R.reset)||0));passRefund();
   for(const k of SKINS.list){const tries=k.png?[]:skinFileTries(k.file);let n=0;const im=new Image();im.onload=()=>{if(gen!==SKINS.gen)return;   /* an older picture finishing late never paints over the new one */SKINS.img[k.id]=im;try{SKH.delete(k.id);}catch(e){}if(SKINS.bad)delete SKINS.bad[k.id];SKINS.tint.clear();try{SPC.clear();for(const q in AVC)delete AVC[q];}catch(e){}SHOPC.clear();clearTimeout(SKINS.rt);SKINS.rt=setTimeout(()=>{if(UI.scr!=='game')render();},150);};   /* one redraw after a batch of pictures, not one per picture */
    im.onerror=()=>{if(++n<tries.length){im.src='skins/'+tries[n]+'?v='+SKINS.ver;return;}SKINS.bad=SKINS.bad||{};SKINS.bad[k.id]=1;console.warn('skin image missing: '+(k.png?'(added online)':'skins/'+k.file));};
@@ -6073,7 +6073,7 @@ function drawLogoLayer(sh,maxY){
 const TRAIL_TINT=new WeakMap(),SANDE=['#00f0ff','#ff2bd6','#ffe600','#7cff4d','#b05cff'];
 function trailTint(c,col){let m=TRAIL_TINT.get(c);if(!m){m=new Map();TRAIL_TINT.set(c,m);}let t=m.get(col);if(t)return t;
  t=document.createElement('canvas');t.width=c.width;t.height=c.height;const g=t.getContext('2d');g.drawImage(c,0,0);g.globalCompositeOperation='source-atop';g.globalAlpha=0.82;g.fillStyle=col;g.fillRect(0,0,t.width,t.height);m.set(col,t);return t;}
-function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail==='glitch')return glitchTrail(st,sx,sy);if(K.trail==='speed'||K.trail==='chaos')return streakTrail(st,sx,sy,K.trail);if(K.trail!=='sandevistan')return;
+function skinTrail(st,sx,sy){const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||!SKINS.img[K.id])return;if(K.trail==='lightning')return boltTrail(st,sx,sy);if(K.trail==='glitch')return glitchTrail(st,sx,sy);if(K.trail==='speed'||K.trail==='chaos')return streakTrail(st,sx,sy,K.trail);if(K.trail==='boov')return boovTrail(st,sx,sy);if(K.trail!=='sandevistan')return;
  const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;
  const o=st.o,u=o.u||2,n=5,T=0.075,k=Math.min(1,(sp-2.5)/4);
  cx.save();
@@ -6125,6 +6125,18 @@ function streakTrail(st,sx,sy,kind){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)r
  /* dust at the feet */
  for(let j=0;j<3;j++){if(Math.random()<0.4)continue;const dx=ux*(4+Math.random()*14)*u,r=1+Math.random()*2.2;cx.globalAlpha=k*0.7;cx.fillStyle=C.dust;cx.beginPath();cx.arc(sx+dx,sy-st.jy-1-Math.random()*3,r*u*0.6,0,Math.PI*2);cx.fill();}
  if(kind==='chaos')for(let j=0;j<3;j++){if(Math.random()<0.5)continue;cx.globalAlpha=k;cx.fillStyle=Math.random()<0.5?'#ff3b3b':'#ffd23a';cx.fillRect(Math.round(sx+ux*Math.random()*20*u+(Math.random()-0.5)*8),Math.round(sy-st.jy-Math.random()*30*u),2,2);}
+ cx.restore();}
+/* "trail": "boov" (Oh, from Home): Boov change colour with their mood, so the afterimages shift through the mood
+   colours (purple, green, yellow, pink, red), and little bubbles float up behind him like Boov bubble ships */
+const BOOV=['#9a5cff','#3ee06a','#ffe14a','#ff6fc8','#ff4a4a'];
+function boovTrail(st,sx,sy){const sp=Math.hypot(st.vx,st.vy);if(sp<2.5)return;const o=st.o,u=o.u||2,k=Math.min(1,(sp-2.5)/4),n=4,T=0.065,now=performance.now()/1000,mood=Math.floor(now/0.55);
+ cx.save();
+ for(let i=n;i>=1;i--){const gx=Math.round(wx(st.x-st.vx*i*T)),gy=Math.round(wy(st.y-st.vy*i*T)-st.jy),spr=sprite(st.lk,Object.assign({},o,{t:(o.t||0)-i*T}));
+  cx.globalAlpha=k*0.6*(1-(i-1)/(n+1));cx.drawImage(trailTint(spr,BOOV[(mood+i)%BOOV.length]),gx-24*u,gy-34*u);}
+ /* bubbles: each one rises and fades from a spot he just ran through, then starts again */
+ for(let j=0;j<6;j++){const ph=(now*0.9+j*0.17+(st.x*0.07))%1,i=1+(j%n),bx=wx(st.x-st.vx*i*T)+Math.sin(now*3+j*2)*3*u,by=wy(st.y-st.vy*i*T)-st.jy-8*u-ph*26*u,r=(1.2+(j%3)*0.7)*u;
+  cx.globalAlpha=k*0.85*(1-ph);cx.strokeStyle='#bfefff';cx.lineWidth=1;cx.beginPath();cx.arc(Math.round(bx),Math.round(by),r,0,Math.PI*2);cx.stroke();
+  cx.fillStyle='rgba(190,240,255,.25)';cx.fill();cx.fillStyle='#ffffff';cx.fillRect(Math.round(bx-r*0.45),Math.round(by-r*0.5),1,1);}
  cx.restore();}
 function glitchNow(st){if(!st.lk||!st.lk.spr||!st.o.run||Math.hypot(st.vx,st.vy)<2.5)return false;const K=SKINS.list.find(x=>x.id===st.lk.spr);if(!K||K.trail!=='glitch')return false;
  const now=performance.now(),key=st.lk.key||st.lk.spr;let g=GLITCH_T.get(key);if(!g){g={until:0,next:now+300+Math.random()*700};GLITCH_T.set(key,g);}
