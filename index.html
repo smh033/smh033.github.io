@@ -3657,7 +3657,7 @@ function buildField(flip){
  const uc=teamCol(L.user),oc=teamCol(M.op);
  // Both end zones belong to the HOME team (like a real stadium). Letters are sized to fill
  // the end zone: as tall as ~60% of its depth and spanning most of the field's width.
- const hT=M.g.h,hcol=teamCol(hT),st=(L.custom&&hT===L.user&&(L.custom.c1||L.custom.nick||L.custom.city))?null:EZ_STYLE[T(hT).abbr];
+ const hT=M.g.h,hcol=teamCol(hT),hcu=custOf(hT),st=(hcu&&(hcu.c1||hcu.nick||hcu.city))?null:EZ_STYLE[T(hT).abbr];   /* any coach's custom team (online: the home coach's, seen by the away coach too) gets its own name, not the NFL end zone */
  const S=st||[hcol.c1,txtCol(hcol.c1,hcol.c2),'#ffffff',(T(hT).nickname||T(hT).city).toUpperCase(),(T(hT).nickname||T(hT).city).toUpperCase()];
  const ez=(x0,rot,label)=>{R(S[0],x0,0,10*PXY,H);
   const fs=Math.max(14,Math.min(Math.floor(10*PXY*0.6),Math.floor(H*0.86/(label.length*1.02))));
@@ -6848,6 +6848,7 @@ function netGuestStart(m){
  if(m.olg&&OLG){if(!OLG.live)OLG.L=L;OLG.live=true;olgPut({room:OLG.code,league:OL&&OL.code,role:'guest',tok:NET.tok,team:m.guest});}
  L=m.L;L.user=m.guest;L.custom=null;L.net=false;L.exh=true;indexPlayers();cfbSync(null);
  if(m.olg){const S=L.seats&&L.seats[m.guest];if(S){L.custom=S.custom||null;L.oc=S.oc;L.dc=S.dc;L.style=S.style;}}
+ applyCustomTeam();try{FIELD_CACHE.clear();}catch(e){}   /* every coach's team name and colours from the host's league copy */
  Object.assign(NET,{stage:'game',snap:null,R:null,Rk:'',Rused:null,iv:100,jit:20,lsT:0,buf:[],pup:[],ovH:null,joyLast:null,menu:false,wasPre:false,rc:null,lastRx:performance.now()});
  startMatch(m.g,{uU:m.gu,uO:m.hu});
  M.netGuest=true;if(m.olg)M.olg=true;M.night=m.night;M.wx=m.wx;M.wind=m.wind;M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
