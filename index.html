@@ -461,7 +461,12 @@ function arcadeHTML(back){const a=Object.assign({},ARC_DEF,L.settings.arc||{}),r
 const xd=()=>!!(M&&!M.def&&L&&L.settings&&L.settings.diff===4&&!(OLG&&OLG.live)&&!L.net);
 function diffLvl(){if(OLG&&OLG.live)return 0;const d=L.settings.diff;return d===0?-1:d===1?0:d===2?1:d===4?2.2:clamp((L.dyn-10)/8,-1.25,1.25);}   /* EXTREME (4) is past hard and past dynamic at 20 */
 function diffMult(){return 1+diffLvl()*0.14;}          // opponent team strength (sims + their drives)
-function diffAdj(){return diffLvl()*1.6;}              // in-game defender ratings (speed, tackling, coverage)
+function diffAdj(){return diffLvl()*1.6;}
+/* EXTREME: the computer plays up to you. Its players are raised to your starters' level and a bit past it
+   (a maxed-out team of 10s was beating 4-rated AI teams 263-0, far beyond what the flat boost could cover). */
+function diffAdjFor(op){let a=diffAdj();if(L.settings.diff!==4||(OLG&&OLG.live)||L.net)return a;
+ const av=t=>{const s=[...starterSet(t)].map(id=>L.pmap[id]).filter(Boolean);return s.length?s.reduce((x,p)=>x+ovr(p),0)/s.length:5;};
+ return Math.max(a,av(L.user)-av(op)+0.5);}              // in-game defender ratings (speed, tackling, coverage)
 const starsTen=v=>clamp(Math.round((v-2)/1.15*2)/2,0.5,5);
 function teamRatings(t){
  const lu=lineup(t);let o=0,d=0;
@@ -3737,7 +3742,7 @@ function mkF(pl,side,role,x,y){
  const mine=(side==='O')!==!!M.def,team=mine?L.user:M.op,away=mine?M.uU:M.uO;
  const f={pl,side,role,x:clamp(x,-1,120),y:clamp(y,0.8,52.5),vx:0,vy:0,face:side==='O'?1:-1,t:Math.random()*2,lk:lookFor(pl,team,away,side==='D'&&M.oalt),route:null,ri:0,rlen:0,eng:null,engT:0,blk:null,stun:0,down:0,shed:0,jk:0,jkc:0,slow:0,dive:0,tried:false,mv:false};
  f.star=!!pl&&pl.team===L.user;
- const adj=side==='D'?M.dAdj:0;
+ const adj=L.settings.diff===4?(aiSide(side)?M.dAdj:0):side==='D'?M.dAdj:0;   /* extreme: the boost is the computer's, on offense too (never your defenders) */
  f.spd=(5.4+clamp(eff(pl,'spd')+adj,1,11)*0.44)*(role==='OL'||role==='DL'?0.85:role==='TE'?0.88:role==='DB'||role==='S'?(netHost()?1:1.06):role==='LB'?0.97:1)*(aiSide(side)?1+0.05*diffLvl():1);
  f.acc=22+eff(pl,'spd')*1.2;if(arc()&&arc().turbo){f.spd*=1.12;f.acc*=1.15;}
  return f;
@@ -4192,7 +4197,7 @@ function startMatch(g,uAway){applyCustomTeam();
  const late=L.phase==='PO'||myWk()>=12;
  const wxr=pickWeather(g.h);void late;
  M={g,home,op,sc:[0,0],qtr:1,clock:L.settings.qlen,to:3,ps:{},ts:{pyd:0,cmp:0,att:0,ryd:0,td:0,to:0},
-  dep:lineup(L.user),odep:lineup(op),dAdj:diffAdj(),cam:45,phase:'ov',O:[],D:[],ov:null,
+  dep:lineup(L.user),odep:lineup(op),dAdj:diffAdjFor(op),cam:45,phase:'ov',O:[],D:[],ov:null,
   pops:[],conf:[],parts:[],shake:0,hype:0,tt:0,runoff:0,ban:null,banT:0,hc:{},plays:0,carries:0,paused:false,
   night:pickNight(),rival:g.h===L.user||L.phase==='PO'||T(g.h).di===T(g.a).di,wx:wxr,wind:wxr==='dome'?0:(arc()&&arc().wind==='none')?0:(arc()&&arc().wind==='strong')?(Math.random()<.5?-1:1)*ri(16,25):clamp(Math.round(gauss()*7),-18,18),ballOn:35,ballY:26.67,down:1,fdX:45,los:35,conv:false};
  {const uc=teamCol(L.user),oc=teamCol(op),uJ=home?uc.c1:'#f0f0f0',oJ=home?'#f0f0f0':oc.c1;M.oalt=colDist(uc.c1,oc.c1)<120||(colDist(uJ,oJ)<90);}
