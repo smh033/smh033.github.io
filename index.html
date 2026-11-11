@@ -171,6 +171,32 @@ body.hw .modal{background:rgba(10,0,20,.66)}
 body.hw .hwp{display:inline-block;image-rendering:pixelated;vertical-align:middle}
 @keyframes hwglow{50%{filter:drop-shadow(0 0 6px rgba(255,160,40,.9))}}body.hw .hwp.glow{animation:hwglow 1.6s steps(4) infinite}
 /* ===================== END HALLOWEEN ===================== */
+/* ===================== THANKSGIVING =====================
+   Active while <body> has the "tg" class (all of November by the player's own date; off by itself
+   December 1; ?thanksgiving=1 / =0 forces it). Menus go autumn colors with falling leaves and a
+   turkey on the title; in games leaves blow across the field and touchdowns get a GOBBLE GOBBLE.
+   Delete this block, the THANKSGIVING switch and the tg* functions to remove it. */
+body.tg{--bl:#7a3a17;--bl2:#8a4520;--bl3:#5a2a10;--nv:#2b1206;--yl:#f5a623;--yl2:#ffd27a;--dim:#f0d2b0;--cy:#ffcf5a}
+body.tg .screen{background:var(--bl);background-image:radial-gradient(ellipse at 50% 120%,rgba(245,166,35,.30),transparent 62%),repeating-linear-gradient(0deg,rgba(30,8,0,.10) 0 1px,transparent 1px 3px)}
+body.tg .tst i{width:13px;height:13px;clip-path:polygon(50% 0,58% 22%,72% 12%,68% 34%,92% 28%,80% 48%,100% 56%,76% 64%,82% 84%,58% 74%,54% 100%,46% 100%,42% 74%,18% 84%,24% 64%,0 56%,20% 48%,8% 28%,32% 34%,28% 12%,42% 22%)}
+body.tg .tst i.r{background:#e2462a}body.tg .tst i.w{background:var(--yl)}body.tg .tst i.n{background:#ffd27a}
+body.tg .ttl{text-shadow:2px 2px 0 #000,0 0 8px rgba(245,166,35,.5)}
+body.tg .bt.y,body.tg .chip.on,body.tg .tl{text-shadow:1px 1px 0 #6a2e00}
+body.tg .cc{box-shadow:inset -2px -2px 0 #a35a00,0 0 0 1px #5a2a00}
+body.tg .stars i:not(.f):not(.h),body.tg .pips i:not(.on){background:#5a2c12}
+body.tg .stars i.h{background:linear-gradient(90deg,var(--yl2) 50%,#5a2c12 50%)}
+body.tg .stars.o i.h{background:linear-gradient(90deg,#6ad6ff 50%,#5a2c12 50%)}body.tg .stars.d i.h{background:linear-gradient(90deg,#ff4a3d 50%,#5a2c12 50%)}
+body.tg .segs i{background:#4a210c}body.tg .segs i.on{background:var(--yl)}
+body.tg .pcard .ph{background:#e8b07a}body.tg .pcard.D .ph{background:#d9785a}body.tg .pcard.K .ph{background:#c9c26a}
+body.tg .modal{background:rgba(25,8,0,.66)}
+body.tg .tgk{display:inline-block;image-rendering:pixelated;vertical-align:middle}
+@keyframes tgbob{50%{transform:translateY(-2px)}}body.tg .tgk.bob{animation:tgbob 1.2s steps(2) infinite}
+#tgl{position:absolute;inset:0;pointer-events:none;z-index:90;overflow:hidden;display:none}body.tg #tgl{display:block}body.tg.ingame #tgl{display:none}
+#tgl i{position:absolute;top:-16px;width:10px;height:10px;image-rendering:pixelated;animation:tgfall linear infinite}
+#tgl i b{display:block;width:100%;height:100%;animation:tgsway ease-in-out infinite alternate}
+@keyframes tgfall{to{transform:translateY(400px)}}
+@keyframes tgsway{from{transform:translateX(-14px) rotate(-35deg)}to{transform:translateX(14px) rotate(35deg)}}
+/* ===================== END THANKSGIVING ===================== */
 .pracsb{display:flex;align-items:center;gap:10px;background:#1a1a1a;border:2px solid #fff;padding:4px 6px 4px 9px;pointer-events:auto;box-shadow:0 2px 0 rgba(0,0,0,.4)}
 .pracsb b{color:#ffd23a;font-weight:normal}.pracsb .bt{padding:4px 7px 3px;font-size:7px}
 .pdr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;white-space:normal;line-height:1.5;width:100%}
@@ -232,6 +258,15 @@ const SHOP_ON=TEST_SITE||(()=>{try{return localStorage.getItem('rf_rel')==='1';}
   if(rel){const go=()=>{if(typeof UI!=='undefined'&&UI.scr==='title'&&!document.querySelector('.modal'))location.reload();else setTimeout(go,15000);};go();}});
  setTimeout(chk,300);setInterval(()=>{if(document.visibilityState!=='hidden')chk();},60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')chk();});})();
 const HALLOWEEN=(()=>{const q=(location.search.match(/[?&]halloween=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===9;})();if(HALLOWEEN)document.body.classList.add('hw');
+const THANKS=(()=>{const q=(location.search.match(/[?&]thanksgiving=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===10;})();
+const TG_COL=['#e2462a','#f5a623','#c8641c','#8a2a12','#e0b84a'];
+/* one pixel maple leaf as an SVG data url, in color c */
+function tgLeafSvg(c){const P=['...x...','.x.x.x.','xxxxxxx','.xxxxx.','xxxxxxx','...x...','...x...'];let r='';P.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==='x')r+=`<rect x='${x}' y='${y}' width='1' height='1' fill='${c}'/>`;}));
+ return"url(data:image/svg+xml,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 7' shape-rendering='crispEdges'>${r}</svg>`).replace(/'/g,'%27').replace(/\(/g,'%28').replace(/\)/g,'%29')+")";}
+if(THANKS){document.body.classList.add('tg');const st=document.getElementById('stage'),d=document.createElement('div');d.id='tgl';
+ let h='';for(let i=0;i<14;i++){const c=TG_COL[i%TG_COL.length],sz=8+(i*7)%7,dur=9+(i*37)%9,del=-((i*53)%18),sw=1.6+(i%4)*.5;
+  h+=`<i style="left:${(i*47+13)%630}px;width:${sz}px;height:${sz}px;animation-duration:${dur}s;animation-delay:${del}s"><b style="background:${tgLeafSvg(c)} 0 0/100% 100%;animation-duration:${sw}s"></b></i>`;}
+ d.innerHTML=h;st.appendChild(d);document.querySelector('meta[name=theme-color]').setAttribute('content','#7a3a17');}
 /* =====================================================================
    RETRO FOOTBALL — core: data, players, rosters, league, sim, offseason
    ===================================================================== */
@@ -2313,6 +2348,15 @@ function coinIcon(u){const P=['...dddd...','.ddyyyydd.','.dwyyyyyd.','dwyyooyyyd
  return`<svg class="ccn" width="${12*u}" height="${12*u}" viewBox="0 0 12 12" shape-rendering="crispEdges">${r}</svg>`;}
 const CUR=u=>coinIcon(u);
 /* pixel jack-o'-lantern for the Halloween title screen (u = pixel size) */
+/* pixel turkey (front view, tail fanned) for the THANKSGIVING title */
+function tgTurkey(u,flip){const W=16,H=15,cx=7.5;let r='';const px=(x,y,c)=>{r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const dx=x+.5-8,dy=y+.5-9,d=Math.hypot(dx,dy),bd=Math.hypot((x+.5-8)/3.6,(y+.5-10)/3.4),hd=Math.hypot(x+.5-8,y+.5-5.2);
+  if(hd<=1.9){px(x,y,'#a8703c');continue;}
+  if(bd<=1){px(x,y,bd>.8?'#5a3416':(x<7&&y<10?'#9a6234':'#7a4a22'));continue;}
+  if(d<=7.6&&d>=3.2&&y<=10){const a=Math.atan2(dy,dx),band=Math.floor((a+Math.PI)/(Math.PI/7));px(x,y,d>6.4?['#e2462a','#f5a623','#e0b84a'][band%3]:d>4.8?['#c8641c','#e2462a','#8a2a12'][band%3]:'#6a3a1a');}}
+ px(7,4,'#000');px(8,4,'#000');px(7,6,'#f2b632');px(8,6,'#f2b632');px(8,7,'#e0302a');px(8,8,'#e0302a');
+ px(6,14,'#f2b632');px(5,14,'#f2b632');px(9,14,'#f2b632');px(10,14,'#f2b632');
+ return`<svg class="tgk bob" width="${W*u}" height="${H*u}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges"${flip?' style="animation-delay:-.6s"':''}>${r}</svg>`;}
 function hwPumpkin(u,glow){const P=['....gg....','...gg.....','.oooooooo.','oooooooooo','oo.oooo.oo','o...oo...o','oooooooooo','oo.o..o.oo','ooo....ooo','.oooooooo.'],C={o:'#f07818',g:'#3c8a2a','.':null};
  let r='';P.forEach((row,y)=>[...row].forEach((ch,x)=>{const c=C[ch];if(c)r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;else if(y>=4&&y<=8&&x>0&&x<9&&P[y][x]==='.')r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#ffe25a"/>`;}));
  return`<svg class="hwp${glow?' glow':''}" width="${10*u}" height="${10*u}" viewBox="0 0 10 10" shape-rendering="crispEdges">${r}</svg>`;}
@@ -2331,7 +2375,7 @@ const UI={scr:'title',sub:{},modal:null};
 const SCR={},ACT={};
 function go(s,sub){UI.scr=s;UI.sub=sub||{};UI.modal=null;render();}
 function render(){
- if(HALLOWEEN)document.body.classList.toggle('ingame',UI.scr==='game');
+ if(HALLOWEEN||THANKS)document.body.classList.toggle('ingame',UI.scr==='game');
  applyCustomTeam();
  const ui=$('#ui');
  if(UI.scr==='game'){$('#cv').style.display='block';$('#lg').style.display='block';return;}
@@ -2416,7 +2460,7 @@ SCR.title=()=>{
  const sv=hasSave()?loadSave():null;
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-28,-32);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px" data-a="egg4">
-  <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':''}
+  <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):THANKS?tgTurkey(3):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):THANKS?tgTurkey(3,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':THANKS?'<div class="s7 yl">HAPPY THANKSGIVING</div>':''}
   <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
@@ -4253,7 +4297,7 @@ function pop(t,x,y,col){
  for(const p of near)p.a=Math.max(p.a,0.9);   // older text clears out fast
  const used=new Set(near.map(p=>p.row||0));let row=0;while(used.has(row))row++;
  M.pops.push({t,x,y,col:col||'#fff',a:0,row});}
-function boom(){sfx('td');crowd(2.4,.13);M.hype=3;M.shake=3;const cols=['#ffe94a','#ff5c7a','#58aaff','#38d27a','#ffffff',teamCol(L.user).c1,teamCol(L.user).c2];for(let i=0;i<130;i++)M.conf.push({x:rnd(0,CW),y:rnd(-80,0),vx:rnd(-40,40),vy:rnd(30,120),c:pick(cols),l:rnd(2,3.5)});}
+function boom(){sfx('td');crowd(2.4,.13);M.hype=3;M.shake=3;const cols=(THANKS?TG_COL.concat(['#ffd27a']):['#ffe94a','#ff5c7a','#58aaff','#38d27a','#ffffff']).concat([teamCol(L.user).c1,teamCol(L.user).c2]);for(let i=0;i<130;i++)M.conf.push({x:rnd(0,CW),y:rnd(-80,0),vx:rnd(-40,40),vy:rnd(30,120),c:pick(cols),l:rnd(2,3.5)});}
 function ovMsg(title,body,btns){M.phase='ov';M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl(title,true)}<div style="line-height:2">${body}</div><div class="row ctr" style="gap:8px;margin-top:4px;flex-wrap:wrap">${btns.map((b,i)=>`<button class="bt ${b[2]||''} big" data-a="gAct" data-i="${i}">${b[0]}</button>`).join('')}</div></div>`,acts:btns.map(b=>b[1])};}
 const qLbl=()=>M.qtr<=4?['1st','2nd','3rd','4th'][M.qtr-1]+' Qtr':M.qtr===5?'OT':(M.qtr-4)+'OT';
 const clockTxt=()=>{const c=Math.max(0,Math.ceil(M.clock));return Math.floor(c/60)+':'+String(c%60).padStart(2,'0');};
@@ -5684,7 +5728,7 @@ function endPlay(kind,x,y,label){
  else if(M.def&&kind==='pick6'){t='PICK SIX!';sub=M.intBy?nm(M.intBy)+' TAKES IT TO THE HOUSE':'';boom();}
  else if(M.def&&kind==='sack'){t='SACKED!';sub=gt(gain);sfx('first');crowd(1.2,.1);M.hype=1;}
  else if(M.def&&(kind==='fumble'||kind==='fumtd')){t=kind==='fumtd'?'FUMBLE RETURN TD!':'FUMBLE RECOVERED!';sub=abbr(L.user)+' BALL';if(kind==='fumtd')boom();else{sfx('first');crowd(1.2,.1);}}
- else if(kind==='td'){t=M.conv?'2-POINT GOOD!':M.play==='ret'?'RETURN TOUCHDOWN!':'TOUCHDOWN!';boom();if(!M.conv&&M.carrier){M.carrier.down=0;M.carrier.dive=0;startCeleb(M.carrier);}}
+ else if(kind==='td'){t=M.conv?'2-POINT GOOD!':M.play==='ret'?'RETURN TOUCHDOWN!':'TOUCHDOWN!';boom();if(THANKS&&!M.conv)sub='GOBBLE GOBBLE!';if(!M.conv&&M.carrier){M.carrier.down=0;M.carrier.dive=0;startCeleb(M.carrier);}}
  else if(kind==='inc'){t=label||'INCOMPLETE';sfx('bad');}
  else if(kind==='int'){t='INTERCEPTED!';sub=M.intBy?'BY '+nm(M.intBy):'';sfx('bad');}
  else if(kind==='sack'){t='SACKED!';sub=gt(gain);}
@@ -6207,7 +6251,14 @@ function drawFX(){
  for(const p of M.pops){const sx=clamp(wx(p.x),70,CW-70),sy=wy(p.y)-52-p.a*26-(p.row||0)*13;cx.globalAlpha=clamp(1.4-p.a,0,1);ctext(p.t,sx,sy,p.col);cx.globalAlpha=1;}
  for(const p of M.parts){if(M.wx==='snow')rect(p.x,p.y,2,2,'rgba(255,255,255,.85)');else rect(p.x,p.y,1,6,'rgba(180,200,255,.5)');}
  for(const c of M.conf)rect(c.x,c.y,3,3,c.c);
+ if(THANKS&&M.wx!=='dome')tgLeaves();
 }
+/* THANKSGIVING: autumn leaves tumbling across the field (worked out from the clock, so nothing to keep in sync) */
+const TG_LEAF=['..x..','x.x.x','xxxxx','.xxx.','..x..'];
+function tgLeaves(){const t=performance.now()/1000,w=(M.wind||0);for(let i=0;i<22;i++){const sp=14+(i*13)%16,y=((i*97)%CH+t*sp)%(CH+20)-10,
+  x=(((i*151)%CW+t*(10+w*0.8+(i%5)*3)+Math.sin(t*(0.8+(i%4)*.3)+i)*14)%(CW+20)+CW+20)%(CW+20)-10,c=TG_COL[i%4],k=2-(i%4===0);
+  cx.globalAlpha=.9;const fl=Math.sin(t*2+i)>0;TG_LEAF.forEach((row,ry)=>[...row].forEach((ch,rx)=>{if(ch==='x')rect(Math.round(x+(fl?4-rx:rx)*k),Math.round(y+ry*k),k,k,c);}));}
+ cx.globalAlpha=1;}
 function drawDriveBall(){const o=M.ov,s=o.i>0?o.lines[o.i-1].s:o.s0,sx=wx(110-s),sy=wy(26.67);rect(sx-4,sy-3,9,6,'#000');rect(sx-3,sy-2,7,4,'#8a4818');rect(sx,sy-2,1,1,'#fff');}
 function drawKick(){
  const k=M.kick,KH=118,F=380,CHH=2.3,P=(lat,z,h)=>{const zz=Math.max(0.6,z+4);return{x:CW/2+lat*F/zz,y:KH+(CHH-h)*F/zz,s:F/zz};};
