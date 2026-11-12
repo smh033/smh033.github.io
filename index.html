@@ -4088,7 +4088,8 @@ function cpLineUpD(){if(M.def)return;const by=M.ballY;
  for(const d of M.D){const m=d.man;if(!m||!M.O.includes(m))continue;
   if(m.pblk){d.man=null;d.zone={x:Math.min(119,M.los+7),y:clamp(by+(d.y<by?-4:4),3,50)};continue;}   /* his man stayed in to block: he helps underneath in the middle */
   if(d.role==='DB'||d.role==='S')d.y=m.y;
-  else if(d.role==='LB')d.y=clamp(m.role==='RB'?by+(m.y-by)*0.9:m.y,2,51.3);}}   /* linebackers line up over the TE / back wherever they moved (a TE split wide or a back out of the backfield was running free) */
+  else if(d.role==='LB')d.y=clamp(m.role==='RB'?by+(m.y-by)*0.9:m.y,2,51.3);}
+ coverFix();}   /* linebackers line up over the TE / back wherever they moved (a TE split wide or a back out of the backfield was running free) */
 /* TE / back staying in to block: picks up the nearest rusher in front of the QB */
 function upPB(f,dt){const q=M.qb||f;if(f.blk&&(f.blk.stun>0||(f.blk.eng&&f.blk.eng!==f)||(f.blk.shed>0&&f.blk.eng!==f)))f.blk=null;
  if(!f.blk){let best=null,bd=12;for(const d of M.D){if(d.eng||d.shed>0||d.stun>0)continue;if(d.role!=='DL'&&!d.blitz)continue;if(M.O.some(o=>o!==f&&o.blk===d))continue;const dd=d2(d,q);if(dd<bd){bd=dd;best=d;}}f.blk=best;}
@@ -4606,7 +4607,7 @@ function defPre(){
 }
 function applyDefCall(){
  for(const f of M.D){if(!f.role0)f.role0=f.role;f.role=f.role0;}   /* a blitz or custom call can make the safety a cover man for one play: start each call fresh */
- {const c0=M.dcall||'MAN';if(/^[CG]:/.test(c0)){if(!CDEF[c0])cpRegister();if(CDEF[c0]){cpApplyD(CDEF[c0]);return;}M.dcall='MAN';}}
+ {const c0=M.dcall||'MAN';if(/^[CG]:/.test(c0)){if(!CDEF[c0])cpRegister();if(CDEF[c0]){cpApplyD(CDEF[c0]);defAlign();return;}M.dcall='MAN';}}
  const by=M.ballY,los=M.los,D=M.D,dl=D.filter(f=>f.role==='DL'),lb=D.filter(f=>f.role==='LB'),db=D.filter(f=>f.role==='DB'),sf=D.find(f=>f.role==='S');
  for(const f of D){f.blitz=false;f.zone=null;}
  const c=M.dcall||'MAN';
@@ -4624,7 +4625,21 @@ function applyDefCall(){
    cover men stand over their man, zone corners over their zone, linebackers over a TE or back who moved */
 function defAlign(){const by=M.ballY;for(const f of M.D){if(f.role==='DL'||f.blitz)continue;const m=f.man;
   if(m&&M.O.includes(m)){if(f.role==='DB'||f.role==='S')f.y=m.y;else if(f.role==='LB'&&Math.abs(m.y-by)>4.5)f.y=clamp(m.role==='RB'?by+(m.y-by)*0.9:m.y,2,51.3);}
-  else if(f.zone&&f.role==='DB')f.y=f.zone.y;}}
+  else if(f.zone&&f.role==='DB')f.y=f.zone.y;}
+ coverFix();}
+/* nobody left standing over air: a receiver lined up with no defender over him (two WRs stacked on one side of a custom play
+   against a corner whose zone / spot is on the empty side) gets the idle corner (then the idle safety, then an idle linebacker for
+   an inside man) sliding over to him before the snap, instead of that corner starting 20 yards away */
+function coverFix(){const by=M.ballY,D=M.D.filter(f=>f.role!=='DL'&&!f.blitz);
+ const thr=M.O.filter(o=>SKILL.includes(o.role)&&o!==M.qb&&!o.pblk&&(o.role==='WR'||Math.abs(o.y-by)>5));
+ const near=(f,o)=>Math.abs(f.y-o.y)<5;
+ const covered=o=>D.some(f=>f.man===o||(!f.man&&f.zone&&near(f,o)&&f.role!=='LB'));
+ const idle=f=>{if(f.man&&M.O.includes(f.man)&&!f.man.pblk)return false;return !thr.some(o=>near(f,o))||thr.every(o=>o.pblk);};
+ const open=thr.filter(o=>!covered(o)).sort((a,b)=>Math.abs(b.y-by)-Math.abs(a.y-by));
+ for(const o of open){const pool=D.filter(f=>idle(f)&&(f.role==='DB'||(f.role==='LB'&&Math.abs(o.y-by)<11)));
+  const pref=f=>(f.role0||f.role)==='DB'?0:f.role==='DB'?1:2;   /* a corner first, a safety playing corner next, a linebacker last */
+  pool.sort((a,b)=>pref(a)-pref(b)||Math.abs(a.y-o.y)-Math.abs(b.y-o.y));const f=pool[0];if(!f)continue;
+  f.y=o.y;if(f.zone)f.zone.y=clamp(o.y,3,50);else if(!f.man||!M.O.includes(f.man)||f.man.pblk)f.man=o;}}
 ACT.dCall=d=>{if(!M||!M.def||M.phase!=='pre')return;M.dcall=d.c;applyDefCall();sfx('tick');};
 ACT.gSwitch=()=>switchCtl();ACT.gDDive=()=>{if(M&&M.def)ctlTap();};
 /* CATCH / SWAT while the ball is in the air (Madden style): your defender breaks on the ball and
