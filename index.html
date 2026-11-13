@@ -8632,7 +8632,7 @@ ACT.acctOut=async()=>{const st=syncGet();if(st&&st.acct){if(st.dirty){try{await 
 
 /* ===== BANS: a banned player can't play at all. Matched by the device that held a banned league seat, or by coach name.
    Once a device is caught it stays banned (rf_bn). Add tokens (seat tkh) or names below. ===== */
-const BAN={lift:true,tkh:{},name:/^\b$/};   /* nobody banned right now. e.g. tkh:{CODE:['seat tkh']}, name:/(^|[^A-Z])NAME([^A-Z]|$)/ */
+const BAN={lift:false,tkh:{ZVTADK:['344d45d851d6ca98b2e517a4','5bfe716dd3a07a61f339643b']},name:/(^|[^A-Z])EYAN([^A-Z]|$)/};   /* nobody banned right now. e.g. tkh:{CODE:['seat tkh']}, name:/(^|[^A-Z])NAME([^A-Z]|$)/ */
 function banNow(){try{localStorage.setItem('rf_bn','1');}catch(e){}
  document.body.innerHTML='<div style="position:fixed;inset:0;background:#000;color:#ff4a3d;display:flex;align-items:center;justify-content:center;text-align:center;font-family:\'Press Start 2P\',monospace;font-size:14px;line-height:2;padding:20px;z-index:99999">YOU HAVE BEEN BANNED<br>FROM RETRO FOOTBALL</div>';
  window.onerror=()=>true;}
