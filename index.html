@@ -197,6 +197,107 @@ body.tg .tgk{display:inline-block;image-rendering:pixelated;vertical-align:middl
 @keyframes tgfall{to{transform:translateY(400px)}}
 @keyframes tgsway{from{transform:translateX(-14px) rotate(-35deg)}to{transform:translateX(14px) rotate(35deg)}}
 /* ===================== END THANKSGIVING ===================== */
+/* ===================== LIQUID GLASS =====================
+   An optional look (body.lq): frosted, see-through panels over a slowly drifting wash of your team's colors,
+   pill buttons that squish when pressed, screens and windows that ease in. Only offered to the game's owner
+   (see LQ_* in the script). Everything here is scoped to body.lq, so with it off nothing changes. */
+body.lq{--bl:rgba(255,255,255,.08);--bl2:rgba(255,255,255,.14);--bl3:rgba(255,255,255,.06);--nv:rgba(8,11,24,.55);--yl:#ffd60a;--yl2:#ffd60a;--rd:#ff453a;--gr:#30d158;
+ --dk:rgba(255,255,255,.05);--dk2:rgba(255,255,255,.3);--cy:#64d2ff;--dim:rgba(235,235,245,.62);--acc:#0a84ff;
+ --g-fill:linear-gradient(180deg,rgba(255,255,255,.20),rgba(255,255,255,.07) 60%,rgba(255,255,255,.10));
+ --g-edge:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.14);
+ --g-drop:0 10px 26px -10px rgba(0,0,0,.55),0 2px 6px -2px rgba(0,0,0,.25);
+ --spring:cubic-bezier(.32,1.55,.5,1);--ease:cubic-bezier(.2,.8,.2,1);
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,"Helvetica Neue",Arial,sans-serif;font-size:10px;font-weight:500;letter-spacing:.01em;-webkit-font-smoothing:antialiased}
+body.lq #stage{background:#0b0f1e}
+body.lq #tgl{display:none}
+body.lq [data-a="egg"]{font-weight:800;letter-spacing:-.02em}
+body.lq .s16{font-size:19px;font-weight:700;letter-spacing:-.01em}body.lq .s12{font-size:14px;font-weight:650}body.lq .s10{font-size:12px;font-weight:600}body.lq .s7{font-size:8.5px}body.lq .s6{font-size:7.5px}
+body.lq .screen *,body.lq .modal *,body.lq .gov *,body.lq .toast{text-shadow:none!important}
+/* the backdrop: two soft pools of team color drifting over near-black */
+body.lq .screen{background:#0b0f1e;isolation:isolate;overflow:hidden}
+body.lq .screen::before{content:'';position:absolute;inset:-30%;z-index:-1;pointer-events:none;
+ background:radial-gradient(38% 46% at 26% 30%,color-mix(in srgb,var(--lq1,#1f5bd8) 78%,transparent),transparent 70%),
+  radial-gradient(34% 42% at 74% 72%,color-mix(in srgb,var(--lq2,#0f9a9a) 62%,transparent),transparent 70%),
+  radial-gradient(30% 30% at 70% 22%,rgba(255,255,255,.07),transparent 70%);
+ filter:saturate(115%);animation:lqdrift 26s ease-in-out infinite alternate}
+@keyframes lqdrift{0%{transform:translate3d(-4%,-3%,0) rotate(0)}50%{transform:translate3d(3%,2%,0) rotate(8deg)}100%{transform:translate3d(-2%,4%,0) rotate(-6deg)}}
+body.lq .ttl{font-size:19px;font-weight:800;letter-spacing:.02em;gap:8px}body.lq .ttl.sm{font-size:14px}
+body.lq .tst i.w{background:#fff}body.lq .tst i.r{background:#ff453a}body.lq .tst i.n{background:rgba(255,255,255,.35)}
+/* glass */
+body.lq .bt,body.lq .chip,body.lq .tile,body.lq .pcard,body.lq .coin,body.lq .box,body.lq .mp,body.lq input.txt,body.lq .toast,body.lq .bm,body.lq .achc{
+ background:var(--g-fill);border:0;box-shadow:var(--g-edge),var(--g-drop);color:#fff}
+body.lq .mp,body.lq .box,body.lq .toast,body.lq .coin,body.lq input.txt,body.lq .sb,body.lq .sbd,body.lq .gbot{-webkit-backdrop-filter:blur(22px) saturate(175%);backdrop-filter:blur(22px) saturate(175%)}
+body.lq .bt{border-radius:16px;font-weight:600;font-size:9.5px;letter-spacing:.02em;padding:7px 13px;top:0!important;
+ transition:transform .5s var(--spring),background-color .25s,box-shadow .25s,filter .2s;will-change:transform}
+body.lq .bt.big{font-size:11px;padding:10px 17px}body.lq .bt.xl{font-size:13px;padding:12px 20px}body.lq .bt.ico{padding:5px 8px}
+body.mobile.lq .bt{padding:8px 14px}
+body.lq .bt:hover{filter:brightness(1.12)}
+body.lq .bt:active,body.lq .chip:active,body.lq .tile:active,body.lq .pcard:active{transform:scale(.94);transition-duration:.12s;transition-timing-function:ease-out}
+body.lq .bt.y{background:linear-gradient(180deg,#3b9cff,var(--acc));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 0 0 1px rgba(255,255,255,.12),0 10px 22px -8px rgba(10,132,255,.65)}
+body.lq .bt.g{background:linear-gradient(180deg,#52dc72,#28b14a);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 10px 22px -8px rgba(48,209,88,.55)}
+body.lq .bt.r{background:linear-gradient(180deg,#ff6a61,#e5362d);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 10px 22px -8px rgba(255,69,58,.55)}
+body.lq .bt:disabled,body.lq .bt.dk,body.lq .tile.dk{opacity:.38;filter:saturate(.4);background:var(--g-fill);color:#fff;box-shadow:var(--g-edge)}
+body.lq .chip{border-radius:999px;font-size:8.5px;font-weight:600;padding:5px 10px;transition:transform .45s var(--spring),background .25s,color .25s}
+body.lq .chip.on{background:rgba(255,255,255,.94);color:#0b0f1e;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
+body.lq .mp.cmp .chip{padding:4px 9px}
+body.lq .box{border-radius:18px;padding:13px 9px 8px}
+body.lq .box>.lbl{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-radius:999px;padding:3px 9px;top:-8px;font-size:8px;font-weight:700;letter-spacing:.06em;color:rgba(255,255,255,.85);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+body.lq .tile{border-radius:16px;transition:transform .45s var(--spring)}
+body.lq .pcard{border-radius:14px;overflow:hidden;transition:transform .45s var(--spring)}
+body.lq .pcard .ph{background:linear-gradient(180deg,rgba(120,190,255,.45),rgba(120,190,255,.08))}
+body.lq .pcard.D .ph{background:linear-gradient(180deg,rgba(255,120,120,.45),rgba(255,120,120,.08))}body.lq .pcard.K .ph{background:linear-gradient(180deg,rgba(255,190,110,.45),rgba(255,190,110,.08))}
+body.lq .pcard .ph .pos{font-weight:700}body.lq .pcard .nm{font-weight:600;font-size:8px}
+body.lq .pcard .cb{background:rgba(255,255,255,.12)}
+body.lq .coin{border-radius:999px;font-weight:600;padding:5px 10px}
+body.lq .cc{background:radial-gradient(circle at 35% 30%,#fff3a0,#ffd60a 45%,#c9a200);box-shadow:none}
+body.lq input.txt{border-radius:12px;font-size:12px;padding:8px 11px;background:rgba(255,255,255,.10)}
+body.lq input.txt:focus{box-shadow:var(--g-edge),0 0 0 3px rgba(10,132,255,.55)}
+body.lq .stars i{background:rgba(255,255,255,.18)}
+body.lq .stars i.h{background:linear-gradient(90deg,var(--yl2) 50%,rgba(255,255,255,.18) 50%)}
+body.lq .stars.o i.h{background:linear-gradient(90deg,#6ad6ff 50%,rgba(255,255,255,.18) 50%)}body.lq .stars.d i.h{background:linear-gradient(90deg,#ff4a3d 50%,rgba(255,255,255,.18) 50%)}
+body.lq .bar{border:0;border-radius:999px;background:rgba(255,255,255,.12);height:8px}body.lq .bar i{border-radius:999px;background:linear-gradient(90deg,#0a84ff,#64d2ff);transition:width .6s var(--ease)}
+body.lq .segs{border:0;background:none;gap:3px}body.lq .segs i{border-radius:4px;height:10px;background:rgba(255,255,255,.12)}body.lq .segs i.on{background:linear-gradient(180deg,#64d2ff,#0a84ff)}
+body.lq .pips i{border-radius:2px;background:rgba(255,255,255,.15)}
+body.lq .tbl th{background:rgba(14,18,34,.72);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:rgba(235,235,245,.6);font-weight:600;font-size:8px;letter-spacing:.04em}
+body.lq .tbl td{border-bottom:1px solid rgba(255,255,255,.06)}
+body.lq .tbl tr.clk:hover td{background:rgba(255,255,255,.06)}
+body.lq .scroll::-webkit-scrollbar{width:4px}body.lq .scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:4px}body.lq .scroll::-webkit-scrollbar-track{background:transparent}
+body.lq .sw{border-radius:50%;border:2px solid rgba(255,255,255,.25)}body.lq .sw.on{outline:2px solid #fff;outline-offset:2px}
+/* windows */
+body.lq .modal{background:rgba(5,7,16,.32);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)}
+body.lq .mp{border-radius:22px;background:linear-gradient(180deg,rgba(60,66,92,.55),rgba(26,30,48,.55));padding:14px 14px 12px;gap:8px}
+body.lq .modal.lqpop{animation:lqfade .28s var(--ease)}
+body.lq .modal.lqpop>.mp{animation:lqpop .55s var(--spring)}
+@keyframes lqfade{from{background:rgba(5,7,16,0);-webkit-backdrop-filter:blur(0);backdrop-filter:blur(0)}}
+@keyframes lqpop{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:none}}
+body.lq .toast{border-radius:999px;padding:8px 14px;font-weight:600;font-size:9.5px;background:rgba(40,44,64,.6);animation:lqtoast .5s var(--spring)}
+@keyframes lqtoast{from{opacity:0;transform:translate(-50%,-14px) scale(.9)}to{opacity:1;transform:translate(-50%,0)}}
+/* screens ease in: the page, then its rows one after another */
+body.lq .screen.lqin{animation:lqscr .45s var(--ease)}
+body.lq .screen.lqin>*{animation:lqrise .55s var(--ease) both}
+body.lq .screen.lqin>*:nth-child(2){animation-delay:.04s}body.lq .screen.lqin>*:nth-child(3){animation-delay:.08s}body.lq .screen.lqin>*:nth-child(4){animation-delay:.12s}
+body.lq .screen.lqin>*:nth-child(5){animation-delay:.16s}body.lq .screen.lqin>*:nth-child(n+6){animation-delay:.2s}
+@keyframes lqscr{from{opacity:.0}}
+@keyframes lqrise{from{opacity:0;transform:translateY(7px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+/* the button you just tapped settles back with a little bounce after the screen redraws */
+body.lq .lqhit{animation:lqhit .5s var(--spring)}
+@keyframes lqhit{from{transform:scale(.92)}to{transform:scale(1)}}
+/* timeline band */
+body.lq .tl{background:rgba(255,255,255,.07);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -1px 0 rgba(255,255,255,.06);color:#fff}
+body.lq .tl .ln{background:rgba(255,255,255,.18);height:3px;border-radius:3px}body.lq .tl .ln i{background:linear-gradient(90deg,#30d158,#64d2ff);border-radius:3px}
+body.lq .tl .nd .dot{border:0;background:rgba(255,255,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 3px 8px rgba(0,0,0,.35)}
+body.lq .tl .nd .dot.w{background:#30d158}body.lq .tl .nd .dot.l{background:#ff453a}body.lq .tl .nd .dot.c{background:#fff}
+body.lq .bm{border-radius:10px;overflow:hidden}body.lq .bm div.me{background:rgba(10,132,255,.45)}
+body.lq .achc{border-radius:14px;opacity:.55}body.lq .achc.on{opacity:1;box-shadow:var(--g-edge),0 0 0 1px rgba(255,214,10,.6),var(--g-drop)}
+/* in a game: glass scoreboard and overlays over the field */
+body.lq .sb{background:rgba(20,24,40,.55);border:0;border-radius:14px;box-shadow:var(--g-edge),var(--g-drop);overflow:hidden}
+body.lq .sb .sc b{font-weight:700;font-size:17px;text-shadow:none}body.lq .sb .clk{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}body.lq .sb .clk b{font-weight:700;font-size:12px}
+body.lq .sbd{background:rgba(20,24,40,.55);border:0;border-radius:999px;box-shadow:var(--g-edge);font-size:8px;font-weight:600}
+body.lq .gbot{background:rgba(10,14,26,.6);font-size:9px;font-weight:600}
+body.lq .gov{background:rgba(5,7,16,.3);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}body.lq .gov .mp{animation:lqpop .5s var(--spring)}
+body.lq .gban div{font-weight:800;font-size:22px;letter-spacing:.02em}body.lq .gban small{font-size:10px;font-weight:600}
+@media (prefers-reduced-motion:reduce){body.lq .screen::before,body.lq .screen.lqin,body.lq .screen.lqin>*,body.lq .modal.lqpop>.mp,body.lq .lqhit{animation:none}}
+/* ===================== END LIQUID GLASS ===================== */
 .pracsb{display:flex;align-items:center;gap:10px;background:#1a1a1a;border:2px solid #fff;padding:4px 6px 4px 9px;pointer-events:auto;box-shadow:0 2px 0 rgba(0,0,0,.4)}
 .pracsb b{color:#ffd23a;font-weight:normal}.pracsb .bt{padding:4px 7px 3px;font-size:7px}
 .pdr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;white-space:normal;line-height:1.5;width:100%}
@@ -2384,6 +2485,7 @@ function render(){
  $('#cv').style.display='none';$('#lg').style.display='none';
  const keep=UI.keepScroll?[...ui.querySelectorAll('.scroll')].map(e=>e.scrollTop):null;
  ui.innerHTML=SCR[UI.scr]()+(UI.modal?`<div class="modal" data-a="mbg">${UI.modal}</div>`:'');
+ lqAfter(ui);
  if(keep){[...ui.querySelectorAll('.scroll')].forEach((e,i)=>{if(keep[i])e.scrollTop=keep[i];});}
  UI.keepScroll=false;
  if(UI.scr==='champ')startFireworks();
@@ -2401,7 +2503,7 @@ document.addEventListener('click',e=>{
  const a=el.dataset.a;if(a==='mbg'&&e.target!==el)return;
  if(el.disabled||el.classList.contains('dk'))return;
  if(OL&&OL.lock&&a!=='mbg'){uiDefer(a,el);return;}
- sfx('tick');
+ sfx('tick');if(window.LQ)LQ.tap=lqKey(el);
  if(ACT[a])ACT[a](el.dataset,el,e);
 });
 /* Keep UI buttons clickable even when the game canvas is using pointer capture.
@@ -2468,7 +2570,7 @@ SCR.title=()=>{
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
    <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?(BP_HIDDEN?'ITEM SHOP':'ITEM SHOP · PASS'):'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
-   ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}
+   ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${window.LQ&&LQ.ok?`<button class="bt" data-a="lqTheme" data-v="${lqOn()?0:1}">${lqOn()?'CLASSIC THEME':'LIQUID GLASS'}</button>`:''}
   </div></div>`;
 };
 /* CODES: type a code to unlock a skin. Codes live in skins/skins.json as "code": "..." (not case-sensitive) */
@@ -3291,6 +3393,7 @@ ACT.hire=d=>{const list=L.staff[d.s],c=list.find(x=>x.id===+d.id);if(!c||L.cc<c.
 function settingsHTML(){const s=L.settings;if(s.play==null)s.play='both';if(s.autoSw==null)s.autoSw=true;const ch=(k,v,l)=>`<span class="chip ${s[k]===v?'on':''}" data-a="set" data-k="${k}" data-v="${v}">${l}</span>`;
  return`<div class="mp cmp" style="width:620px">${ttl('SETTINGS',true)}
  <div class="row"><span style="width:130px">SOUND</span>${ch('sound',true,'ON')}${ch('sound',false,'OFF')}</div>
+ ${lqRow()}
  <div class="row"><span style="width:130px">REPLAYS</span>${ch('replay',true,'ON')}${ch('replay',false,'OFF')}</div>
  ${L.online?`<div class="row"><span style="width:130px">LEAGUE</span><span class="s7 yl">${olSettingsLine()} · ARCADE ${arc()?'ON':'OFF'} · SET BY THE HOST</span></div>`:`<div class="row"><span style="width:130px">QUARTER LENGTH</span>${[120,180,240,300].map(q=>ch('qlen',q,q/60+':00')).join('')}</div>
  <div class="row"><span style="width:130px">ARCADE MODE</span><button class="bt" data-a="arcade">${arc()?'ON':'OFF'} · EDIT</button></div>`}
@@ -8642,6 +8745,27 @@ async function banCheck(){
  try{if(L&&banName(L.coach))return banNow();}catch(e){}
  for(const x of olMine()){const hs=BAN.tkh[x.code];if(!hs||!x.tk)continue;try{if(hs.includes(await olHash(x.code+':'+x.tk)))return banNow();}catch(e){}}}
 banCheck();setInterval(()=>{try{if(L&&banName(L.coach))banNow();for(const el of document.querySelectorAll('input'))if(el.value&&banName(el.value.replace(/_/g,' '))&&/YOUR.*NAME|USER/i.test(el.placeholder||''))banNow();if(UI.sub&&banName(UI.sub.coach))banNow();}catch(e){}},1500);
+
+/* ===== LIQUID GLASS theme switch. Only the owner sees it: his account name, or the device holding his ZVTADK seat. ===== */
+const LQ_ACCTS=['troy'],LQ_TKH={ZVTADK:'88b18b042080127ea6283562'};
+var LQ={ok:false,scr:null,modal:false,tap:null,font:false};
+function lqOn(){try{return LQ.ok&&localStorage.getItem('rf_lq')==='1';}catch(e){return false;}}
+function lqKey(el){const d=el.dataset||{};return [d.a,d.k,d.v,d.s,d.t,d.i,d.n].join('|');}
+function lqApply(){const on=lqOn();document.body.classList.toggle('lq',on);
+ if(on&&!LQ.font){LQ.font=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap';document.head.appendChild(l);}
+ const m=document.querySelector('meta[name=theme-color]');if(m&&on)m.setAttribute('content','#0b0f1e');}
+function lqAfter(ui){if(!window.LQ)return;if(!document.body.classList.contains('lq')){LQ.scr=UI.scr;LQ.modal=!!UI.modal;return;}
+ try{const tc=L&&L.user!=null&&typeof teamCol==='function'?teamCol(L.user):null;const st=document.getElementById('stage').style;st.setProperty('--lq1',tc?tc.c1:'#1f5bd8');st.setProperty('--lq2',tc?tc.c2:'#0f9a9a');}catch(e){}
+ const sc=ui.querySelector('.screen');if(sc&&LQ.scr!==UI.scr)sc.classList.add('lqin');
+ const md=ui.querySelector('.modal');if(md&&!LQ.modal)md.classList.add('lqpop');
+ if(LQ.tap){const k=LQ.tap;for(const el of ui.querySelectorAll('[data-a]'))if(lqKey(el)===k&&!el.closest('.lqin')){el.classList.add('lqhit');break;}LQ.tap=null;}
+ LQ.scr=UI.scr;LQ.modal=!!UI.modal;}
+async function lqCheck(){let ok=false;try{const a=syncGet();ok=!!(a&&a.acct&&LQ_ACCTS.includes(String(a.u||'').toLowerCase()));}catch(e){}
+ if(!ok)for(const x of olMine()){const h=LQ_TKH[x.code];if(!h||!x.tk)continue;try{if(await olHash(x.code+':'+x.tk)===h){ok=true;break;}}catch(e){}}
+ const was=LQ.ok;LQ.ok=ok;lqApply();if(was!==ok&&UI.scr!=='game')render();}
+ACT.lqTheme=d=>{try{localStorage.setItem('rf_lq',d&&d.v==='1'?'1':'0');}catch(e){}lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
+function lqRow(){return LQ.ok?`<div class="row"><span style="width:130px">THEME</span><span class="chip ${lqOn()?'':'on'}" data-a="lqTheme" data-v="0">CLASSIC</span><span class="chip ${lqOn()?'on':''}" data-a="lqTheme" data-v="1">LIQUID GLASS</span><span class="s7 dim">ONLY YOU CAN SEE THIS</span></div>`:'';}
+lqCheck();setInterval(lqCheck,30000);
 
 olmBoot();
 setTimeout(()=>{srvSync().finally(()=>{try{dailyLogin();}catch(e){}});},800);   /* daily bonus by the website's date */
