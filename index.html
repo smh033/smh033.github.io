@@ -8966,8 +8966,8 @@ var LQ={ok:false,scr:null,modal:false,tap:null,font:false};
 function themeGet(){try{const t=localStorage.getItem('rf_theme');if(t)return t;return localStorage.getItem('rf_lq')==='1'?'lq':'classic';}catch(e){return 'classic';}}
 function themeSet(t){try{localStorage.setItem('rf_theme',t);localStorage.removeItem('rf_lq');}catch(e){}}
 function lqOn(){return LQ.ok&&themeGet()==='lq';}
-/* SUPER BOWL look: by itself in the playoffs, over CLASSIC or PRIME TIME (never over Liquid Glass) */
-function sbwOn(){return !lqOn()&&!!(L&&L.phase==='PO'&&UI.scr!=='title'&&UI.scr!=='slots');}
+/* SUPER BOWL look: by itself in the playoffs, only when the player is on CLASSIC (a theme they picked always wins) */
+function sbwOn(){return themeGet()==='classic'&&!!(L&&L.phase==='PO'&&UI.scr!=='title'&&UI.scr!=='slots');}
 function sbcBuild(){if(document.getElementById('sbc'))return;const st=document.getElementById('stage'),d=document.createElement('div');d.id='sbc';let h='';
  const C=['#f3d27a','#d4af37','#ffffff','#c0c0c0','#b8860b'];for(let i=0;i<34;i++){const dur=4+(i*37)%5,del=-((i*53)%9),w=3+(i%3),c=C[i%C.length];
   h+=`<i style="left:${(i*41+7)%640}px;width:${w}px;height:${w*2}px;background:${c};animation-duration:${dur}s;animation-delay:${del}s;opacity:${.55+(i%4)*.12}"></i>`;}
@@ -8991,7 +8991,7 @@ async function lqCheck(){let ok=false;try{const a=syncGet();ok=!!(a&&a.acct&&LQ_
 ACT.lqTheme=d=>{themeSet(d&&d.v==='1'?'lq':'classic');lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
 ACT.theme=d=>{themeSet(d.v);lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
 function lqRow(){const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq','mdn'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
- return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${LQ.ok?c('lq','LIQUID GLASS'):''}<span class="s7 dim">PLAYOFFS GET THE SUPER BOWL LOOK</span></div>`;}
+ return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${LQ.ok?c('lq','LIQUID GLASS'):''}<span class="s7 dim">CLASSIC GETS THE SUPER BOWL LOOK IN THE PLAYOFFS</span></div>`;}
 lqCheck();setInterval(lqCheck,30000);
 
 olmBoot();
