@@ -298,6 +298,128 @@ body.lq .gov{background:rgba(5,7,16,.3);-webkit-backdrop-filter:blur(3px);backdr
 body.lq .gban div{font-weight:800;font-size:22px;letter-spacing:.02em}body.lq .gban small{font-size:10px;font-weight:600}
 @media (prefers-reduced-motion:reduce){body.lq .screen::before,body.lq .screen.lqin,body.lq .screen.lqin>*,body.lq .modal.lqpop>.mp,body.lq .lqhit{animation:none}}
 /* ===================== END LIQUID GLASS ===================== */
+/* ===================== PRIME TIME (body.pt) =====================
+   A night-game TV broadcast look: deep navy, gold trim, stadium lights sweeping the background,
+   graphics that slide in like a broadcast package. Anyone can pick it in Settings → THEME. */
+body.pt,body.thsb{--spring:cubic-bezier(.32,1.4,.5,1);--ease:cubic-bezier(.2,.8,.2,1);font-family:"Oswald","Arial Narrow",system-ui,sans-serif;font-size:10.5px;font-weight:500;letter-spacing:.05em}
+body.pt .s16,body.thsb .s16{font-size:19px;font-weight:700}body.pt .s12,body.thsb .s12{font-size:14px;font-weight:600}body.pt .s10,body.thsb .s10{font-size:12px}body.pt .s7,body.thsb .s7{font-size:9px}body.pt .s6,body.thsb .s6{font-size:8px}
+body.pt .screen *,body.pt .modal *,body.pt .gov *,body.pt .toast,body.thsb .screen *,body.thsb .modal *,body.thsb .gov *,body.thsb .toast{text-shadow:none!important}
+body.pt #tgl,body.thsb #tgl{display:none}
+body.pt [data-a="egg"],body.thsb [data-a="egg"]{font-weight:700;font-size:38px!important;letter-spacing:.06em}
+body.pt .ttl,body.thsb .ttl{font-size:20px;font-weight:700;letter-spacing:.08em}body.pt .ttl.sm,body.thsb .ttl.sm{font-size:15px}
+body.pt{--bl:#12214c;--bl2:#1a2d63;--bl3:#0b1636;--nv:#060d24;--yl:#e8b923;--yl2:#ffd24a;--dim:#9fb0d8;--cy:#7fd0ff;--dk:#0b1430;--gold:linear-gradient(180deg,#ffe07a,#e8b923 55%,#b8860b)}
+body.pt #stage{background:#050b1f}
+body.pt .screen{background:#060d24;isolation:isolate;overflow:hidden}
+body.pt .screen::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:radial-gradient(60% 55% at 50% -10%,rgba(80,120,220,.45),transparent 70%),
+  conic-gradient(from 160deg at 0% -8%,transparent 0deg,rgba(255,255,255,.09) 8deg,transparent 16deg,transparent 30deg,rgba(255,255,255,.06) 36deg,transparent 42deg),
+  conic-gradient(from 180deg at 100% -8%,transparent 2deg,rgba(255,255,255,.08) 10deg,transparent 18deg,transparent 34deg,rgba(255,255,255,.05) 40deg,transparent 46deg),
+  linear-gradient(180deg,#0b1a44,#050b1f 70%);animation:ptsweep 9s ease-in-out infinite alternate}
+@keyframes ptsweep{from{background-position:0 0,-30px 0,30px 0,0 0}to{background-position:0 0,40px 0,-40px 0,0 0}}
+body.pt .tst i.w{background:#fff}body.pt .tst i.r{background:#e8b923}body.pt .tst i.n{background:#2a3d78}
+body.pt .bt{background:linear-gradient(180deg,#1d3170,#0f1c45);border:0;border-bottom:2px solid var(--yl);border-radius:2px;color:#fff;font-weight:600;letter-spacing:.09em;font-size:10px;padding:7px 12px 5px;box-shadow:0 6px 14px -6px rgba(0,0,0,.7);top:0!important;transition:transform .3s var(--spring),filter .2s,box-shadow .2s}
+body.pt .bt.big{font-size:12px;padding:9px 16px 7px}body.pt .bt.xl{font-size:14px;padding:11px 20px 9px}
+body.pt .bt:hover{filter:brightness(1.2);box-shadow:0 0 0 1px rgba(232,185,35,.45),0 8px 18px -6px rgba(232,185,35,.35)}
+body.pt .bt:active,body.pt .chip:active,body.pt .tile:active,body.pt .pcard:active,body.thsb .bt:active,body.thsb .chip:active,body.thsb .tile:active,body.thsb .pcard:active{transform:translateY(1px) scale(.97);transition-duration:.08s}
+body.pt .bt.y{background:var(--gold);color:#0a1430;border-bottom-color:#8a6508;font-weight:700}
+body.pt .bt.g{background:linear-gradient(180deg,#2ec25a,#178a3a);border-bottom-color:#0d5a24}body.pt .bt.r{background:linear-gradient(180deg,#e2463c,#a52a22);border-bottom-color:#6e1610}
+body.pt .bt:disabled,body.pt .bt.dk,body.pt .tile.dk{opacity:.4;filter:saturate(.3)}
+body.pt .chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.22);border-radius:2px;font-weight:600;letter-spacing:.08em;font-size:9px;padding:4px 8px 3px}
+body.pt .chip.on{background:var(--gold);color:#0a1430;border-color:transparent}
+body.pt .box{background:linear-gradient(180deg,rgba(20,36,82,.72),rgba(8,16,40,.72));border:1px solid rgba(255,255,255,.1);border-top:2px solid var(--yl);border-radius:2px;padding:13px 8px 7px;box-shadow:0 10px 24px -12px rgba(0,0,0,.8)}
+body.pt .box>.lbl{background:var(--gold);color:#0a1430;font-weight:700;letter-spacing:.1em;font-size:9px;padding:2px 14px 1px;top:-9px;clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}
+body.pt .mp{background:linear-gradient(180deg,rgba(20,36,82,.97),rgba(7,14,36,.97));border:0;border-top:3px solid var(--yl);border-radius:2px;box-shadow:0 24px 50px -10px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.08)}
+body.pt .modal{background:rgba(2,5,16,.55)}
+body.pt .tile,body.pt .pcard{background:linear-gradient(180deg,#16285c,#0b1636);border:1px solid rgba(255,255,255,.12);border-radius:2px;box-shadow:0 8px 18px -8px rgba(0,0,0,.8);transition:transform .3s var(--spring)}
+body.pt .pcard{border-bottom:2px solid var(--yl)}
+body.pt .pcard .ph{background:linear-gradient(180deg,#2a4a9a,#13245a)}body.pt .pcard.D .ph{background:linear-gradient(180deg,#8a2a35,#4a1520)}body.pt .pcard.K .ph{background:linear-gradient(180deg,#8a6a20,#4a3610)}
+body.pt .pcard .nm{font-weight:600;font-size:9px;letter-spacing:.06em}
+body.pt .coin{border:1px solid rgba(232,185,35,.55);background:rgba(6,13,36,.7);border-radius:2px;font-weight:600}
+body.pt input.txt{background:#081232;border:1px solid rgba(255,255,255,.25);border-bottom:2px solid var(--yl);border-radius:2px;font-size:12px}
+body.pt .stars i{background:rgba(255,255,255,.14)}body.pt .stars i.f{background:var(--yl2)}
+body.pt .stars i.h{background:linear-gradient(90deg,var(--yl2) 50%,rgba(255,255,255,.14) 50%)}body.pt .stars.o i.h{background:linear-gradient(90deg,#6ad6ff 50%,rgba(255,255,255,.14) 50%)}body.pt .stars.d i.h{background:linear-gradient(90deg,#ff4a3d 50%,rgba(255,255,255,.14) 50%)}
+body.pt .bar{border:0;height:8px;background:#081232;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}body.pt .bar i{background:var(--gold);transition:width .6s var(--ease)}
+body.pt .segs{border:0;background:none;gap:2px}body.pt .segs i{height:10px;background:#0b1636;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}body.pt .segs i.on{background:var(--gold)}
+body.pt .tbl th{background:#081232;color:var(--yl2);font-weight:600;letter-spacing:.08em;border-bottom:1px solid rgba(232,185,35,.5)}
+body.pt .tbl td{border-bottom:1px solid rgba(255,255,255,.06)}
+body.pt .scroll::-webkit-scrollbar{width:4px}body.pt .scroll::-webkit-scrollbar-thumb{background:var(--yl)}body.pt .scroll::-webkit-scrollbar-track{background:transparent}
+body.pt .tl{background:linear-gradient(90deg,#0b1636,#142a66,#0b1636);border-top:1px solid rgba(232,185,35,.6);border-bottom:1px solid rgba(232,185,35,.6);color:#fff}
+body.pt .tl .ln{background:rgba(255,255,255,.2);height:3px}body.pt .tl .ln i{background:var(--gold)}
+body.pt .tl .nd .dot{border:2px solid #fff;background:#13245a}body.pt .tl .nd .dot.c{background:var(--yl)}
+body.pt .toast{background:linear-gradient(90deg,#0f1c45,#16285c);border:0;border-left:4px solid var(--yl);border-radius:0;padding:7px 14px;font-weight:600;letter-spacing:.08em;font-size:10px;box-shadow:0 10px 24px -8px rgba(0,0,0,.8);animation:ptlower .45s var(--ease)}
+@keyframes ptlower{from{opacity:0;transform:translate(-80%,0);clip-path:inset(0 100% 0 0)}to{opacity:1;transform:translate(-50%,0);clip-path:inset(0 0 0 0)}}
+body.pt .sb{background:linear-gradient(180deg,#16285c,#081232);border:0;border-top:2px solid var(--yl);box-shadow:0 8px 18px -6px rgba(0,0,0,.8)}
+body.pt .sb .sc b{font-weight:700;font-size:18px}body.pt .sb .clk b{font-weight:700;font-size:13px}
+body.pt .sbd{background:#0b1636;border:0;border-left:3px solid var(--yl)}
+body.pt .gbot{background:linear-gradient(90deg,#081232,#13245a,#081232);border-top:1px solid rgba(232,185,35,.5)}
+body.pt .gov{background:rgba(2,5,16,.45)}
+body.pt .gban div{font-weight:700;font-size:26px;letter-spacing:.08em;color:#fff;background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* broadcast-package entrances: rows slide in from the left one after another, windows wipe open */
+body.pt .screen.lqin::after{content:'';position:absolute;left:0;right:0;top:50%;height:3px;background:var(--gold);transform-origin:left;animation:ptbar .55s var(--ease) forwards;pointer-events:none}
+@keyframes ptbar{0%{transform:scaleX(0);opacity:1}60%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+body.pt .screen.lqin>*{animation:ptin .5s var(--ease) both}
+body.pt .screen.lqin>*:nth-child(2){animation-delay:.05s}body.pt .screen.lqin>*:nth-child(3){animation-delay:.1s}body.pt .screen.lqin>*:nth-child(4){animation-delay:.15s}body.pt .screen.lqin>*:nth-child(n+5){animation-delay:.2s}
+@keyframes ptin{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+body.pt .modal.lqpop>.mp,body.pt .gov .mp{animation:ptwipe .45s var(--ease)}
+@keyframes ptwipe{from{clip-path:inset(0 100% 0 0);transform:translateX(-10px)}to{clip-path:inset(0 0 0 0);transform:none}}
+body.pt .lqhit{animation:pthit .35s var(--spring)}@keyframes pthit{from{transform:scale(.94)}}
+
+/* ===================== SUPER BOWL (body.thsb) =====================
+   Turns on by itself during the playoffs (not over Liquid Glass): black and metallic gold, a trophy glow,
+   gold and silver confetti, a championship banner on the screen. */
+body.thsb{--bl:#151515;--bl2:#1f1f1f;--bl3:#0c0c0c;--nv:#000;--yl:#d4af37;--yl2:#f3d27a;--dim:#b8ad92;--cy:#e6e6e6;--dk:#101010;
+ --gold:linear-gradient(180deg,#fff2b0 0%,#e9c75a 30%,#c79a2c 62%,#f0d27a 100%)}
+body.thsb #stage{background:#050505}
+body.thsb .screen{background:#060606;isolation:isolate;overflow:hidden}
+body.thsb .screen::before{content:'';position:absolute;inset:-10%;z-index:-1;pointer-events:none;
+ background:radial-gradient(34% 48% at 50% 8%,rgba(243,210,122,.33),transparent 70%),radial-gradient(70% 60% at 50% 120%,rgba(212,175,55,.18),transparent 70%),
+  repeating-conic-gradient(from 0deg at 50% -6%,rgba(243,210,122,.05) 0deg 4deg,transparent 4deg 14deg),linear-gradient(180deg,#141008,#050505 65%);animation:sbglow 5s ease-in-out infinite alternate}
+@keyframes sbglow{from{opacity:.75}to{opacity:1}}
+body.thsb .screen::after{content:'THE BIG GAME';position:absolute;right:-30px;top:12px;transform:rotate(35deg);background:var(--gold);color:#1a1405;font-weight:700;letter-spacing:.14em;font-size:8px;padding:3px 34px;pointer-events:none;box-shadow:0 4px 10px rgba(0,0,0,.6);z-index:5}
+body.thsb .tst i.w{background:#fff}body.thsb .tst i.r{background:#d4af37}body.thsb .tst i.n{background:#5a5a5a}
+body.thsb [data-a="egg"],body.thsb .ttl{background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.thsb .bt{background:linear-gradient(180deg,#232323,#111);border:1px solid rgba(212,175,55,.7);border-radius:4px;color:#f3e3b0;font-weight:600;letter-spacing:.09em;font-size:10px;padding:7px 12px 5px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 6px 14px -6px rgba(0,0,0,.8);top:0!important;transition:transform .3s var(--spring),box-shadow .2s}
+body.thsb .bt.big{font-size:12px;padding:9px 16px 7px}body.thsb .bt.xl{font-size:14px;padding:11px 20px 9px}
+body.thsb .bt:hover{box-shadow:0 0 0 1px #f3d27a,0 0 18px -2px rgba(243,210,122,.45)}
+body.thsb .bt.y{background:var(--gold);background-size:100% 200%;color:#1a1405;border-color:#8a6a18;font-weight:700;animation:sbshine 3s ease-in-out infinite}
+@keyframes sbshine{0%,100%{background-position:0 0}50%{background-position:0 100%}}
+body.thsb .bt.g{background:linear-gradient(180deg,#2a6a3a,#123a1c)}body.thsb .bt.r{background:linear-gradient(180deg,#7a1f1a,#3d0e0b)}
+body.thsb .bt:disabled,body.thsb .bt.dk,body.thsb .tile.dk{opacity:.38;filter:grayscale(.6)}
+body.thsb .chip{background:#141414;border:1px solid rgba(212,175,55,.45);border-radius:3px;color:#f3e3b0;font-weight:600;letter-spacing:.08em;font-size:9px;padding:4px 8px 3px}
+body.thsb .chip.on{background:var(--gold);color:#1a1405;border-color:transparent}
+body.thsb .box{background:linear-gradient(180deg,rgba(28,24,14,.8),rgba(8,8,8,.85));border:1px solid rgba(212,175,55,.55);border-radius:4px;padding:13px 8px 7px;box-shadow:inset 0 1px 0 rgba(243,210,122,.15),0 10px 24px -12px rgba(0,0,0,.9)}
+body.thsb .box>.lbl{background:var(--gold);color:#1a1405;font-weight:700;letter-spacing:.12em;font-size:9px;padding:2px 12px 1px;top:-9px;border-radius:2px}
+body.thsb .mp{background:linear-gradient(180deg,rgba(30,26,16,.98),rgba(8,8,8,.98));border:1px solid rgba(212,175,55,.7);border-radius:5px;box-shadow:0 0 40px -10px rgba(243,210,122,.35),0 24px 50px -10px rgba(0,0,0,.9)}
+body.thsb .modal{background:rgba(0,0,0,.6)}
+body.thsb .tile,body.thsb .pcard{background:linear-gradient(180deg,#1c1a14,#0b0b0b);border:1px solid rgba(212,175,55,.45);border-radius:4px;transition:transform .3s var(--spring)}
+body.thsb .pcard .ph{background:linear-gradient(180deg,#5a4a20,#1e180a)}body.thsb .pcard.D .ph{background:linear-gradient(180deg,#5a2a20,#1e0c0a)}body.thsb .pcard.K .ph{background:linear-gradient(180deg,#5a5a5a,#1e1e1e)}
+body.thsb .coin{border:1px solid rgba(212,175,55,.7);background:#0d0d0d;border-radius:4px}
+body.thsb input.txt{background:#0d0d0d;border:1px solid rgba(212,175,55,.6);border-radius:3px;font-size:12px}
+body.thsb .stars i{background:rgba(255,255,255,.14)}body.thsb .stars i.f{background:#f3d27a}body.thsb .stars i.h{background:linear-gradient(90deg,#f3d27a 50%,rgba(255,255,255,.14) 50%)}
+body.thsb .stars.o i.h{background:linear-gradient(90deg,#6ad6ff 50%,rgba(255,255,255,.14) 50%)}body.thsb .stars.d i.h{background:linear-gradient(90deg,#ff4a3d 50%,rgba(255,255,255,.14) 50%)}
+body.thsb .bar{border:0;height:8px;background:#0d0d0d;box-shadow:inset 0 0 0 1px rgba(212,175,55,.35)}body.thsb .bar i{background:var(--gold)}
+body.thsb .segs{border:0;background:none;gap:2px}body.thsb .segs i{height:10px;background:#141414}body.thsb .segs i.on{background:var(--gold)}
+body.thsb .tbl th{background:#0d0d0d;color:#f3d27a;font-weight:600;letter-spacing:.08em;border-bottom:1px solid rgba(212,175,55,.6)}body.thsb .tbl td{border-bottom:1px solid rgba(255,255,255,.06)}
+body.thsb .tbl tr.me td{color:#f3d27a}
+body.thsb .scroll::-webkit-scrollbar{width:4px}body.thsb .scroll::-webkit-scrollbar-thumb{background:#d4af37}body.thsb .scroll::-webkit-scrollbar-track{background:transparent}
+body.thsb .tl{background:linear-gradient(90deg,#0b0b0b,#2a220f,#0b0b0b);border-top:1px solid rgba(212,175,55,.7);border-bottom:1px solid rgba(212,175,55,.7);color:#fff}
+body.thsb .tl .ln{background:rgba(255,255,255,.18);height:3px}body.thsb .tl .ln i{background:var(--gold)}body.thsb .tl .nd .dot{border:2px solid #f3d27a;background:#111}body.thsb .tl .nd .dot.c{background:#f3d27a}
+body.thsb .bm{border:1px solid rgba(212,175,55,.6);background:#0d0d0d;border-radius:3px}body.thsb .bm div.me{background:rgba(212,175,55,.3)}body.thsb .bm div.w{color:#f3d27a}
+body.thsb .toast{background:#0d0d0d;border:1px solid #d4af37;border-radius:4px;color:#f3e3b0;font-weight:600;letter-spacing:.08em;box-shadow:0 0 24px -6px rgba(243,210,122,.5);animation:sbpop .5s var(--spring)}
+body.thsb .sb{background:linear-gradient(180deg,#1e1a10,#070707);border:1px solid rgba(212,175,55,.7);border-radius:4px}body.thsb .sb .sc b{font-weight:700;font-size:18px}body.thsb .sb .clk b{font-weight:700;font-size:13px}
+body.thsb .sbd{background:#0d0d0d;border:1px solid rgba(212,175,55,.6)}body.thsb .gbot{background:#0b0b0b;border-top:1px solid rgba(212,175,55,.6)}
+body.thsb .gban div{font-weight:700;font-size:26px;letter-spacing:.08em;background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent}
+body.thsb .screen.lqin>*{animation:sbrise .6s var(--ease) both}
+body.thsb .screen.lqin>*:nth-child(2){animation-delay:.06s}body.thsb .screen.lqin>*:nth-child(3){animation-delay:.12s}body.thsb .screen.lqin>*:nth-child(n+4){animation-delay:.18s}
+@keyframes sbrise{from{opacity:0;transform:scale(1.04);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+body.thsb .modal.lqpop>.mp,body.thsb .gov .mp{animation:sbpop .5s var(--spring)}
+@keyframes sbpop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+body.thsb .lqhit{animation:pthit .35s var(--spring)}
+#sbc{position:absolute;inset:0;pointer-events:none;z-index:80;overflow:hidden;display:none}body.thsb #sbc{display:block}body.thsb.ingame #sbc{display:none}
+#sbc i{position:absolute;top:-12px;width:4px;height:8px;animation:sbfall linear infinite}
+@keyframes sbfall{0%{transform:translate3d(0,0,0) rotate(0)}100%{transform:translate3d(30px,390px,0) rotate(720deg)}}
+@media (prefers-reduced-motion:reduce){body.pt .screen::before,body.thsb .screen::before,#sbc,body.pt .screen.lqin>*,body.thsb .screen.lqin>*,body.thsb .bt.y{animation:none}}
+/* ===================== END PRIME TIME / SUPER BOWL ===================== */
 .pracsb{display:flex;align-items:center;gap:10px;background:#1a1a1a;border:2px solid #fff;padding:4px 6px 4px 9px;pointer-events:auto;box-shadow:0 2px 0 rgba(0,0,0,.4)}
 .pracsb b{color:#ffd23a;font-weight:normal}.pracsb .bt{padding:4px 7px 3px;font-size:7px}
 .pdr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;white-space:normal;line-height:1.5;width:100%}
@@ -2478,7 +2600,7 @@ const UI={scr:'title',sub:{},modal:null};
 const SCR={},ACT={};
 function go(s,sub){UI.scr=s;UI.sub=sub||{};UI.modal=null;render();}
 function render(){
- if(HALLOWEEN||THANKS)document.body.classList.toggle('ingame',UI.scr==='game');
+ document.body.classList.toggle('ingame',UI.scr==='game');
  applyCustomTeam();
  const ui=$('#ui');
  if(UI.scr==='game'){$('#cv').style.display='block';$('#lg').style.display='block';return;}
@@ -8749,12 +8871,22 @@ banCheck();setInterval(()=>{try{if(L&&banName(L.coach))banNow();for(const el of 
 /* ===== LIQUID GLASS theme switch. Only the owner sees it: his account name, or the device holding his ZVTADK seat. ===== */
 const LQ_ACCTS=['troy'],LQ_TKH={ZVTADK:'88b18b042080127ea6283562'};
 var LQ={ok:false,scr:null,modal:false,tap:null,font:false};
-function lqOn(){try{return LQ.ok&&localStorage.getItem('rf_lq')==='1';}catch(e){return false;}}
+function themeGet(){try{const t=localStorage.getItem('rf_theme');if(t)return t;return localStorage.getItem('rf_lq')==='1'?'lq':'classic';}catch(e){return 'classic';}}
+function themeSet(t){try{localStorage.setItem('rf_theme',t);localStorage.removeItem('rf_lq');}catch(e){}}
+function lqOn(){return LQ.ok&&themeGet()==='lq';}
+/* SUPER BOWL look: by itself in the playoffs, over CLASSIC or PRIME TIME (never over Liquid Glass) */
+function sbwOn(){return !lqOn()&&!!(L&&L.phase==='PO'&&UI.scr!=='title'&&UI.scr!=='slots');}
+function sbcBuild(){if(document.getElementById('sbc'))return;const st=document.getElementById('stage'),d=document.createElement('div');d.id='sbc';let h='';
+ const C=['#f3d27a','#d4af37','#ffffff','#c0c0c0','#b8860b'];for(let i=0;i<34;i++){const dur=4+(i*37)%5,del=-((i*53)%9),w=3+(i%3),c=C[i%C.length];
+  h+=`<i style="left:${(i*41+7)%640}px;width:${w}px;height:${w*2}px;background:${c};animation-duration:${dur}s;animation-delay:${del}s;opacity:${.55+(i%4)*.12}"></i>`;}
+ d.innerHTML=h;st.appendChild(d);}
 function lqKey(el){const d=el.dataset||{};return [d.a,d.k,d.v,d.s,d.t,d.i,d.n].join('|');}
-function lqApply(){const on=lqOn();document.body.classList.toggle('lq',on);
+function lqApply(){const on=lqOn(),sb=sbwOn(),pt=!on&&!sb&&themeGet()==='prime';document.body.classList.toggle('lq',on);document.body.classList.toggle('thsb',sb);document.body.classList.toggle('pt',pt);
+ if(sb)sbcBuild();
+ if((pt||sb)&&!LQ.font2){LQ.font2=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap';document.head.appendChild(l);}
  if(on&&!LQ.font){LQ.font=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap';document.head.appendChild(l);}
  const m=document.querySelector('meta[name=theme-color]');if(m&&on)m.setAttribute('content','#0b0f1e');}
-function lqAfter(ui){if(!window.LQ)return;if(!document.body.classList.contains('lq')){LQ.scr=UI.scr;LQ.modal=!!UI.modal;return;}
+function lqAfter(ui){if(!window.LQ)return;lqApply();const B=document.body.classList;if(!B.contains('lq')&&!B.contains('pt')&&!B.contains('thsb')){LQ.scr=UI.scr;LQ.modal=!!UI.modal;return;}
  try{const tc=L&&L.user!=null&&typeof teamCol==='function'?teamCol(L.user):null;const st=document.getElementById('stage').style;st.setProperty('--lq1',tc?tc.c1:'#1f5bd8');st.setProperty('--lq2',tc?tc.c2:'#0f9a9a');}catch(e){}
  const sc=ui.querySelector('.screen');if(sc&&LQ.scr!==UI.scr)sc.classList.add('lqin');
  const md=ui.querySelector('.modal');if(md&&!LQ.modal)md.classList.add('lqpop');
@@ -8763,8 +8895,10 @@ function lqAfter(ui){if(!window.LQ)return;if(!document.body.classList.contains('
 async function lqCheck(){let ok=false;try{const a=syncGet();ok=!!(a&&a.acct&&LQ_ACCTS.includes(String(a.u||'').toLowerCase()));}catch(e){}
  if(!ok)for(const x of olMine()){const h=LQ_TKH[x.code];if(!h||!x.tk)continue;try{if(await olHash(x.code+':'+x.tk)===h){ok=true;break;}}catch(e){}}
  const was=LQ.ok;LQ.ok=ok;lqApply();if(was!==ok&&UI.scr!=='game')render();}
-ACT.lqTheme=d=>{try{localStorage.setItem('rf_lq',d&&d.v==='1'?'1':'0');}catch(e){}lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
-function lqRow(){return LQ.ok?`<div class="row"><span style="width:130px">THEME</span><span class="chip ${lqOn()?'':'on'}" data-a="lqTheme" data-v="0">CLASSIC</span><span class="chip ${lqOn()?'on':''}" data-a="lqTheme" data-v="1">LIQUID GLASS</span><span class="s7 dim">ONLY YOU CAN SEE THIS</span></div>`:'';}
+ACT.lqTheme=d=>{themeSet(d&&d.v==='1'?'lq':'classic');lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
+ACT.theme=d=>{themeSet(d.v);lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
+function lqRow(){const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
+ return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${LQ.ok?c('lq','LIQUID GLASS'):''}<span class="s7 dim">SUPER BOWL LOOK TURNS ON BY ITSELF IN THE PLAYOFFS</span></div>`;}
 lqCheck();setInterval(lqCheck,30000);
 
 olmBoot();
