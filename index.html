@@ -197,6 +197,10 @@ body.tg .tgk{display:inline-block;image-rendering:pixelated;vertical-align:middl
 @keyframes tgfall{to{transform:translateY(400px)}}
 @keyframes tgsway{from{transform:translateX(-14px) rotate(-35deg)}to{transform:translateX(14px) rotate(35deg)}}
 /* ===================== END THANKSGIVING ===================== */
+/* spectating: a glass cover over the game takes every tap; only LEAVE works */
+#specov{position:absolute;inset:0;z-index:300;display:none}body.spec #specov{display:block}
+#specov .specbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.72);padding:4px 6px 4px 10px;font-size:8px;white-space:nowrap}
+body.spec #gov,body.spec .gov,body.spec #gpz,body.spec #gctrl,body.spec #ghint,body.spec #gpb,body.spec .gpause{display:none!important}
 /* ===================== LIQUID GLASS =====================
    An optional look (body.lq): frosted, see-through panels over a slowly drifting wash of your team's colors,
    pill buttons that squish when pressed, screens and windows that ease in. Only offered to the game's owner
@@ -1321,7 +1325,7 @@ function aiOfferDo(id){const o=(L.aiOffers||[]).find(x=>x.id===id);if(!o||o.to!=
  const t=o.t,G=o.want.map(P),R=o.give.map(P);
  for(const p of G){p.team=t;p.bench=false;p.bk=false;p.mor=clamp(p.mor-5,0,100);p.traded={y:L.year,w:L.week};}
  for(const p of R){p.team=L.user;p.bk=false;p.bench=false;p.mor=clamp(p.mor+5,0,100);p.yrs=Math.max(1,p.yrs);p.traded={y:L.year,w:L.week};}
- {const ap=aiPk(t);o.gpk.forEach((n,i)=>{L.picks[i]+=n;ap[i]-=n;});}
+ pkMoveAll(t,L.user,o.gpk);{const ap=aiPk(t);o.gpk.forEach((n,i)=>{L.picks[i]+=n;ap[i]-=n;});}
  const rr=rosterOf(t);if(rr.length>rmax()){const st=starterSet(t);rr.filter(x=>!st.has(x.id)).sort((a,b)=>ovr(a)-ovr(b)).slice(0,rr.length-rmax()).forEach(x=>{x.team=-1;x.yrs=1;});}
  fillAIRoster(t);bkAuto(L.user,true);
  const pk=o.gpk.map((n,i)=>n?'A ROUND '+(i+1)+' PICK':'').filter(Boolean);
@@ -1578,15 +1582,18 @@ function setupDraft(founding){
  const extra=founding?0:Math.max(0,(L.picks||[1,1,1]).reduce((a,b)=>a+b,0)-3),n=(founding?40:28)+extra*2,pool=founding?[]:draftPoolOf(n);if(founding)for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
  let slot;
  if(founding)slot=ri(6,20);
- else{const po=L.po,key=t=>{if(po.champ===t)return 1000;if(po.runner===t)return 900;if(inPlayoffs(t))return 100+(po.elim[t]||0)*100+tpct(L.teams[t])*10;return tpct(L.teams[t])*10;};const ids=L.teams.map(t=>t.id).sort((a,b)=>key(a)-key(b));slot=ids.indexOf(L.user);}
- let rounds=founding?[1,1,3]:(L.picks||[1,1,1]).slice();if(!founding){L.picks=[1,1,1];L.aiPicks={};}
- L.draft={founding,pool,rounds,round:0,left:0,slot,log:[],done:false};
+ else{const po=L.po,key=t=>{if(po.champ===t)return 1000;if(po.runner===t)return 900;if(inPlayoffs(t))return 100+(po.elim[t]||0)*100+tpct(L.teams[t])*10;return tpct(L.teams[t])*10;};const ids=L.teams.map(t=>t.id).sort((a,b)=>key(a)-key(b));slot=ids.indexOf(L.user);var sls=pkSlots(L.user,L.picks||[1,1,1],ids);}
+ let rounds=founding?[1,1,3]:(L.picks||[1,1,1]).slice();if(!founding){L.picks=[1,1,1];L.aiPicks={};L.pko={};}
+ L.draft={founding,pool,rounds,round:0,left:0,slot,log:[],done:false,own:slot,sls:founding?null:sls,pi:0};
+ if(L.draft.sls&&L.draft.sls[0].length)L.draft.slot=L.draft.sls[0][0];
  while(L.draft.round<rounds.length&&!rounds[L.draft.round]){draftAI(7);L.draft.round++;}
  if(L.draft.round>=rounds.length){L.draft.done=true;return;}
  L.draft.left=rounds[L.draft.round];
  draftAI(beforeK());
 }
 const beforeK=()=>Math.round(L.draft.slot/31*5);
+/* single player: where your next pick in this round sits (a pick you traded for can come earlier or later than your own) */
+function drSlotAt(r,i){const D=L.draft,a=D.sls&&D.sls[r];return a&&a[i]!=null?a[i]:(D.own!=null?D.own:D.slot);}
 function draftAI(n){
  const D=L.draft;
  for(let i=0;i<n&&D.pool.length;i++){
@@ -1602,12 +1609,12 @@ function draftPick(p){
  const D=L.draft;if(D.q)return olDraftPick(p);
  if(p){D.pool.splice(D.pool.indexOf(p.id),1);delete p.scout;p.team=L.user;p.mor=80;D.log.unshift({id:p.id,t:L.user,r:D.round+1});news('You drafted '+p.pos+' '+fullname(p)+' in round '+(D.round+1)+'.');}
  D.left--;
- if(D.left>0){draftAI(1);return;}
+ if(D.left>0){const nx=drSlotAt(D.round,D.pi+1);draftAI(D.sls?Math.max(0,slK(nx)-slK(D.slot)):1);D.pi++;D.slot=nx;return;}
  draftAI(Math.max(1,6-beforeK()));
- D.round++;
+ D.round++;D.pi=0;
  while(D.round<D.rounds.length&&!D.rounds[D.round]){draftAI(7);D.round++;}
  if(D.round>=D.rounds.length){D.done=true;return;}
- D.left=D.rounds[D.round];draftAI(beforeK());
+ D.slot=drSlotAt(D.round,0);D.left=D.rounds[D.round];draftAI(beforeK());
 }
 function finishDraft(){
  const D=L.draft;
@@ -3350,6 +3357,20 @@ function trVal(p){if(!p)return 0;const o=ovr(p)+(p.age<=26?Math.max(0,p.pot-ovr(
 const PICK_V=[Math.pow(5.1,2.2),Math.pow(3.9,2.2),Math.pow(2.8,2.2)];
 /* Other teams' draft picks for this season (everyone starts with one per round; trades move them). */
 function aiPk(t){L.aiPicks=L.aiPicks||{};return L.aiPicks[t]||(L.aiPicks[t]=[1,1,1]);}
+/* WHOSE pick it is: a pick you trade for keeps its original team's spot in the draft order (the worst team's 1st is
+   the 1st pick overall). L.pko[t] lists the picks team t got from other teams: {r: round index, f: original team}.
+   Call pkMove BEFORE the pick counts change. A team gives its own pick first, then ones it traded for. */
+function pkCnt(t){return L.seats?olPk(t):t===L.user?(L.picks||(L.picks=[1,1,1])):aiPk(t);}
+function pkMove(from,to,r,n){if(!n||n<0)return;L.pko=L.pko||{};const A=L.pko[from]||(L.pko[from]=[]),B=L.pko[to]||(L.pko[to]=[]);
+ for(let k=0;k<n;k++){const acq=A.filter(x=>x.r===r).length,own=(pkCnt(from)[r]||0)-k-acq;let f=from;
+  if(own<=0){const j=A.findIndex(x=>x.r===r);if(j>=0){f=A[j].f;A.splice(j,1);}}
+  if(f!==to)B.push({r,f});else{const j=B.findIndex(x=>x.r===r&&x.f===to);if(j>=0)B.splice(j,1);}}}
+function pkMoveAll(from,to,pk){(pk||[]).forEach((n,i)=>pkMove(from,to,i,n));}
+/* draft-order slots (0 = picks first) of team t's picks in each round */
+function pkSlots(t,cnt,ids){const own=ids.indexOf(t),A=((L.pko||{})[t]||[]);
+ return [0,1,2].map(r=>{const acq=A.filter(x=>x.r===r).map(x=>ids.indexOf(x.f)).filter(x=>x>=0),o=Math.max(0,(cnt[r]||0)-acq.length);
+  const out=acq.slice(0,cnt[r]||0);for(let i=0;i<o;i++)out.push(own);return out.sort((a,b)=>a-b);});}
+const slK=sl=>Math.round(sl/31*5);
 /* DRAFT-DAY TRADES: while a draft is on you can also trade picks in THIS draft, alone or in an online franchise.
    A human team's picks are its remaining picks (single player: L.draft.rounds/left; online: its entries left in the
    shared pick queue L.draft.q). Each computer team has one pick per round left, tracked in L.draft.ai so the same
@@ -3439,6 +3460,7 @@ function trAiDo(t,s){
  if(s.dk.some(x=>x)||s.gdk.some(x=>x)){if(!inDraft())return'THE DRAFT IS OVER';const m=drHas(L.user),th=drHas(t);if(s.dk.some((n,i)=>n>m[i])||s.gdk.some((n,i)=>n>th[i]))return'THAT PICK IS ALREADY GONE';}
  for(const p of G){p.team=t;p.bench=false;p.bk=false;p.mor=clamp(p.mor-5,0,100);}
  for(const p of R){p.team=L.user;p.bk=false;p.mor=clamp(p.mor+5,0,100);p.yrs=Math.max(1,p.yrs);}
+ pkMoveAll(L.user,t,s.pk);pkMoveAll(t,L.user,s.gpk);
  {const ap=aiPk(t);s.pk.forEach((n,i)=>{L.picks[i]-=n;ap[i]+=n;});s.gpk.forEach((n,i)=>{L.picks[i]+=n;ap[i]-=n;});}
  /* this draft's picks: picks you get are yours to use when that round comes; a pick you give away in the round
     you're on the clock in is used by them right away (the draft moves on like a skipped pick) */
@@ -4141,7 +4163,8 @@ function mkF(pl,side,role,x,y){
  const f={pl,side,role,x:clamp(x,-1,120),y:clamp(y,0.8,52.5),vx:0,vy:0,face:side==='O'?1:-1,t:Math.random()*2,lk:lookFor(pl,team,away,side==='D'&&M.oalt),route:null,ri:0,rlen:0,eng:null,engT:0,blk:null,stun:0,down:0,shed:0,jk:0,jkc:0,slow:0,dive:0,tried:false,mv:false};
  f.star=!!pl&&pl.team===L.user;
  const adj=L.settings.diff===4?(aiSide(side)?M.dAdj:0):side==='D'?M.dAdj:0;   /* extreme: the boost is the computer's, on offense too (never your defenders) */
- f.spd=(5.4+clamp(eff(pl,'spd')+adj,1,11)*0.44)*(role==='OL'||role==='DL'?0.85:role==='TE'?0.88:role==='DB'||role==='S'?(netHost()?1:1.06):role==='LB'?0.97:1)*(aiSide(side)?1+0.05*diffLvl():1);
+ /* speed matters: a steeper curve (a 10-speed runner is ~25% faster than a 6), and difficulty only adds a little speed */
+ f.spd=(4.9+clamp(eff(pl,'spd')+Math.min(adj,1.2),1,11)*0.55)*(role==='OL'||role==='DL'?0.85:role==='TE'?0.88:role==='DB'||role==='S'?(netHost()?1:1.03):role==='LB'?0.97:1)*(aiSide(side)?1+0.03*Math.max(0,diffLvl()):1);
  f.acc=22+eff(pl,'spd')*1.2;if(arc()&&arc().turbo){f.spd*=1.12;f.acc*=1.15;}
  return f;
 }
@@ -5799,7 +5822,7 @@ function upChase(f,dt){
  steer(f,Lp.x,Lp.y,f.spd,f.acc*1.3,dt);
  if(d<1.2)f.face=b.x0<f.x?-1:1;
 }
-function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D';steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,c.spd*CATCHUP):f.spd)*(dist<3.5?1.07:1)*(f.side==='D'&&xd()?1.11:1),f.acc+(xd()?10:6),dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
+function pursue(f,c,dt){const dist=d2(f,c),lead=clamp(dist/f.spd,0,0.9)*0.8,run=M.play==='run'&&f.side==='D';steer(f,c.x+c.vx*lead,c.y+c.vy*lead,(run?Math.max(f.spd*PURS,Math.min(c.spd*CATCHUP,f.spd*1.08)):f.spd)*(dist<3.5?1.07:1)*(f.side==='D'&&xd()?1.04:1),f.acc+(xd()?10:6),dt);}   // a final burst when he's right on the runner; run defense flows to the ball   // a final burst when he's right on the runner
 function upDef(f,dt){
  if(f.eng){const h=M.carrier||M.qb||f.eng;const dx=h.x-f.x,dy=h.y-f.y,l=Math.hypot(dx,dy)||1;f.vx=dx/l*0.8;f.vy=dy/l*0.8;f.x+=f.vx*dt;f.y+=f.vy*dt;return;}
  const c=M.carrier;
@@ -6837,6 +6860,7 @@ document.addEventListener('dblclick',e=>e.preventDefault());
 const KM={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
 addEventListener('keydown',e=>{
  if(e.target&&e.target.tagName==='INPUT')return;
+ if(document.body.classList.contains('spec'))return;   /* watching: hands off */
  const k=KM[e.code];if(k)keys[k]=true;
  if(UI.scr!=='game'||!M)return;
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
@@ -6882,8 +6906,8 @@ const netPeerOpts=()=>{const o={debug:0,config:NET_ICE};if(NET_PH){const[h,pt]=d
 const netHost=()=>NET.on&&NET.role==='host'&&!!(M&&L&&L.net);
 /* online: your friend is moved to the defender nearest your throw only after this long (a DB's read of the throw), not on release */
 const NET_SW_DELAY=0.5;
-const netGuest=()=>NET.on&&NET.role==='guest'&&!!(M&&M.netGuest);
-function netSend(o){try{if(NET.conn&&NET.connOpen)NET.conn.send(o);}catch(e){console.warn('net send',e);}}
+const netGuest=()=>NET.on&&(NET.role==='guest'||NET.role==='spec')&&!!(M&&M.netGuest);
+function netSend(o){if(NET.role==='spec')return;try{if(NET.conn&&NET.connOpen)NET.conn.send(o);}catch(e){console.warn('net send',e);}if(o&&(o.t==='end'||o.t==='bye')&&NET.role==='host')specPub(o,true);}
 function netCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function loadPeerLib(){if(window.Peer||NET_MOCK)return Promise.resolve();return new Promise((res,rej)=>{const s=document.createElement('script');s.src='lib/peerjs.min.js';s.onload=()=>res();s.onerror=()=>rej(new Error('Could not load the online library'));document.head.appendChild(s);});}
 /* test transport: two tabs of the same browser talk through a BroadcastChannel (?netmock) */
@@ -6993,6 +7017,7 @@ setInterval(()=>{const c=NET.conn;if(!c||c.mode!=='relay'||c.dead||!NET.connOpen
 /* host: listen on every relay server we can reach */
 function netHostRelay(){const code=NET.code;NET.rsocks=(NET.rsocks||[]).concat(NET_BROKERS.map(url=>{
  const s=mqttSock(url,(topic,txt)=>{let m;try{m=JSON.parse(txt);}catch(e){return;}if(!m||!m.k||NET.code!==code)return;const R=NET.rconns||(NET.rconns={});
+  if(m.spec){specHello(s,code,m.k);return;}
   if(m.hello){const key=m.k+'|'+url,old=R[key];if(old)old.dead=true;const c=relayConn(s,NET_RT+code+'/g/'+m.k,x=>x);R[key]=c;netAccept(c);if(c.dead)return;s.pub(NET_RT+code+'/g/'+m.k,JSON.stringify({hi:1}));c.handlers.open&&c.handlers.open();return;}
   const c=R[m.k+'|'+url];if(!c||c.dead||c.sock!==s)return;
   if(m.bye){c.dead=true;c.handlers.close&&c.handlers.close();return;}
@@ -7070,7 +7095,7 @@ SCR.online=()=>{cfbSync(null);const s=NET;
    <div class="s7 dim">OR A SINGLE HEAD TO HEAD GAME</div>
    <button class="bt big" style="width:260px" data-a="netHost">HOST A GAME</button>
    <div class="s7 dim">OR</div>
-   <div class="row" style="gap:6px"><input class="txt" id="netCode" maxlength="4" placeholder="CODE" style="width:110px;text-align:center;text-transform:uppercase" autocomplete="off"><button class="bt big" data-a="netJoin">JOIN GAME</button></div>
+   <div class="row" style="gap:6px"><input class="txt" id="netCode" maxlength="4" placeholder="CODE" style="width:110px;text-align:center;text-transform:uppercase" autocomplete="off"><button class="bt big" data-a="netJoin">JOIN GAME</button><button class="bt big" data-a="netWatch">WATCH</button></div>
    ${err}</div></div>`;
  if(s.stage==='hosting'||s.stage==='joining')return`<div class="screen" style="align-items:center;gap:14px">${head}
   <div class="col" style="align-items:center;gap:10px;margin-top:16px">${s.stage==='hosting'?`<div class="s7">YOUR GAME CODE</div><div style="font-size:40px;letter-spacing:8px;text-shadow:3px 3px 0 var(--nv)">${esc(s.code)}</div><div class="s7 dim">YOUR FRIEND TAPS ONLINE · JOIN GAME AND TYPES THIS CODE</div><div class="s7 dim">KEEP THIS SCREEN OPEN UNTIL THEY JOIN</div>`:`<div class="s10">JOINING ${esc(s.code)}</div>`}
@@ -7218,7 +7243,7 @@ function netHostTick(dt){if(!netHost())return;NET.stT=(NET.stT||0)+dt;if(NET.stT
  if(!NET.wait&&NET.stage==='game'&&now-NET.lastRx>6000){NET.wait=true;NET.waitT=now;}   /* nothing from your friend for 6 s */
  if(M.ov&&M.ov.net&&!NET.wait){M.ov.wt+=dt;if(M.ov.wt>30){const f=M.ov.gacts[M.ov.dflt];M.ov=null;if(f)f();}}
  if(M.phase==='kick'&&M.kick&&M.kick.guest&&M.kick.st==='aim'&&!NET.wait){M.kick.wt+=dt;if(M.kick.wt>20)kickRelease(0,-clamp(kickNeed()+0.08,0.3,1.04)*170,true);}
- NET.sendAcc+=dt;if(NET.sendAcc<0.05)return;NET.sendAcc=0;if(netBuffered()>20000)return;netSend(netSnapshot());}
+ NET.sendAcc+=dt;if(NET.sendAcc<0.05)return;NET.sendAcc=0;if(netBuffered()>20000)return;const snp=netSnapshot();netSend(snp);specPub(snp);}
 function netBuffered(){const c=NET.conn;try{if(!c)return 0;if(c.mode==='relay')return c.sock&&c.sock.ws?c.sock.ws.bufferedAmount:0;return c.dataChannel?c.dataChannel.bufferedAmount:0;}catch(e){return 0;}}
 function netSnapshot(){
  const all=[...M.O,...M.D],ix=f=>f?all.indexOf(f):-1,now=performance.now();
@@ -7241,6 +7266,45 @@ function netSnapshot(){
  let oh=null;try{oh=M.ov?(M.ov.gh?M.ov.gh():M.ov.html?M.ov.html():null):null;}catch(e){}if(oh!==NET.lov){NET.lov=oh;s.ov=oh;}
  if(NET.ev.length)s.ev=NET.ev.splice(0);
  return s;}
+
+/* ---------- SPECTATING: watch someone's online game by its 4-letter code ----------
+   The host answers a watcher on the relay with the game's start (teams, weather, the two rosters) and from then on
+   also publishes every snapshot it sends its opponent to <code>/spec. The watcher draws it exactly like the
+   opponent's screen would, but can't touch anything. Watchers never slow the game down: the host sends one
+   shared stream however many people watch, and stops once nobody has said hello for 20 s. */
+function specHello(sock,code,k){if(NET.role!=='host'||NET.code!==code)return;NET.specs=NET.specs||{};const now=Date.now(),first=!NET.specs[k];NET.specs[k]={t:now,sock};
+ for(const id in NET.specs)if(now-NET.specs[id].t>20000)delete NET.specs[id];
+ if(first||!NET.specSent||!NET.specSent[k]){if(NET.stage==='game'&&NET.startMsg){NET.specSent=NET.specSent||{};NET.specSent[k]=1;
+  sock.pub(NET_RT+code+'/sp/'+k,JSON.stringify({o:Object.assign({},NET.startMsg,{spec:1})}));NET.specRN=3;}
+  else sock.pub(NET_RT+code+'/sp/'+k,JSON.stringify({o:{t:'swait'}}));}}
+function specPub(o,force){if(NET.role!=='host'||!NET.specs)return;const now=Date.now(),socks=new Set();
+ for(const id in NET.specs){if(now-NET.specs[id].t>20000){delete NET.specs[id];if(NET.specSent)delete NET.specSent[id];continue;}socks.add(NET.specs[id].sock);}
+ if(!socks.size)return;
+ if(o.t==='s'&&!o.R&&(NET.specRN>0||now-(NET.specRT||0)>1000)){NET.specRN=Math.max(0,(NET.specRN||0)-1);NET.specRT=now;const all=[...M.O,...M.D];o=Object.assign({},o,{R:all.map(f=>[f.pl?f.pl.id:-1,f.side,f.role,f.key||'',f.lk||null,f.star?1:0])});}
+ const txt=JSON.stringify({o});for(const sk of socks)try{if(sk.up)sk.pub(NET_RT+NET.code+'/spec',txt);}catch(e){}}
+ACT.netWatch=(d,code1)=>{const code=(typeof code1==='string'?code1:d&&d.c)||String(($('#netCode')||{}).value||'').trim().toUpperCase().replace(/[^A-Z]/g,'');
+ if(code.length!==4){NET.err='TYPE THE 4-LETTER CODE';return render();}
+ if(OL&&L&&L.seats&&!window.__franchL)window.__franchL=L;   /* back to the league after watching */
+ netReset();const tok='w'+Math.random().toString(36).slice(2,9);
+ Object.assign(NET,{role:'spec',code,tok,stage:'joining',status:'FINDING THE GAME...',err:'',on:true,connOpen:true,conn:{send(){},close(){},mode:'spec'},specWon:-1,lastRx:performance.now()});
+ NET.rsocks=NET_BROKERS.map((url,bi)=>{const sk=mqttSock(url,(topic,txt)=>{if(NET.role!=='spec'||NET.code!==code||NET.tok!==tok)return;let m;try{m=JSON.parse(txt);}catch(e){return;}const o=m&&m.o;if(!o)return;
+   if(NET.specWon>=0&&NET.specWon!==bi)return;
+   if(o.t==='swait'){NET.status='THAT GAME HASN\'T STARTED YET · WAITING...';if(UI.scr==='online')render();return;}
+   NET.lastRx=performance.now();
+   if(o.t==='start'&&o.spec){if(NET.stage==='game')return;NET.specWon=bi;go('game');netGuestStart(o);toast('SPECTATING · '+abbr(o.guest)+' VS '+abbr(o.g.h===o.guest?o.g.a:o.g.h));return;}
+   if(NET.stage!=='game')return;
+   if(o.t==='end'||o.t==='bye'){specStop(o.t==='end'?(o.last||'FINAL'):'THE HOST LEFT THE GAME');return;}
+   if(o.t==='s')netGuestMsg(o);},
+  ()=>{sk.sub(NET_RT+code+'/sp/'+tok);sk.sub(NET_RT+code+'/spec');sk.pub(NET_RT+code+'/h',JSON.stringify({k:tok,spec:1}));},
+  ()=>{});return sk;});
+ clearInterval(NET.specIv);NET.specIv=setInterval(()=>{if(NET.role!=='spec'||NET.tok!==tok){clearInterval(NET.specIv);return;}
+  (NET.rsocks||[]).forEach((sk,bi)=>{if(sk.up&&(NET.specWon<0||NET.specWon===bi))sk.pub(NET_RT+code+'/h',JSON.stringify({k:tok,spec:1}));});
+  if(NET.stage==='joining'&&performance.now()-NET.lastRx>25000)specStop('NO GAME FOUND WITH THAT CODE');},5000);
+ go('online');};
+function specStop(msg){clearInterval(NET.specIv);document.body.classList.remove('spec');{const v=document.getElementById('specov');if(v)v.remove();}const inGame=UI.scr==='game'&&M;netReset();Object.assign(NET,{role:null,on:false,connOpen:false,conn:null,stage:'menu',specWon:-1});
+ if(inGame){M=null;L=window.__franchL||null;window.__franchL=null;if(L)indexPlayers();}
+ NET.err=msg||'';if(L&&L.seats&&OL){go('olcoaches');if(msg)toast(msg);}else go('online');}
+ACT.specLeave=()=>specStop('');
 /* ---------- guest side ---------- */
 function netGuestMsg(m){
  if(m.t==='brk'&&NET.stage==='game'){netDrop();return;}
@@ -7260,7 +7324,7 @@ function netGuestKeep(){const k=M.sc.join('-')+'|'+M.qtr,now=performance.now();i
  const m={sc:M.sc.slice(),qtr:M.qtr,clock:M.clock};
  if(M.olg&&OLG)olgPut({room:OLG.code,role:'guest',m});else{const c=netsGet();if(c&&c.role==='guest'&&c.code===NET.code){c.m=m;netsPut(c);}}}
 function netGuestStart(m){
- if(m.olg&&OLG){if(!OLG.live)OLG.L=L;OLG.live=true;olgPut({room:OLG.code,league:OL&&OL.code,role:'guest',tok:NET.tok,team:m.guest});}
+ if(m.olg&&OLG&&NET.role!=='spec'){if(!OLG.live)OLG.L=L;OLG.live=true;olgPut({room:OLG.code,league:OL&&OL.code,role:'guest',tok:NET.tok,team:m.guest});}
  L=m.L;L.user=m.guest;L.custom=null;L.net=false;L.exh=true;indexPlayers();cfbSync(null);
  if(m.olg){const S=L.seats&&L.seats[m.guest];if(S){L.custom=S.custom||null;L.oc=S.oc;L.dc=S.dc;L.style=S.style;}}
  applyCustomTeam();try{FIELD_CACHE.clear();}catch(e){}   /* every coach's team name and colours from the host's league copy */
@@ -7269,6 +7333,8 @@ function netGuestStart(m){
  M.netGuest=true;if(m.olg)M.olg=true;M.night=m.night;M.wx=m.wx;M.wind=m.wind;M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  M.fieldCvs=[];M.ov=null;M.phase='dead';M.dir=1;M.udir=1;
  NET.gdir=dirPref();
+ if(NET.role==='spec'){M.spec=true;document.body.classList.add('spec');let v=document.getElementById('specov');if(!v){v=document.createElement('div');v.id='specov';document.getElementById('stage').appendChild(v);}
+  v.innerHTML=`<div class="specbar"><span class="blink" style="color:#ff4a3d">●</span> SPECTATING · ${esc(T(m.guest).name.toUpperCase())} VS ${esc(T(m.g.h===m.guest?m.g.a:m.g.h).name.toUpperCase())}<button class="bt" style="padding:3px 8px 2px" data-a="specLeave">LEAVE</button></div>`;return;}
  if(!m.olg){netsStart(m);netsPut({role:'guest',code:NET.code,tok:NET.tok,lob:NET.lob});}}
 function netPuppets(R){const O=[],D=[],all=[];for(const r of R){const f={pl:r[0]>=0?P(r[0]):null,side:r[1],role:r[2],key:r[3],lk:r[4]?Object.assign({},r[4]):null,star:r[0]>=0&&!!P(r[0])&&P(r[0]).team===L.user,x:0,y:0,vx:0,vy:0,face:1,t:0,route:null,rlen:0,man:null,zone:null,blitz:false};(f.side==='O'?O:D).push(f);all.push(f);}return{O,D,all};}
 /* one snapshot's one-off things (popups, sounds, the popup window), applied once when its moment comes */
@@ -7321,8 +7387,9 @@ ACT.netAns=d=>{if(!netGuest())return;netSend({t:'ans',i:+d.i,q:+d.q});sfx('tick'
 function netGuestFrame(dt){
  const now=performance.now();
  /* connection health: heartbeat out, and if nothing comes back for 5 s, reconnect */
+ if(NET.role==='spec'){if(now-NET.lastRx>12000){specStop('THE GAME ENDED OR THE HOST LEFT');return;}}else{
  NET.hbT+=dt;if(NET.hbT>1){NET.hbT=0;netSend({t:'hb',ts:Math.round(performance.now()),rtt:Math.round(NET.rtt),dl:Math.round(netDelay())});}
- if(NET.connOpen&&now-NET.lastRx>5000)netDrop();
+ if(NET.connOpen&&now-NET.lastRx>5000)netDrop();}
  if(NET.rc){if(now>=NET.rc.next)netGuestRetry();if(now-NET.rc.t0>120000&&NET.rc.slow!==1){NET.rc.slow=1;}if(NET.rc.slow&&NET.rc.next-now<8000)NET.rc.next=now+8000;}
  NET.stT=(NET.stT||0)+dt;if(NET.stT>10){NET.stT=0;netsTouch();}
  netApply(dt);
@@ -7805,10 +7872,13 @@ function olSetupDraft(founding){
  const n=(founding?40:28)+(H.length-1)*(founding?5:3)+extra*2,pool=founding?[]:draftPoolOf(n);if(founding)for(let i=0;i<n;i++){const p=genProspect();addPlayer(p);pool.push(p.id);}
  const po=L.po,key=t=>{if(!po)return tpct(L.teams[t]);if(po.champ===t)return 1000;if(po.runner===t)return 900;if(inPlayoffs(t))return 100+(po.elim[t]||0)*100+tpct(L.teams[t])*10;return tpct(L.teams[t])*10;};
  const ids=L.teams.map(t=>t.id).sort((a,b)=>key(a)-key(b)),slots={},rd={};
- for(const t of H){slots[t]=founding?ri(6,20):ids.indexOf(t);rd[t]=founding?[1,1,3]:((seatOf(t)||{}).picks||[1,1,1]).slice();}
- if(!founding){olEach(()=>{L.picks=[1,1,1];});L.aiPicks={};}
- const ord=H.slice().sort((a,b)=>slots[a]-slots[b]),q=[];
- for(let r=0;r<3;r++){let done=0;for(const t of ord){const k=Math.round(slots[t]/31*5);if(k>done){q.push({ai:k-done,r});done=k;}if(rd[t][r]>0)q.push({t,n:rd[t][r],r});}q.push({ai:Math.max(1,6-done),r});}
+ const psl={};for(const t of H){slots[t]=founding?ri(6,20):ids.indexOf(t);rd[t]=founding?[1,1,3]:((seatOf(t)||{}).picks||[1,1,1]).slice();psl[t]=founding?rd[t].map(n=>Array(n).fill(slots[t])):pkSlots(t,rd[t],ids);}
+ if(!founding){olEach(()=>{L.picks=[1,1,1];});L.aiPicks={};L.pko={};}
+ const q=[];
+ /* every pick sits at its original team's spot, so a traded-for pick is used where that team would have picked */
+ for(let r=0;r<3;r++){let done=0;const it=[];for(const t of H)for(const sl of psl[t][r])it.push({t,sl});it.sort((a,b)=>a.sl-b.sl);
+  for(const x of it){const k=slK(x.sl);if(k>done){q.push({ai:k-done,r});done=k;}const lst=q[q.length-1];if(lst&&lst.t===x.t&&lst.r===r)lst.n++;else q.push({t:x.t,n:1,r});}
+  q.push({ai:Math.max(1,6-done),r});}
  L.draft={founding,pool,rounds:[0,0,0],round:0,left:0,slot:0,log:[],done:false,q,qi:0,slots,rd,cur:null};
  olDraftRun();}
 function olDraftRun(){const D=L.draft;if(!D||!D.q)return;
@@ -7974,8 +8044,9 @@ SCR.olcoaches=()=>{if(!olLive())return SCR.olmenu();const H=humans(),host=L.onli
  const rows=H.map(t=>{const on=(OL.on||[]).includes(t)||t===L.user,R=L.teams[t],w=W.filter(x=>x.t===t);
   const force=host&&t!==L.user&&w.length?w.slice(0,1).map(x=>`<button class="bt" style="padding:3px 6px 2px" data-a="olForceQ" data-k="${x.k}" data-t="${t}">${x.k==='sim'?'SIM GAME':x.k==='pick'?'AUTO PICK':'AUTO FINISH'}</button>`).join(''):'';
   const kick=host&&t!==L.user?`<button class="bt r" style="padding:3px 6px 2px" data-a="olKickQ" data-t="${t}">REMOVE</button>`:'';
+  const wg=t!==L.user&&w.find(x=>x.g&&x.g.hs==null&&olH2H(x.g)&&x.g.h===t&&x.g.a!==L.user&&x.g.h!==L.user),watch=wg?`<button class="bt" style="padding:3px 6px 2px" data-a="netWatch" data-c="${olGameCode(wg.g)}">WATCH</button>`:'';
   const rest=host&&w.some(x=>x.g&&x.g.hs==null&&!x.blocked&&olH2H(x.g))?`<button class="bt" style="padding:3px 6px 2px" data-a="olSimRestQ" data-t="${t}">SIM REST</button>`:'';
-  return`<tr><td class="${on?'grt':'dim'}">●</td><td>${esc(abbr(t))}</td><td>${esc((seatOf(t)||{}).coach||'')}${t===L.online.host?' <span class="yl">HOST</span>':''}</td><td class="c">${R.w}-${R.l}${R.t?'-'+R.t:''}</td><td class="s7">${w.length?w.map(x=>esc(x.what)).join(' · '):'<span class="dim">DONE</span>'}</td><td class="r" style="white-space:nowrap">${rest}${force}${kick}</td></tr>`;}).join('');
+  return`<tr><td class="${on?'grt':'dim'}">●</td><td>${esc(abbr(t))}</td><td>${esc((seatOf(t)||{}).coach||'')}${t===L.online.host?' <span class="yl">HOST</span>':''}</td><td class="c">${R.w}-${R.l}${R.t?'-'+R.t:''}</td><td class="s7">${w.length?w.map(x=>esc(x.what)).join(' · '):'<span class="dim">DONE</span>'}</td><td class="r" style="white-space:nowrap">${watch}${rest}${force}${kick}</td></tr>`;}).join('');
  return`<div class="screen">
  <div class="row"><button class="bt ico" data-a="olBack">${ICON.back}</button><div class="grow">${ttl('LEAGUE '+L.online.code)}</div><div style="width:32px"></div></div>
  <div class="s7 yl" style="text-align:center">${olSettingsLine()} · ${H.length}/${L.online.max} COACHES</div>
@@ -8133,6 +8204,7 @@ function olTradeDo(o){const G=o.give.map(P),R=o.get.map(P);
  for(const p of G){p.team=o.to;p.bench=false;p.bk=false;p.mor=clamp(p.mor-5,0,100);p.yrs=Math.max(1,p.yrs);}
  for(const p of R){p.team=o.from;p.bench=false;p.bk=false;p.mor=clamp(p.mor-5,0,100);p.yrs=Math.max(1,p.yrs);}
  bkAuto(o.from);bkAuto(o.to);
+ pkMoveAll(o.from,o.to,o.pk);pkMoveAll(o.to,o.from,o.gpk);
  olAs(o.from,()=>{o.pk.forEach((n,i)=>{L.picks[i]-=n;});o.gpk.forEach((n,i)=>{L.picks[i]+=n;});});
  olAs(o.to,()=>{o.gpk.forEach((n,i)=>{L.picks[i]-=n;});o.pk.forEach((n,i)=>{L.picks[i]+=n;});});
  if(inDraft()&&((o.dk||[]).some(x=>x)||(o.gdk||[]).some(x=>x)))dkSwap(o.from,o.to,o.dk,o.gdk);
@@ -8961,19 +9033,20 @@ async function banCheck(){
 banCheck();setInterval(()=>{try{if(L&&banName(L.coach))banNow();for(const el of document.querySelectorAll('input'))if(el.value&&banName(el.value.replace(/_/g,' '))&&/YOUR.*NAME|USER/i.test(el.placeholder||''))banNow();if(UI.sub&&banName(UI.sub.coach))banNow();}catch(e){}},1500);
 
 /* ===== LIQUID GLASS theme switch. Only the owner sees it: his account name, or the device holding his ZVTADK seat. ===== */
-const LQ_ACCTS=['troy'],LQ_TKH={ZVTADK:'88b18b042080127ea6283562'};
+const LQ_ACCTS=['x_v'],LQ_TKH={};   /* themes: only the owner's account (x_v) */
 var LQ={ok:false,scr:null,modal:false,tap:null,font:false};
 function themeGet(){try{const t=localStorage.getItem('rf_theme');if(t)return t;return localStorage.getItem('rf_lq')==='1'?'lq':'classic';}catch(e){return 'classic';}}
 function themeSet(t){try{localStorage.setItem('rf_theme',t);localStorage.removeItem('rf_lq');}catch(e){}}
 function lqOn(){return LQ.ok&&themeGet()==='lq';}
+function thPick(){return LQ.ok?themeGet():'classic';}
 /* SUPER BOWL look: by itself in the playoffs, only when the player is on CLASSIC (a theme they picked always wins) */
-function sbwOn(){return themeGet()==='classic'&&!!(L&&L.phase==='PO'&&UI.scr!=='title'&&UI.scr!=='slots');}
+function sbwOn(){return false&&!!(L&&L.phase==='PO'&&UI.scr!=='title'&&UI.scr!=='slots');}
 function sbcBuild(){if(document.getElementById('sbc'))return;const st=document.getElementById('stage'),d=document.createElement('div');d.id='sbc';let h='';
  const C=['#f3d27a','#d4af37','#ffffff','#c0c0c0','#b8860b'];for(let i=0;i<34;i++){const dur=4+(i*37)%5,del=-((i*53)%9),w=3+(i%3),c=C[i%C.length];
   h+=`<i style="left:${(i*41+7)%640}px;width:${w}px;height:${w*2}px;background:${c};animation-duration:${dur}s;animation-delay:${del}s;opacity:${.55+(i%4)*.12}"></i>`;}
  d.innerHTML=h;st.appendChild(d);}
 function lqKey(el){const d=el.dataset||{};return [d.a,d.k,d.v,d.s,d.t,d.i,d.n].join('|');}
-function lqApply(){const on=lqOn(),sb=sbwOn(),pt=!on&&!sb&&themeGet()==='prime',md=!on&&!sb&&themeGet()==='mdn';document.body.classList.toggle('mdn',md);
+function lqApply(){const on=lqOn(),sb=sbwOn(),pt=!on&&!sb&&thPick()==='prime',md=!on&&!sb&&thPick()==='mdn';document.body.classList.toggle('mdn',md);
  if(md&&!LQ.font3){LQ.font3=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,700&display=swap';document.head.appendChild(l);}document.body.classList.toggle('lq',on);document.body.classList.toggle('thsb',sb);document.body.classList.toggle('pt',pt);
  if(sb)sbcBuild();
  if((pt||sb)&&!LQ.font2){LQ.font2=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap';document.head.appendChild(l);}
@@ -8987,11 +9060,11 @@ function lqAfter(ui){if(!window.LQ)return;lqApply();const B=document.body.classL
  LQ.scr=UI.scr;LQ.modal=!!UI.modal;}
 async function lqCheck(){let ok=false;try{const a=syncGet();ok=!!(a&&a.acct&&LQ_ACCTS.includes(String(a.u||'').toLowerCase()));}catch(e){}
  if(!ok)for(const x of olMine()){const h=LQ_TKH[x.code];if(!h||!x.tk)continue;try{if(await olHash(x.code+':'+x.tk)===h){ok=true;break;}}catch(e){}}
- const was=LQ.ok;LQ.ok=ok;lqApply();if(was!==ok&&UI.scr!=='game')render();}
+ const was=LQ.ok;LQ.ok=ok;if(!ok&&themeGet()!=='classic')themeSet('classic');lqApply();if(was!==ok&&UI.scr!=='game')render();}
 ACT.lqTheme=d=>{themeSet(d&&d.v==='1'?'lq':'classic');lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
 ACT.theme=d=>{themeSet(d.v);lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
-function lqRow(){const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq','mdn'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
- return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${LQ.ok?c('lq','LIQUID GLASS'):''}<span class="s7 dim">CLASSIC GETS THE SUPER BOWL LOOK IN THE PLAYOFFS</span></div>`;}
+function lqRow(){if(!LQ.ok)return '';const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq','mdn'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
+ return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${c('lq','LIQUID GLASS')}<span class="s7 dim">ONLY YOU CAN SEE THIS</span></div>`;}
 lqCheck();setInterval(lqCheck,30000);
 
 olmBoot();
