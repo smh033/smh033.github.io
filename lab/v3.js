@@ -115,6 +115,7 @@ function shadeC(c,k){const n=parseInt(String(c).slice(1),16);if(isNaN(n))return 
 function spr3(lk,view,fr,fl,num){
  const key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,view,fr,fl.ball?1:0,fl.throw?1:0,fl.down?1:0,fl.glow?1:0,num].join('|');
  let out=S3.get(key);if(out)return out;
+ if(fl.down)return spr3Down(lk,num,fl,key);
  /* athletic proportions: ~43 px tall, small helmet (~1/6 of the height), wide pads, long legs */
  const W=26,H=48,a=canvas(W,H),g=a.getContext('2d'),P=(x,y,w,h,c)=>{if(w>0&&h>0){g.fillStyle=c;g.fillRect(x,y,w,h);}};
  const tone=c=>[shadeC(c,0.22),c,shadeC(c,-0.22),shadeC(c,-0.4)];
@@ -166,12 +167,31 @@ function spr3(lk,view,fr,fl,num){
   else{P(12,1+y,2,8,St);}
   P(11,9+y,4,1,Sk[2]);
  }
- if(fl.down){const r=canvas(W,H),gr=r.getContext('2d');gr.translate(W/2,H-4);gr.rotate(Math.PI/2);gr.drawImage(a,-W/2,-H+6);g.clearRect(0,0,W,H);g.drawImage(r,0,-2);}
- out=canvas(W,H);const go=out.getContext('2d');
+ return finish3(a,W,H,fl,key);}
+/* outline + cache */
+function finish3(a,W,H,fl,key){
+ const out=canvas(W,H),go=out.getContext('2d');
  const sil=col=>{const b=canvas(W,H),gb=b.getContext('2d');gb.drawImage(a,0,0);gb.globalCompositeOperation='source-in';gb.fillStyle=col;gb.fillRect(0,0,W,H);return b;};
  if(fl.glow){const yv=sil('#ffe600');for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2]])go.drawImage(yv,dx,dy);}
  const bk=sil('#0a0a12');for(const[dx,dy]of[[-1,0],[1,0],[0,-1],[0,1]])go.drawImage(bk,dx,dy);go.drawImage(a,0,0);
  if(S3.size>4000)S3.clear();S3.set(key,out);return out;}
+/* a tackled player flat on the turf, head to the right (mirrored when he went down the other way) */
+function spr3Down(lk,num,fl,key){
+ const W=40,H=48,a=canvas(W,H),g=a.getContext('2d'),P=(x,y,w,h,c)=>{if(w>0&&h>0){g.fillStyle=c;g.fillRect(x,y,w,h);}};
+ const tone=c=>[shadeC(c,0.22),c,shadeC(c,-0.22),shadeC(c,-0.4)];
+ const J=tone(lk.jersey),Hm=tone(lk.helm),Pn=tone(lk.pants),So=tone(lk.socks),Sk=tone(lk.skin||'#c58c5c'),Mk=lk.mask||'#bdbdbd';
+ const y0=34;   /* lying on rows 34-41, the ground is row 42 */
+ P(2,y0+3,3,3,'#121218');P(1,y0+5,4,2,'#121218');                    // cleats
+ P(5,y0+2,6,4,So[1]);P(5,y0+2,6,1,So[0]);P(7,y0+2,1,4,lk.trim);         // socks
+ P(11,y0+1,8,6,Pn[1]);P(11,y0+1,8,1,Pn[0]);P(11,y0+6,8,1,Pn[2]);P(11,y0+3,8,1,lk.trim);   // pants with stripe
+ P(19,y0+1,2,6,'#2a2a32');                                             // belt
+ P(21,y0,10,7,J[1]);P(21,y0,10,1,J[0]);P(21,y0+6,10,1,J[2]);P(28,y0-1,4,3,J[1]);   // jersey + pad
+ {const n=String(Math.max(0,num|0)%100);let x=23;for(const ch of n){const d=DIG[+ch];for(let i=0;i<15;i++)if(d[i]==='1')P(x+i%3,y0+1+(i/3|0),1,1,lk.trim);x+=4;}}
+ P(22,y0+7,7,2,Sk[1]);P(29,y0+7,2,2,'#1e1e24');                         // arm stretched along the turf
+ P(32,y0-1,6,7,Hm[1]);P(33,y0-2,4,1,Hm[1]);P(32,y0-1,2,2,Hm[0]);P(32,y0+5,6,1,Hm[2]);P(34,y0-2,1,8,lk.stripe);  // helmet
+ P(37,y0+1,2,4,Mk);P(38,y0+1,1,4,Mk);
+ return finish3(a,W,H,fl,key);}
+
 
 /* ---------------- setup ---------------- */
 function init(){
@@ -227,7 +247,8 @@ function draw3D(){
   /* which way is he facing, seen from the camera? */
   let fx=f.vx||0,fz=f.vy||0;const sp=Math.hypot(fx,fz);if(sp<1.2){fx=(f.side==='O'?M.dir:-M.dir);fz=0;}else{fx/=sp;fz/=sp;}
   const along=fx*cf.x+fz*cf.z,acr=fx*camRight.x+fz*camRight.z;
-  const view=along>0.45?'back':along<-0.45?'front':'side',flip=view==='side'&&acr<0;
+  const isDown=!!(o.down||o.dive);if(isDown&&f.dn3==null)f.dn3=acr<0?-1:1;if(!isDown)f.dn3=null;
+  const view=along>0.45?'back':along<-0.45?'front':'side',flip=isDown?f.dn3<0:view==='side'&&acr<0;
   const fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1,num=f.pl&&f.pl.num!=null?f.pl.num:0;
   const c=spr3(st.lk,view,fr,{ball:o.ball,throw:o.throw,down:o.down||o.dive,glow:false},num),t=texFor(c);if(s.material.map!==t){s.material.map=t;s.material.needsUpdate=true;}
   s.scale.set((flip?-1:1)*c.width*0.052,c.height*0.052,1);s.position.set(f.x,(st.jy||0)/14,f.y);s.visible=true;
@@ -250,14 +271,126 @@ function draw3D(){
  overMesh.position.set(M.cam,0.025,26.665);overMesh.scale.x=M.dir<0?-1:1;
  R.render(scene,camera);}
 
+
+/* ---------------- kicks in 3D ----------------
+   Same kick as the classic view (k.d yards from the hold to the posts, the ball's path from k.hAt / drift),
+   but seen from behind the holder like a TV kick camera, with both lines set up at the line of scrimmage. */
+function lineup(list){let i=0;for(const it of list){const s=spriteFor(i++),c=it.c,t=texFor(c);if(s.material.map!==t){s.material.map=t;s.material.needsUpdate=true;}
+  s.scale.set((it.flip?-1:1)*c.width*0.052,c.height*0.052,1);s.position.set(it.x,it.h||0,it.z);s.visible=true;s.userData.sh.position.set(it.x,0.015,it.z);s.userData.sh.visible=true;}
+ for(;i<pool.length;i++){pool[i].visible=false;pool[i].userData.sh.visible=false;}}
+function kickWorld(){const k=M.kick,d=M.dir,goal=d>0?120:0,bx=goal-d*k.d;return{k,d,goal,bx,los:bx+d*7};}
+function draw3DKick(){
+ const now=performance.now(),dt=Math.min(0.1,(now-(V3.lt||now))/1000);V3.lt=now;
+ const tk=L.user+'|'+M.op+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(L.user,M.op);}
+ const W=kickWorld(),k=W.k,d=W.d,mid=26.665;
+ const own=netHost()?!k.guest:netGuest()?!!k.mine:true,kt=own?L.user:M.op,ku=own?M.uU:M.uO,dt2=own?M.op:L.user,du=own?M.uO:M.uU;
+ const lkK=lookFor(k.K,kt,ku),lkH=lookFor(((own?M.dep:M.odep)||M.dep).QB[0],kt,ku),lkO=lookFor(null,kt,ku),lkD=lookFor(null,dt2,du);
+ const fly=k.st==='fly',ft=fly?k.t:0,rush=Math.min(1.6,ft*2.2);
+ const L1=[];
+ for(let i=-4;i<=4;i++){const t=Math.abs(i);L1.push({c:spr3(lkO,'back',-1,{},50+t*7%40),x:W.los-d*0.6-d*(t>=4?0.6:0),z:mid+i*1.05});}
+ for(let i=-4;i<=4;i++){if(i===0)continue;const c=spr3(lkD,'front',fly?Math.floor(ft*9)%4:-1,{},90+i);L1.push({c,x:W.los+d*(0.8-rush*(Math.abs(i)<3?0.4:0.9)),z:mid+i*1.1+Math.sign(i)*rush*0.4});}
+ L1.push({c:spr3(lkD,'front',-1,{},40),x:W.los+d*3.2,z:mid-2});L1.push({c:spr3(lkD,'front',-1,{},41),x:W.los+d*3.2,z:mid+2});
+ /* holder kneeling (a short sprite: the lying pose would read wrong) and the kicker */
+ L1.push({c:spr3Down(lkH,(k.K&&0)||12,{},'hold|'+lkH.key),x:W.bx-d*0.4,z:mid+0.9,flip:d<0});
+ const kr=fly?Math.min(1,k.t/0.25):0;L1.push({c:spr3(lkK,'back',fly&&k.t<0.25?Math.floor(k.t*30)%4:-1,{},3),x:W.bx-d*(2.6-kr*2.2),z:mid-1.4+kr*1.2});
+ lineup(L1);
+ /* ball: on the tee/hold, then in flight */
+ let bp=null;
+ if(k.st==='aim')bp={x:W.bx,y:0.3,z:mid};
+ else if(fly){const u=clamp(k.t/1.4,0,1),z=u*k.zEnd,rz=z/k.d,lat=(k.latG-k.drift)*rz+k.drift*rz*rz;let h=k.hAt(z);if(k.t>1.4)h=Math.max(0,h-(k.t-1.4)*9);bp={x:W.bx+d*z,y:Math.max(0.2,h),z:mid+lat*d};}
+ if(bp){const A=ballArt(curBall()),t=texFor(Math.floor(performance.now()/60)%2?A.side:A.end);if(ballSpr.material.map!==t){ballSpr.material.map=t;ballSpr.material.needsUpdate=true;}ballSpr.position.set(bp.x,bp.y,bp.z);ballSpr.visible=true;}else ballSpr.visible=false;
+ losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;
+ /* camera: low behind the holder; follows the ball up once it's kicked */
+ const want={x:W.bx-d*(fly?13-Math.min(6,k.t*5):13.5),y:fly?3.6+Math.min(3,k.t*2):3.4,z:mid+1.2},look={x:W.goal,y:fly&&bp?Math.min(6,bp.y*0.6+2):4.2,z:mid};
+ if(!V3.kcam||V3.kcam.id!==k){V3.kcam={id:k,c:Object.assign({},want),l:Object.assign({},look)};}
+ const K=Math.min(1,dt*4);for(const a of['x','y','z']){V3.kcam.c[a]+=(want[a]-V3.kcam.c[a])*K;V3.kcam.l[a]+=(look[a]-V3.kcam.l[a])*K;}
+ camera.position.set(V3.kcam.c.x,V3.kcam.c.y,V3.kcam.c.z);camera.lookAt(V3.kcam.l.x,V3.kcam.l.y,V3.kcam.l.z);camera.updateMatrixWorld();camRight.setFromMatrixColumn(camera.matrixWorld,0);
+ V3.cam=null;R.render(scene,camera);overMesh.visible=true;
+ return {W,own};}
+/* the kick screen's controls (power bar, swipe line, aim line), on the flat canvas over the 3D view */
+function proj(x,y,z){tmp.set(x,y,z).project(camera);return{x:(tmp.x+1)/2*CW,y:(1-tmp.y)/2*CH};}
+function kickUI(info){const k=M.kick,own=info.own,W=info.W;
+ const kt=own?L.user:M.op;
+ if(k.st==='aim'&&!own&&(netHost()||netGuest())){const dots='.'.repeat(1+Math.floor(performance.now()/400)%3),bx=CW/2-120;rect(bx,138,240,34,'rgba(0,0,20,.72)');
+  ctext(abbr(kt)+' IS LINING UP THE KICK'+dots,CW/2,149,'#ffe94a','center',8);}
+ /* broadcast tag top-left: SPECIAL TEAMS / EXTRA POINT, wind */
+ rect(8,8,150,12,'#1d9a3a');ctext('SPECIAL TEAMS',12,11,'#fff','left',6);rect(8,20,180,16,'rgba(8,10,18,.88)');ctext(k.kind==='xp'?'EXTRA POINT':k.d+' YARD FIELD GOAL',14,25,'#fff','left',8);
+ {const p=proj(W.goal,10.3,26.665);rect(p.x-34,p.y-22,68,14,'rgba(8,10,18,.85)');const dir=M.wind>0?'→':M.wind<0?'←':'';ctext((dir?dir+' ':'')+Math.abs(M.wind)+' MPH',p.x,p.y-18,'#fff','center',6);}
+ const sw=k.sw;
+ if(k.st==='aim'&&own){
+  ctext(IS_MOBILE?'SWIPE UP TO KICK':'DRAG UP AND RELEASE TO KICK',CW/2,CH-138,'#fff');
+  /* horizontal broadcast-style power meter under the kicker */
+  const need=kickNeed(),mx=CW/2-110,my=CH-118,mw=220;rect(mx-2,my-2,mw+4,16,'#000');rect(mx,my,mw,12,'#1c2a5e');
+  const tX=v=>mx+clamp(v/1.4,0,1)*mw;rect(tX(1.05),my,tX(1.4)-tX(1.05),12,'rgba(229,72,77,.75)');
+  ctext('POWER',mx-6,my+3,'#ffe94a','right',6);
+  if(sw){const dx=sw.cx-sw.sx,dy=sw.cy-sw.sy,len=Math.hypot(dx,dy),pw=dy<0?clamp(len/170,0,1.4):0;rect(mx,my,tX(pw)-mx,12,pw>1.05?'#ff5c5c':pw>=need?'#38d27a':'#ffe94a');
+   cx.save();cx.setLineDash([4,4]);cx.strokeStyle='rgba(255,255,255,.7)';cx.lineWidth=2;cx.beginPath();cx.moveTo(sw.sx,sw.sy);cx.lineTo(sw.cx,sw.cy);cx.stroke();cx.restore();
+   if(dy<-10){const ang=clamp(Math.atan2(dx,-dy)*0.75,-0.45,0.45),a=proj(W.bx,0.3,26.665),b=proj(W.goal,5,26.665+k.d*Math.tan(ang)*W.d);cx.save();cx.setLineDash([2,5]);cx.strokeStyle='rgba(255,233,74,.95)';cx.lineWidth=2;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();cx.restore();}}
+  rect(tX(need)-1,my-4,3,20,'#fff');
+ }}
+
+/* ---------------- replays in 3D: a slow orbiting camera around the play ---------------- */
+function draw3DReplay(){
+ const now=performance.now(),dt=Math.min(0.1,(now-(V3.lt||now))/1000);V3.lt=now;
+ const Rc=M.rec,ft=clamp(M.rp.t*30,0,Rc.f.length-1),i=Math.floor(ft),u=ft-i,f0=Rc.f[i],f1=Rc.f[Math.min(i+1,Rc.f.length-1)],mix=(a,b)=>a+(b-a)*u;
+ const same=f0.ps.length===f1.ps.length,list=[];let cxs=0,czs=0;
+ for(let k=0;k<f0.ps.length;k++){const a=f0.ps[k],b=same?f1.ps[k]:a,x=mix(a.x,b.x),y=mix(a.y,b.y),o=u<0.5?a.o:b.o,lk=a.lk;
+  const vx=(b.x-a.x)*30,vy=(b.y-a.y)*30;list.push({x,y,vx,vy,o,lk,jy:mix(a.jy,b.jy),side:a.side});}
+ const bl=(a,b)=>a&&b?{x:mix(a.x,b.x),y:mix(a.y,b.y),z:mix(a.z,b.z)}:a,bp=bl(f0.b,f1.b)||bl(f0.lo,f1.lo);
+ /* follow the ball (or the middle of the action) and slowly circle it */
+ let tx,tz;if(bp){tx=bp.x;tz=bp.y;}else{for(const p of list){cxs+=p.x;czs+=p.y;}tx=cxs/Math.max(1,list.length);tz=czs/Math.max(1,list.length);}
+ if(!V3.rp||V3.rp.id!==Rc){V3.rp={id:Rc,tx,tz,a:Math.random()*Math.PI*2};}
+ V3.rp.tx+=(tx-V3.rp.tx)*Math.min(1,dt*3);V3.rp.tz+=(tz-V3.rp.tz)*Math.min(1,dt*3);V3.rp.a+=dt*0.25;
+ const rad=11,cp={x:V3.rp.tx+Math.cos(V3.rp.a)*rad,y:4.2,z:V3.rp.tz+Math.sin(V3.rp.a)*rad};
+ camera.position.set(cp.x,cp.y,cp.z);camera.lookAt(V3.rp.tx,1,V3.rp.tz);camera.updateMatrixWorld();camRight.setFromMatrixColumn(camera.matrixWorld,0);
+ const cf={x:V3.rp.tx-cp.x,z:V3.rp.tz-cp.z};{const n=Math.hypot(cf.x,cf.z)||1;cf.x/=n;cf.z/=n;}
+ const items=list.map(p=>{let fx=p.vx,fz=p.vy;const sp=Math.hypot(fx,fz);if(sp<1.2){fx=(p.o&&p.o.face)||1;fz=0;}else{fx/=sp;fz/=sp;}
+  const along=fx*cf.x+fz*cf.z,acr=fx*camRight.x+fz*camRight.z,dn=!!(p.o&&(p.o.down||p.o.dive));
+  const view=along>0.45?'back':along<-0.45?'front':'side',fr=p.o&&p.o.run&&!p.o.dive?Math.floor((p.o.t||0)*9)%4:-1;
+  const c=spr3(p.lk,view,fr,{ball:p.o&&p.o.ball,throw:p.o&&p.o.throw,down:dn},0);return{c,x:p.x,z:p.y,h:(p.jy||0)/14,flip:dn?acr<0:view==='side'&&acr<0};});
+ lineup(items);
+ if(bp){const A=ballArt(curBall()),t=texFor(Math.floor(M.rp.t*14)%2?A.side:A.end);if(ballSpr.material.map!==t){ballSpr.material.map=t;ballSpr.material.needsUpdate=true;}ballSpr.position.set(bp.x,0.25+(bp.z||0)*0.7,bp.y);ballSpr.visible=true;}else ballSpr.visible=false;
+ losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;
+ R.render(scene,camera);overMesh.visible=true;V3.cam=null;}
+function replayUI(){const by=44;rect(0,by,CW,24,'rgba(0,0,0,.82)');
+ if(Math.floor(M.tt*2)%2===0){cx.fillStyle='#e8423a';cx.beginPath();cx.arc(14,by+12,5,0,Math.PI*2);cx.fill();}
+ ctext('REPLAY',24,by+7,'#fff','left',10);ctext(M.rp.lab||'',CW/2,by+7,'#ffe94a','center',10);ctext(M.rp.fast?'FAST FORWARD >>':'TAP TO SPEED UP',CW-112,by+8,'#b7c8ff','right',7);}
+
+/* ---------------- broadcast scoreboard along the bottom ---------------- */
+function scoreboard(){let el=document.getElementById('v3sb');
+ if(!el){el=document.createElement('div');el.id='v3sb';document.getElementById('stage').appendChild(el);
+  const css=document.createElement('style');css.textContent=`
+  body.v3on #gtop{display:none!important}
+  #v3sb{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;pointer-events:none;display:none;font-family:"Press Start 2P",monospace;filter:drop-shadow(0 3px 0 rgba(0,0,0,.6))}
+  body.v3on #v3sb{display:block}
+  #v3sb .tab{position:absolute;left:50%;transform:translateX(-50%);bottom:100%;background:linear-gradient(#ffd23a,#e8a812);color:#111;font-size:6px;padding:3px 10px 2px;white-space:nowrap;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 100%,0 100%)}
+  #v3sb .row{display:flex;align-items:stretch;height:26px;border:1px solid rgba(255,255,255,.35);background:#0d1120}
+  #v3sb .tm{display:flex;align-items:center;gap:6px;padding:0 8px;min-width:96px;position:relative}
+  #v3sb .tm .ab{font-size:8px;color:#fff}
+  #v3sb .tm .to{position:absolute;left:8px;right:8px;bottom:3px;display:flex;gap:2px}#v3sb .tm .to i{flex:1;height:2px;background:rgba(255,255,255,.25)}#v3sb .tm .to i.on{background:#ffd23a}
+  #v3sb .tm .po{width:6px;height:4px;background:#8a4818;border:1px solid #000;border-radius:3px}
+  #v3sb .sc{font-size:12px;color:#ffd23a;min-width:34px;text-align:center;display:flex;align-items:center;justify-content:center;background:#151a2c}
+  #v3sb .mid{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px;background:#0a0d18;color:#fff;border-left:1px solid rgba(255,255,255,.15);border-right:1px solid rgba(255,255,255,.15)}
+  #v3sb .mid span{font-size:5px;color:#9fb0d8}#v3sb .mid b{font-size:9px}`;document.head.appendChild(css);}
+ const q=M.qtr<=4?['1ST','2ND','3RD','4TH'][M.qtr-1]:M.qtr===5?'OT':(M.qtr-4)+'OT';
+ const offense=!(M.ov&&M.ov.type==='drive'),ours=offense&&!M.def&&M.play!=='kickoff';
+ const dn=M.phase==='kick'&&M.kick?(M.kick.kind==='xp'?'EXTRA POINT':'FIELD GOAL')+' · '+abbr(M.dir===M.udir?L.user:M.op):(M.phase==='pre'||M.phase==='live'||M.phase==='dead')&&M.play!=='ret'?String(downTxt()).toUpperCase():'';
+ const tm=(t,sc,to,has,right)=>{const c=teamCol(t);const pips=`<span class="to">${[0,1,2].map(i=>`<i class="${i<to?'on':''}"></i>`).join('')}</span>`;
+  const blk=`<div class="tm" style="background:linear-gradient(${right?'270deg':'90deg'},${c.c1},${shadeC(c.c1,-0.35)})">${has&&right?'<i class="po"></i>':''}<span class="ab" style="color:${txtCol(c.c1,c.c2)}">${esc(abbr(t))}</span>${has&&!right?'<i class="po"></i>':''}${pips}</div>`;
+  const s=`<div class="sc">${sc}</div>`;return right?s+blk:blk+s;};
+ const html=`${dn?`<div class="tab">${esc(dn)}</div>`:''}<div class="row">${tm(L.user,M.sc[0],M.to,ours,false)}<div class="mid"><span>${q}</span><b>${clockTxt()}</b></div>${tm(M.op,M.sc[1],M.oto==null?3:M.oto,!ours&&offense,true)}</div>`;
+ if(el._h!==html){el.innerHTML=html;el._h=html;}}
+
 /* ---------------- hooking the game ---------------- */
 const draw2D=window.draw;
-function active(){return V3.on&&V3.ready&&M&&UI.scr==='game'&&M.phase!=='kick'&&M.phase!=='replay';}
+function active(){return V3.on&&V3.ready&&M&&UI.scr==='game'&&!M.prac&&!(M.phase==='kick'&&!M.kick)&&!(M.phase==='replay'&&!M.rec);}
 window.draw=function(){
- if(!active()){if(cv3)cv3.style.display='none';cv.style.background='';return draw2D();}
- cv3.style.display='block';
+ if(!active()){if(cv3)cv3.style.display='none';document.body.classList.remove('v3on');return draw2D();}
+ cv3.style.display='block';document.body.classList.add('v3on');scoreboard();
  hiRes();cx.imageSmoothingEnabled=false;LOGO_Q.length=0;HELM_Q.length=0;
  cx.setTransform(HIK,0,0,HIK,0,0);cx.clearRect(0,0,CW,CH);
+ if(M.phase==='kick'){const info=draw3DKick();kickUI(info);return;}
+ if(M.phase==='replay'){draw3DReplay();replayUI();return;}
  /* ground art first (copied into the 3D world)... */
  if(M.phase==='pre'&&!M.def)drawRoutes();
  if(M.phase==='pre'&&M.def&&!M.ov)drawDefArt();
@@ -275,7 +408,7 @@ function drawAimShadow(){const a=M.aim;if(!a||!M.qb)return;const ai=aimInfo(a);i
 /* taps: cast onto the grass and hand the game the spot in its own flat-view coordinates */
 const ray=new THREE.Raycaster(),plane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3(),nd=new THREE.Vector2();
 const cpos2D=window.cpos;
-window.cpos=function(e){const p=cpos2D(e);V3.raw={x:p.x,y:p.y};if(!active())return p;return toFlat(p.x,p.y);};
+window.cpos=function(e){const p=cpos2D(e);V3.raw={x:p.x,y:p.y};if(!active()||M.phase==='kick'||M.phase==='replay')return p;return toFlat(p.x,p.y);};
 function toFlat(sx,sy){nd.set(sx/CW*2-1,-(sy/CH*2-1));ray.setFromCamera(nd,camera);
  let ok=ray.ray.intersectPlane(plane,hit);
  if(!ok||hit.distanceTo(camera.position)>90){const d=ray.ray.direction.clone();d.y=Math.min(d.y,-0.05);ray.ray.direction.copy(d.normalize());ok=ray.ray.intersectPlane(plane,hit);if(!ok)return{x:CW/2,y:CH/2};}

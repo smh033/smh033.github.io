@@ -9066,7 +9066,7 @@ ACT.theme=d=>{themeSet(d.v);lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsH
 function lqRow(){if(!LQ.ok)return '';const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq','mdn'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
  return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${c('lq','LIQUID GLASS')}<span class="s7 dim">ONLY YOU CAN SEE THIS</span></div>`;}
 /* LAB: lab.html is a private test copy of the game (same code) that adds the broadcast camera. Owner only. */
-const LAB=/\/lab(\.html)?$/.test(location.pathname);
+const LAB=/\/lab(\.html)?$/.test(location.pathname)||/[?&]lab=1\b/.test(location.search);
 function labGate(){if(!LAB||LQ.labDone)return;LQ.labDone=true;
  if(!LQ.ok){document.body.innerHTML='<div style="position:fixed;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;text-align:center;font-family:\'Press Start 2P\',monospace;font-size:12px;line-height:2;padding:20px">PRIVATE TEST BUILD<br><a href="./" style="color:#ffe94a;font-size:10px">PLAY RETRO FOOTBALL</a></div>';window.onerror=()=>true;return;}
  document.title='Retro Football LAB';const add=(src,cb)=>{const e=document.createElement('script');e.src=src+'?v='+Date.now();e.onload=cb;document.head.appendChild(e);};
