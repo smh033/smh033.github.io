@@ -245,7 +245,8 @@ function draw3D(){
  const cf={x:V3.look.x-V3.cam.x,z:V3.look.z-V3.cam.z};{const n=Math.hypot(cf.x,cf.z)||1;cf.x/=n;cf.z/=n;}
  for(const f of all){const st=plState(f,holder),s=spriteFor(i++),o=st.o;
   /* which way is he facing, seen from the camera? */
-  let fx=f.vx||0,fz=f.vy||0;const sp=Math.hypot(fx,fz);if(sp<1.2){fx=(f.side==='O'?M.dir:-M.dir);fz=0;}else{fx/=sp;fz/=sp;}
+  /* before/after the play everyone faces the other team; during it, the way he's running */
+  let fx=M.phase==='live'?f.vx||0:0,fz=M.phase==='live'?f.vy||0:0;const sp=Math.hypot(fx,fz);if(sp<1.2){fx=(f.side==='O'?M.dir:-M.dir);fz=0;}else{fx/=sp;fz/=sp;}
   const along=fx*cf.x+fz*cf.z,acr=fx*camRight.x+fz*camRight.z;
   const isDown=!!(o.down||o.dive);if(isDown&&f.dn3==null)f.dn3=acr<0?-1:1;if(!isDown)f.dn3=null;
   const view=along>0.45?'back':along<-0.45?'front':'side',flip=isDown?f.dn3<0:view==='side'&&acr<0;
@@ -314,13 +315,13 @@ function kickUI(info){const k=M.kick,own=info.own,W=info.W;
  if(k.st==='aim'&&!own&&(netHost()||netGuest())){const dots='.'.repeat(1+Math.floor(performance.now()/400)%3),bx=CW/2-120;rect(bx,138,240,34,'rgba(0,0,20,.72)');
   ctext(abbr(kt)+' IS LINING UP THE KICK'+dots,CW/2,149,'#ffe94a','center',8);}
  /* broadcast tag top-left: SPECIAL TEAMS / EXTRA POINT, wind */
- rect(8,8,150,12,'#1d9a3a');ctext('SPECIAL TEAMS',12,11,'#fff','left',6);rect(8,20,180,16,'rgba(8,10,18,.88)');ctext(k.kind==='xp'?'EXTRA POINT':k.d+' YARD FIELD GOAL',14,25,'#fff','left',8);
+ rect(8,58,150,12,'#1d9a3a');ctext('SPECIAL TEAMS',12,61,'#fff','left',6);rect(8,70,180,16,'rgba(8,10,18,.88)');ctext(k.kind==='xp'?'EXTRA POINT':k.d+' YARD FIELD GOAL',14,75,'#fff','left',8);
  {const p=proj(W.goal,10.3,26.665);rect(p.x-34,p.y-22,68,14,'rgba(8,10,18,.85)');const dir=M.wind>0?'→':M.wind<0?'←':'';ctext((dir?dir+' ':'')+Math.abs(M.wind)+' MPH',p.x,p.y-18,'#fff','center',6);}
  const sw=k.sw;
  if(k.st==='aim'&&own){
-  ctext(IS_MOBILE?'SWIPE UP TO KICK':'DRAG UP AND RELEASE TO KICK',CW/2,CH-138,'#fff');
+  ctext(IS_MOBILE?'SWIPE UP TO KICK':'DRAG UP AND RELEASE TO KICK',CW/2,CH-84,'#fff');
   /* horizontal broadcast-style power meter under the kicker */
-  const need=kickNeed(),mx=CW/2-110,my=CH-118,mw=220;rect(mx-2,my-2,mw+4,16,'#000');rect(mx,my,mw,12,'#1c2a5e');
+  const need=kickNeed(),mx=CW/2-110,my=CH-64,mw=220;rect(mx-2,my-2,mw+4,16,'#000');rect(mx,my,mw,12,'#1c2a5e');
   const tX=v=>mx+clamp(v/1.4,0,1)*mw;rect(tX(1.05),my,tX(1.4)-tX(1.05),12,'rgba(229,72,77,.75)');
   ctext('POWER',mx-6,my+3,'#ffe94a','right',6);
   if(sw){const dx=sw.cx-sw.sx,dy=sw.cy-sw.sy,len=Math.hypot(dx,dy),pw=dy<0?clamp(len/170,0,1.4):0;rect(mx,my,tX(pw)-mx,12,pw>1.05?'#ff5c5c':pw>=need?'#38d27a':'#ffe94a');
@@ -352,7 +353,7 @@ function draw3DReplay(){
  if(bp){const A=ballArt(curBall()),t=texFor(Math.floor(M.rp.t*14)%2?A.side:A.end);if(ballSpr.material.map!==t){ballSpr.material.map=t;ballSpr.material.needsUpdate=true;}ballSpr.position.set(bp.x,0.25+(bp.z||0)*0.7,bp.y);ballSpr.visible=true;}else ballSpr.visible=false;
  losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;
  R.render(scene,camera);overMesh.visible=true;V3.cam=null;}
-function replayUI(){const by=44;rect(0,by,CW,24,'rgba(0,0,0,.82)');
+function replayUI(){const by=58;rect(0,by,CW,24,'rgba(0,0,0,.82)');
  if(Math.floor(M.tt*2)%2===0){cx.fillStyle='#e8423a';cx.beginPath();cx.arc(14,by+12,5,0,Math.PI*2);cx.fill();}
  ctext('REPLAY',24,by+7,'#fff','left',10);ctext(M.rp.lab||'',CW/2,by+7,'#ffe94a','center',10);ctext(M.rp.fast?'FAST FORWARD >>':'TAP TO SPEED UP',CW-112,by+8,'#b7c8ff','right',7);}
 
@@ -361,9 +362,9 @@ function scoreboard(){let el=document.getElementById('v3sb');
  if(!el){el=document.createElement('div');el.id='v3sb';document.getElementById('stage').appendChild(el);
   const css=document.createElement('style');css.textContent=`
   body.v3on #gtop{display:none!important}
-  #v3sb{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:40;pointer-events:none;display:none;font-family:"Press Start 2P",monospace;filter:drop-shadow(0 3px 0 rgba(0,0,0,.6))}
+  #v3sb{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:40;pointer-events:none;display:none;font-family:"Press Start 2P",monospace;filter:drop-shadow(0 3px 0 rgba(0,0,0,.6))}
   body.v3on #v3sb{display:block}
-  #v3sb .tab{position:absolute;left:50%;transform:translateX(-50%);bottom:100%;background:linear-gradient(#ffd23a,#e8a812);color:#111;font-size:6px;padding:3px 10px 2px;white-space:nowrap;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 100%,0 100%)}
+  #v3sb .tab{position:absolute;left:50%;transform:translateX(-50%);top:100%;background:linear-gradient(#ffd23a,#e8a812);color:#111;font-size:6px;padding:3px 10px 2px;white-space:nowrap;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,6px 100%)}
   #v3sb .row{display:flex;align-items:stretch;height:26px;border:1px solid rgba(255,255,255,.35);background:#0d1120}
   #v3sb .tm{display:flex;align-items:center;gap:6px;padding:0 8px;min-width:96px;position:relative}
   #v3sb .tm .ab{font-size:8px;color:#fff}
