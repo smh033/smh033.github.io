@@ -2791,7 +2791,7 @@ SCR.title=()=>{
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
    <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?(BP_HIDDEN?'ITEM SHOP':'ITEM SHOP · PASS'):'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
-   ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${window.LQ&&LQ.ok?`<button class="bt" data-a="lqTheme" data-v="${lqOn()?0:1}">${lqOn()?'CLASSIC THEME':'LIQUID GLASS'}</button>`:''}
+   ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${window.V3?`<button class="bt" data-a="v3Toggle">${V3.on?'CLASSIC CAMERA':'BROADCAST CAMERA'}</button>`:''}${window.LQ&&LQ.ok?`<button class="bt" data-a="lqTheme" data-v="${lqOn()?0:1}">${lqOn()?'CLASSIC THEME':'LIQUID GLASS'}</button>`:''}
   </div></div>`;
 };
 /* CODES: type a code to unlock a skin. Codes live in skins/skins.json as "code": "..." (not case-sensitive) */
@@ -9060,11 +9060,17 @@ function lqAfter(ui){if(!window.LQ)return;lqApply();const B=document.body.classL
  LQ.scr=UI.scr;LQ.modal=!!UI.modal;}
 async function lqCheck(){let ok=false;try{const a=syncGet();ok=!!(a&&a.acct&&LQ_ACCTS.includes(String(a.u||'').toLowerCase()));}catch(e){}
  if(!ok)for(const x of olMine()){const h=LQ_TKH[x.code];if(!h||!x.tk)continue;try{if(await olHash(x.code+':'+x.tk)===h){ok=true;break;}}catch(e){}}
- const was=LQ.ok;LQ.ok=ok;if(!ok&&themeGet()!=='classic')themeSet('classic');lqApply();if(was!==ok&&UI.scr!=='game')render();}
+ const was=LQ.ok;LQ.ok=ok;if(!ok&&themeGet()!=='classic')themeSet('classic');lqApply();labGate();if(was!==ok&&UI.scr!=='game')render();}
 ACT.lqTheme=d=>{themeSet(d&&d.v==='1'?'lq':'classic');lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
 ACT.theme=d=>{themeSet(d.v);lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsHTML());else render();};
 function lqRow(){if(!LQ.ok)return '';const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq','mdn'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
  return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${c('lq','LIQUID GLASS')}<span class="s7 dim">ONLY YOU CAN SEE THIS</span></div>`;}
+/* LAB: lab.html is a private test copy of the game (same code) that adds the broadcast camera. Owner only. */
+const LAB=/\/lab(\.html)?$/.test(location.pathname);
+function labGate(){if(!LAB||LQ.labDone)return;LQ.labDone=true;
+ if(!LQ.ok){document.body.innerHTML='<div style="position:fixed;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;text-align:center;font-family:\'Press Start 2P\',monospace;font-size:12px;line-height:2;padding:20px">PRIVATE TEST BUILD<br><a href="./" style="color:#ffe94a;font-size:10px">PLAY RETRO FOOTBALL</a></div>';window.onerror=()=>true;return;}
+ document.title='Retro Football LAB';const add=(src,cb)=>{const e=document.createElement('script');e.src=src+'?v='+Date.now();e.onload=cb;document.head.appendChild(e);};
+ add('lab/three.min.js',()=>add('lab/v3.js',()=>{toast('LAB: BROADCAST CAMERA');if(UI.scr==='title')render();}));}
 lqCheck();setInterval(lqCheck,30000);
 
 olmBoot();
