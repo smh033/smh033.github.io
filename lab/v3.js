@@ -107,7 +107,7 @@ function buildStadium(home,away){
 /* ---------------- 3D player sprites ----------------
    Drawn just for this mode: the camera sits behind the play, so each player needs a BACK view (running away
    from you, name-bar number on the back), a FRONT view (coming at you, facemask) and a SIDE view (crossing).
-   26x36 pixels, team uniform colours only (skins are off in this mode), 4 running frames, carrying, throwing,
+   26x48 pixels with real proportions, team uniform colours only (skins are off in this mode), 4 running frames, carrying, throwing,
    and lying down. Each look is drawn once and cached. */
 const S3=new Map();
 const DIG=['111101101101111','010110010010111','111001111100111','111001111001111','101101111001001','111100111001111','111100111101111','111001010010010','111101111101111','111101111001111'];
@@ -115,52 +115,58 @@ function shadeC(c,k){const n=parseInt(String(c).slice(1),16);if(isNaN(n))return 
 function spr3(lk,view,fr,fl,num){
  const key=[lk.helm,lk.stripe,lk.jersey,lk.trim,lk.pants,lk.socks,lk.mask||'',lk.skin,view,fr,fl.ball?1:0,fl.throw?1:0,fl.down?1:0,fl.glow?1:0,num].join('|');
  let out=S3.get(key);if(out)return out;
- const W=26,H=36,a=canvas(W,H),g=a.getContext('2d'),P=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h);};
- const J=lk.jersey,Jd=shadeC(J,-0.25),Jl=shadeC(J,0.18),Hm=lk.helm,Hd=shadeC(Hm,-0.28),Hl=shadeC(Hm,0.3),Tr=lk.trim,Pn=lk.pants,Pd=shadeC(Pn,-0.22),Sk=lk.skin||'#c58c5c',Sd=shadeC(Sk,-0.2),So=lk.socks,Mk=lk.mask||'#c8c8c8',CL='#16161c',GL='#2a2a30';
- const run=fr>=0,st=run?fr%4:-1,legA=st===0?-2:st===2?2:0,bob=(st===1||st===3)?-1:0;
- const digits=(x0,y0,col)=>{const n=String(Math.max(0,num|0)%100),w=n.length*4-1;let x=x0-Math.floor(w/2);for(const ch of n){const d=DIG[+ch];for(let i=0;i<15;i++)if(d[i]==='1')P(x+i%3,y0+(i/3|0),1,1,col);x+=4;}};
+ /* athletic proportions: ~43 px tall, small helmet (~1/6 of the height), wide pads, long legs */
+ const W=26,H=48,a=canvas(W,H),g=a.getContext('2d'),P=(x,y,w,h,c)=>{if(w>0&&h>0){g.fillStyle=c;g.fillRect(x,y,w,h);}};
+ const tone=c=>[shadeC(c,0.22),c,shadeC(c,-0.22),shadeC(c,-0.4)];
+ const J=tone(lk.jersey),Hm=tone(lk.helm),Pn=tone(lk.pants),So=tone(lk.socks),Sk=tone(lk.skin||'#c58c5c'),Tr=lk.trim,St=lk.stripe,Mk=lk.mask||'#bdbdbd',CL='#121218',CL2='#2a2a32',GL='#1e1e24',BALL='#7a3e14';
+ /* a limb/part with light on the left, shadow on the right */
+ const part=(x,y,w,h,T)=>{P(x,y,w,h,T[1]);if(w>2){P(x,y,1,h,T[0]);P(x+w-1,y,1,h,T[2]);}};
+ const run=fr>=0,st=run?fr%4:-1,bob=(st===1||st===3)?-1:0;
+ const digits=(cx0,y0,col,tall)=>{const n=String(Math.max(0,num|0)%100),w=n.length*4-1;let x=cx0-Math.floor(w/2);
+  for(const ch of n){const d=DIG[+ch];for(let i=0;i<15;i++)if(d[i]==='1'){const r=i/3|0;P(x+i%3,y0+r+(tall&&r>1?1:0),1,tall&&r===1?2:1,col);}x+=4;}};
  if(view==='side'){ /* facing right */
-  const y=bob;
-  /* back arm (behind the body) */
-  P(10+(st===0?2:st===2?-2:0),13+y,3,6,Jd);P(10+(st===0?2:st===2?-2:0),19+y,3,2,Sd);
-  /* legs: stride */
-  const fx=st===0?4:st===2?-2:st===1||st===3?1:1,bx=-fx;
-  P(11+bx,22+y,4,5,Pd);P(11+bx,27+y,3,4,shadeC(So,-0.2));P(10+bx,31+y,5,2,CL);
-  P(12+fx,22+y,4,5,Pn);P(12+fx,27+y,3,4,So);P(12+fx,31+y,6,2,CL);
-  /* body */
-  P(10,12+y,7,9,J);P(10,12+y,7,2,Jl);P(9,13+y,2,6,Tr);P(10,20+y,7,2,Pd);
-  digits(13,14+y,Tr);
-  /* helmet */
-  P(10,3+y,8,7,Hm);P(11,2+y,6,1,Hm);P(11,3+y,3,1,Hl);P(10,9+y,7,1,Hd);P(13,2+y,1,8,lk.stripe);
-  P(16,6+y,2,3,Sk);P(18,5+y,2,1,Mk);P(18,7+y,2,1,Mk);P(19,5+y,1,4,Mk);P(16,5+y,1,1,'#111');
-  P(12,10+y,3,2,Sk);
-  /* front arm / ball / throw */
-  if(fl.throw){P(13,4+y,3,9,J);P(13,2+y,3,2,Sk);P(12,0,4,3,'#7a3e14');}
-  else if(fl.ball){P(14,13+y,4,4,J);P(16,15+y,5,3,'#7a3e14');P(17,16+y,3,1,'#f4ead2');}
-  else{const ax=st===0?-2:st===2?3:1;P(13+ax,13+y,3,5,J);P(13+ax,18+y,3,2,Sk);P(13+ax,20+y,3,1,GL);}
- }else{ /* back (away from the camera) or front (towards it) */
-  const front=view==='front',y=bob;
-  /* legs */
-  const lU=st===0?-2:0,rU=st===2?-2:0;
-  P(8,21+y,5,5+lU,Pn);P(13,21+y,5,5+rU,Pn);P(8,21+y,1,5+lU,Tr);P(17,21+y,1,5+rU,Tr);P(12,22+y,2,4,Pd);
-  P(9,26+y+lU,3,4,So);P(14,26+y+rU,3,4,So);
-  P(8,30+y+lU,5,2,CL);P(13,30+y+rU,5,2,CL);
-  /* arms: swing opposite to legs */
-  const aL=st===2?-1:st===0?1:0,aR=-aL;
-  P(4,12+y+aL,3,4,J);P(4,16+y+aL,3,3,Sk);P(4,19+y+aL,3,1,GL);
-  if(fl.throw){P(19,3+y,3,9,J);P(19,1+y,3,2,Sk);P(18,-1+y<0?0:-1+y,4,3,'#7a3e14');}
-  else if(fl.ball){P(19,12+y,3,4,J);P(15,15+y,6,3,'#7a3e14');P(16,16+y,4,1,'#f4ead2');}
-  else{P(19,12+y+aR,3,4,J);P(19,16+y+aR,3,3,Sk);P(19,19+y+aR,3,1,GL);}
-  /* jersey and pads */
-  P(6,11+y,14,3,J);P(6,11+y,14,1,Jl);P(6,12+y,2,1,Tr);P(18,12+y,2,1,Tr);P(8,14+y,10,6,J);P(8,19+y,10,1,Jd);P(8,20+y,10,1,Pd);
-  digits(13,13+y,Tr);
-  /* helmet */
-  P(9,2+y,8,8,Hm);P(10,1+y,6,1,Hm);P(10,2+y,2,2,Hl);P(9,9+y,8,1,Hd);
-  if(front){P(10,5+y,6,4,Sk);P(11,6+y,1,1,'#111');P(14,6+y,1,1,'#111');P(9,6+y,8,1,Mk);P(9,8+y,8,1,Mk);P(12,5+y,1,4,Mk);P(13,5+y,1,4,Mk);P(12,1+y,2,4,lk.stripe);}
-  else{P(12,1+y,2,9,lk.stripe);P(11,10+y,4,1,Sk);}
+  const y=bob,lf=st===0?5:st===2?-3:1,lb=-lf;   /* front/back leg stride */
+  const leg=(dx,T,S,back)=>{const kx=12+Math.round(dx*0.5),fx=12+dx;
+   part(kx-1,25+y,4,7,T);part(fx-1,32+y,3,8,S);P(fx-1,40+y,(back?4:5),2,back?CL2:CL);P(fx-1,40+y,1,1,'#fff');};
+  leg(lb,[Pn[2],Pn[2],Pn[3],Pn[3]],[So[2],So[2],So[3],So[3]],true);
+  /* back arm */
+  const ab=st===0?-3:st===2?3:0;P(10+ab,13+y,3,6,J[2]);P(10+ab,19+y,3,4,Sk[2]);P(10+ab,23+y,3,1,GL);
+  leg(lf,Pn,So,false);
+  /* torso + pads */
+  part(9,11+y,8,4,J);part(10,15+y,7,9,J);P(9,12+y,8,1,J[0]);P(15,13+y,2,1,Tr);P(10,23+y,7,1,Pn[2]);P(10,24+y,7,1,CL2);
+  digits(13,15+y,Tr,true);
+  /* helmet: small, with facemask out front */
+  part(10,3+y,7,6,Hm);P(11,2+y,5,1,Hm[1]);P(11,3+y,2,2,Hm[0]);P(10,8+y,6,1,Hm[2]);P(12,2+y,1,7,St);
+  P(16,5+y,2,3,Sk[1]);P(16,5+y,1,1,'#111');P(17,4+y,2,1,Mk);P(17,6+y,2,1,Mk);P(18,4+y,1,4,Mk);
+  P(12,9+y,3,2,Sk[2]);
+  /* front arm, ball, throw */
+  if(fl.throw){part(13,1+y,3,11,J);P(13,0,3,2,Sk[1]);P(12,0,4,2,BALL);}
+  else if(fl.ball){part(14,13+y,3,5,J);P(15,16+y,5,3,BALL);P(16,17+y,3,1,'#f4ead2');P(16,18+y,4,1,Sk[1]);}
+  else{const af=-ab;part(13+af,13+y,3,5,J);P(13+af,18+y,3,4,Sk[1]);P(13+af,22+y,3,1,GL);}
+ }else{ /* back = running away from the camera, front = towards it */
+  const front=view==='front',y=bob,cx0=13;
+  const lU=st===0?3:0,rU=st===2?3:0;   /* the stepping leg lifts */
+  /* legs: thighs, knees, socks, cleats */
+  part(8,25+y,5,7-Math.min(lU,2),Pn);part(13,25+y,5,7-Math.min(rU,2),Pn);P(8,25+y,1,6,Tr);P(17,25+y,1,6,Tr);P(12,25+y,2,2,Pn[2]);
+  part(9,32+y-lU,3,8,So);part(14,32+y-rU,3,8,So);P(9,35+y-lU,3,1,Tr);P(14,35+y-rU,3,1,Tr);
+  P(8,40+y-lU,5,2,CL);P(13,40+y-rU,5,2,CL);if(front){P(8,40+y-lU,1,1,'#fff');P(13,40+y-rU,1,1,'#fff');}
+  /* arms swing against the legs */
+  const aL=st===2?-2:st===0?2:0,aR=-aL;
+  part(4,12+y,3,4,J);P(4,16+y+Math.max(0,aL),3,6,Sk[1]);P(4,16+y+Math.max(0,aL),1,6,Sk[0]);P(4,22+y+aL,3,1,GL);
+  if(fl.throw){part(19,2+y,3,11,J);P(19,0,3,2,Sk[1]);P(18,0,5,2,BALL);}
+  else if(fl.ball){part(19,12+y,3,4,J);P(15,15+y,6,3,BALL);P(16,16+y,4,1,'#f4ead2');P(19,16+y,3,3,Sk[1]);}
+  else{part(19,12+y,3,4,J);P(19,16+y+Math.max(0,aR),3,6,Sk[1]);P(21,16+y+Math.max(0,aR),1,6,Sk[2]);P(19,22+y+aR,3,1,GL);}
+  /* shoulder pads, jersey (tapers to the waist), belt */
+  part(5,10+y,16,4,J);P(6,10+y,14,1,J[0]);P(5,11+y,2,2,Tr);P(19,11+y,2,2,Tr);
+  part(7,14+y,12,6,J);part(8,20+y,10,4,J);P(8,23+y,10,1,J[2]);P(8,24+y,10,1,CL2);
+  digits(cx0,14+y,Tr,true);
+  /* small helmet */
+  part(10,2+y,6,7,Hm);P(11,1+y,4,1,Hm[1]);P(10,3+y,2,2,Hm[0]);P(10,8+y,6,1,Hm[2]);
+  if(front){P(11,4+y,4,4,Sk[1]);P(11,5+y,1,1,'#111');P(14,5+y,1,1,'#111');P(10,5+y,6,1,Mk);P(10,7+y,6,1,Mk);P(12,4+y,2,4,Mk);P(12,1+y,2,3,St);}
+  else{P(12,1+y,2,8,St);}
+  P(11,9+y,4,1,Sk[2]);
  }
- if(fl.down){const r=canvas(W,H),gr=r.getContext('2d');gr.translate(W/2,H-6);gr.rotate(Math.PI/2);gr.drawImage(a,-W/2,-H+4);g.clearRect(0,0,W,H);g.drawImage(r,0,0);}
- /* dark outline (and a gold one for stars) */
+ if(fl.down){const r=canvas(W,H),gr=r.getContext('2d');gr.translate(W/2,H-4);gr.rotate(Math.PI/2);gr.drawImage(a,-W/2,-H+6);g.clearRect(0,0,W,H);g.drawImage(r,0,-2);}
  out=canvas(W,H);const go=out.getContext('2d');
  const sil=col=>{const b=canvas(W,H),gb=b.getContext('2d');gb.drawImage(a,0,0);gb.globalCompositeOperation='source-in';gb.fillStyle=col;gb.fillRect(0,0,W,H);return b;};
  if(fl.glow){const yv=sil('#ffe600');for(const[dx,dy]of[[-2,0],[2,0],[0,-2],[0,2]])go.drawImage(yv,dx,dy);}
@@ -189,7 +195,7 @@ function init(){
  V3.ready=true;}
 
 /* ---------------- one frame ---------------- */
-function spriteFor(i){let s=pool[i];if(!s){const m=new THREE.SpriteMaterial({transparent:true,alphaTest:0.35});s=new THREE.Sprite(m);s.center.set(0.5,2/36);root.add(s);
+function spriteFor(i){let s=pool[i];if(!s){const m=new THREE.SpriteMaterial({transparent:true,alphaTest:0.35});s=new THREE.Sprite(m);s.center.set(0.5,6/48);root.add(s);
   const sh=new THREE.Mesh(new THREE.CircleGeometry(0.55,12),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.32,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.scale.set(1.3,0.8,1);sh.position.y=0.015;root.add(sh);s.userData.sh=sh;pool[i]=s;}
  return s;}
 function texFor(c){let t=texOf.get(c);if(!t){t=canvasTex(c);texOf.set(c,t);}return t;}
@@ -223,8 +229,8 @@ function draw3D(){
   const along=fx*cf.x+fz*cf.z,acr=fx*camRight.x+fz*camRight.z;
   const view=along>0.45?'back':along<-0.45?'front':'side',flip=view==='side'&&acr<0;
   const fr=o.run&&!o.dive?Math.floor((o.t||0)*9)%4:-1,num=f.pl&&f.pl.num!=null?f.pl.num:0;
-  const c=spr3(st.lk,view,fr,{ball:o.ball,throw:o.throw,down:o.down||o.dive,glow:o.glow},num),t=texFor(c);if(s.material.map!==t){s.material.map=t;s.material.needsUpdate=true;}
-  s.scale.set((flip?-1:1)*c.width*YPU*1.2,c.height*YPU*1.2,1);s.position.set(f.x,(st.jy||0)/14,f.y);s.visible=true;
+  const c=spr3(st.lk,view,fr,{ball:o.ball,throw:o.throw,down:o.down||o.dive,glow:false},num),t=texFor(c);if(s.material.map!==t){s.material.map=t;s.material.needsUpdate=true;}
+  s.scale.set((flip?-1:1)*c.width*0.052,c.height*0.052,1);s.position.set(f.x,(st.jy||0)/14,f.y);s.visible=true;
   s.userData.sh.position.set(f.x,0.015,f.y);s.userData.sh.visible=true;}
  for(;i<pool.length;i++){pool[i].visible=false;pool[i].userData.sh.visible=false;}
  /* the ball in the air (carried balls are part of the runner's sprite) */
