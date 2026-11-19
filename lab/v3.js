@@ -384,6 +384,50 @@ function scoreboard(){let el=document.getElementById('v3sb');
  const html=`${dn?`<div class="tab">${esc(dn)}</div>`:''}<div class="row">${tm(L.user,M.sc[0],M.to,ours,false)}<div class="mid"><span>${q}</span><b>${clockTxt()}</b></div>${tm(M.op,M.sc[1],M.oto==null?3:M.oto,!ours&&offense,true)}</div>`;
  if(el._h!==html){el.innerHTML=html;el._h=html;}}
 
+
+/* ---------------- Madden-style passing: a numbered icon over every receiver ----------------
+   Tap a receiver's icon (or the receiver), or press 1-5, to throw to him: a quick tap is a touch pass,
+   holding the icon for a moment is a bullet. The ball is led to where he's going, like the computer QB.
+   The ring around each number shows how open he is (green open, yellow tight, red covered).
+   Before the snap the icons show who's who; tapping one snaps the ball. Drag-back aiming still works too. */
+const ICOL=['#2f7bff','#2fbf5a','#ff8a1f','#e5484d','#b05cff'];
+function passOn(){return active()&&!M.def&&M.play!=='ret'&&M.play!=='intret'&&!M.ov&&!M.paused&&((M.phase==='pre'&&!M.pb)||(M.phase==='live'&&M.play==='pass'&&!M.thrown&&!M.carrier&&M.qb));}
+function receivers(){const q=M.qb;return M.O.filter(r=>r!==q&&SKILL.includes(r.role)&&!r.pblk).map(r=>({r,p:proj(r.x,2.75,r.y),f:proj(r.x,0,r.y)})).sort((a,b)=>a.p.x-b.p.x).slice(0,5).map((o,i)=>Object.assign(o,{n:i+1}));}
+function openOf(r){const q=M.qb;const T=Math.hypot(r.x-q.x,r.y-q.y)/20+0.25,px=r.x+(r.vx||0)*T,py=r.y+(r.vy||0)*T;let o=9;
+ for(const d of M.D){if(d.stun>0||(d.down>0&&!(d.dive>0)))continue;o=Math.min(o,Math.hypot(d.x+(d.vx||0)*T*0.6-px,d.y+(d.vy||0)*T*0.6-py));}return o;}
+function drawIcons(){V3.icons=passOn()?receivers():[];const live=M.phase==='live';
+ for(const ic of V3.icons){const{x,y}=ic.p,c=ICOL[ic.n-1],op=live?openOf(ic.r):9,ring=!live?'#ffffff':op>=3?'#38d27a':op>=1.6?'#ffe94a':'#ff5c5c';
+  const hold=V3.press&&V3.press.ic===ic.n,r=hold?10:8;
+  cx.save();cx.globalAlpha=live?1:0.85;
+  cx.beginPath();cx.arc(x,y-4,r+3,0,Math.PI*2);cx.fillStyle='#000';cx.fill();
+  cx.beginPath();cx.arc(x,y-4,r+2,0,Math.PI*2);cx.fillStyle=ring;cx.fill();
+  cx.beginPath();cx.arc(x,y-4,r,0,Math.PI*2);cx.fillStyle=c;cx.fill();
+  cx.fillStyle='#fff';cx.font='8px "Press Start 2P",monospace';cx.textAlign='center';cx.textBaseline='middle';cx.fillText(String(ic.n),x+0.5,y-3);
+  cx.fillStyle='#000';cx.beginPath();cx.moveTo(x-3,y+r-3);cx.lineTo(x+3,y+r-3);cx.lineTo(x,y+r+1);cx.fill();
+  if(hold){const k=Math.min(1,(performance.now()-V3.press.t)/250);cx.strokeStyle='#ffdf5b';cx.lineWidth=2;cx.beginPath();cx.arc(x,y-4,r+5,-Math.PI/2,-Math.PI/2+k*Math.PI*2);cx.stroke();}
+  cx.restore();}
+ if(V3.icons.length&&live&&!V3.tipShown){V3.tipShown=true;toast('TAP A RECEIVER NUMBER TO THROW · HOLD IT FOR A BULLET');}}
+function iconAt(p){if(!V3.icons)return null;let best=null,bd=1e9;
+ for(const ic of V3.icons){const d=Math.hypot(p.x-ic.p.x,p.y-(ic.p.y-4));if(d<22&&d<bd){bd=d;best=ic;}
+  /* the receiver's body counts too */
+  const top=ic.p.y,bot=ic.f.y,w=Math.max(10,(bot-top)*0.35);if(p.x>ic.f.x-w&&p.x<ic.f.x+w&&p.y>top&&p.y<bot+4){const d2=Math.abs(p.x-ic.f.x)+20;if(d2<bd){bd=d2;best=ic;}}}
+ return best;}
+function throwTo(r,bullet){const q=M.qb;if(!q||M.thrown||M.carrier||M.phase!=='live')return;
+ const T=Math.hypot(r.x-q.x,r.y-q.y)/(bullet?26:20)+0.25,tx=Math.min(r.x+(r.vx||0)*T,118.3),ty=clamp(r.y+(r.vy||0)*T,1.5,51.8);
+ M.passBullet=!!bullet;let best=null;const gx0=wx(tx)-wx(q.x),gy0=wy(ty)-wy(q.y),l0=Math.hypot(gx0,gy0)||1;
+ for(let pull=PASS.PULL_MIN;pull<=PASS.PULL_MAX+10;pull+=2){const a={sx:320,sy:200,cx:320-gx0/l0*pull,cy:200-gy0/l0*pull};const ai=aimInfo(a);if(ai.run)continue;const e=Math.hypot(ai.tx-tx,ai.ty-ty);if(!best||e<best.e)best={e,ai};}
+ if(!best)return;M.aim=null;M.input=null;throwBall(best.ai);}
+function cvPoint(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*CW/r.width,y:(e.clientY-r.top)*CH/r.height};}
+document.addEventListener('pointerdown',e=>{if(!passOn()||e.target!==cv)return;if(e.pointerType==='mouse'&&e.button!==0)return;
+ const ic=iconAt(cvPoint(e));if(!ic)return;e.stopImmediatePropagation();e.preventDefault();audio();
+ if(M.phase==='pre'){snap('pass');return;}
+ V3.press={ic:ic.n,r:ic.r,t:performance.now(),id:e.pointerId};},true);
+document.addEventListener('pointerup',e=>{const P=V3.press;if(!P||e.pointerId!==P.id)return;V3.press=null;e.stopImmediatePropagation();e.preventDefault();
+ if(passOn()&&M.phase==='live')throwTo(P.r,performance.now()-P.t>=250);},true);
+addEventListener('keydown',e=>{if(!passOn())return;const n=['Digit1','Digit2','Digit3','Digit4','Digit5'].indexOf(e.code);if(n<0)return;
+ const ic=(V3.icons||[]).find(i=>i.n===n+1);if(!ic)return;e.stopImmediatePropagation();e.preventDefault();
+ if(M.phase==='pre'){snap('pass');return;}throwTo(ic.r,e.shiftKey);},true);
+
 /* ---------------- hooking the game ---------------- */
 const draw2D=window.draw;
 function active(){return V3.on&&V3.ready&&M&&UI.scr==='game'&&!M.prac&&!(M.phase==='kick'&&!M.kick)&&!(M.phase==='replay'&&!M.rec);}
@@ -402,6 +446,7 @@ window.draw=function(){
  /* ...then the flat canvas only keeps the things that live on the screen itself */
  cx.setTransform(HIK,0,0,HIK,0,0);cx.clearRect(0,0,CW,CH);
  if(M.aim){const ai=aimInfo(M.aim);if(ai.pull>=PASS.PULL_MIN){const q=M.qb;ctextScreen(ai.run?'RUN':ai.bullet?'BULLET':'LOB',ai.bullet?'#ffdf5b':'#fff');}}
+ drawIcons();
  drawJoy();};
 function ctextScreen(t,col){cx.save();cx.font='10px "Press Start 2P",monospace';cx.textAlign='center';cx.textBaseline='top';cx.fillStyle='#000';cx.fillText(t,CW/2+1,64+1);cx.fillStyle=col;cx.fillText(t,CW/2,64);cx.restore();}
 /* the throw preview as dots on the grass (the 2D version draws them in the air for the side view) */
