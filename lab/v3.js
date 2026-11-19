@@ -222,7 +222,8 @@ function texFor(c){let t=texOf.get(c);if(!t){t=canvasTex(c);texOf.set(c,t);}retu
 const camRight=new THREE.Vector3(),tmp=new THREE.Vector3();
 function frameCam(dt){
  /* behind your team before the snap; once someone has the ball, behind him the way he's going */
- const own=(M.def?-M.dir:M.dir),car=M.phase!=='pre'&&M.carrier?(M.carrier.side==='O'?M.dir:-M.dir):null,f=V3.f=car!=null?car:own;
+ /* the game's own coordinates always have the offense going +x (M.dir only mirrors the flat view) */
+ const own=M.def?-1:1,car=M.phase!=='pre'&&M.carrier?(M.carrier.side==='O'?1:-1):null,f=V3.f=car!=null?car:own;
  const holder=M.carrier||(M.phase==='live'&&M.play==='pass'&&!M.thrown?M.qb:null);let tx=M.los,tz=M.ballY,lead=0;
  const b=M.ball;
  if(M.phase==='live'){if(b&&b.F&&!b.done){const p=ballPos(b);tx=p.x;tz=p.y;}else if(holder){tx=holder.x;tz=holder.y;lead=1;}}
@@ -238,7 +239,8 @@ function frameCam(dt){
 
 function draw3D(){
  const now=performance.now(),dt=Math.min(0.1,(now-(V3.lt||now))/1000);V3.lt=now;
- const tk=L.user+'|'+M.op+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;const home=M.home===false?M.op:L.user,away=home===L.user?M.op:L.user;buildStadium(home,away);V3.cam=null;}
+ /* the end zone behind the offense (x<10) is theirs, the one they attack (x>110) is the defense's */
+ const offT=M.def?M.op:L.user,defT=M.def?L.user:M.op,tk=offT+'|'+defT+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(offT,defT);V3.cam=null;}
  frameCam(dt);
  /* players */
  const all=[...M.O,...M.D],holder=curHolder();let i=0;
@@ -246,7 +248,7 @@ function draw3D(){
  for(const f of all){const st=plState(f,holder),s=spriteFor(i++),o=st.o;
   /* which way is he facing, seen from the camera? */
   /* before/after the play everyone faces the other team; during it, the way he's running */
-  let fx=M.phase==='live'?f.vx||0:0,fz=M.phase==='live'?f.vy||0:0;const sp=Math.hypot(fx,fz);if(sp<1.2){fx=(f.side==='O'?M.dir:-M.dir);fz=0;}else{fx/=sp;fz/=sp;}
+  let fx=M.phase==='live'?f.vx||0:0,fz=M.phase==='live'?f.vy||0:0;const sp=Math.hypot(fx,fz);if(sp<1.2){fx=(f.side==='O'?1:-1);fz=0;}else{fx/=sp;fz/=sp;}
   const along=fx*cf.x+fz*cf.z,acr=fx*camRight.x+fz*camRight.z;
   const isDown=!!(o.down||o.dive);if(isDown&&f.dn3==null)f.dn3=acr<0?-1:1;if(!isDown)f.dn3=null;
   const view=along>0.45?'back':along<-0.45?'front':'side',flip=isDown?f.dn3<0:view==='side'&&acr<0;
@@ -279,10 +281,10 @@ function draw3D(){
 function lineup(list){let i=0;for(const it of list){const s=spriteFor(i++),c=it.c,t=texFor(c);if(s.material.map!==t){s.material.map=t;s.material.needsUpdate=true;}
   s.scale.set((it.flip?-1:1)*c.width*0.052,c.height*0.052,1);s.position.set(it.x,it.h||0,it.z);s.visible=true;s.userData.sh.position.set(it.x,0.015,it.z);s.userData.sh.visible=true;}
  for(;i<pool.length;i++){pool[i].visible=false;pool[i].userData.sh.visible=false;}}
-function kickWorld(){const k=M.kick,d=M.dir,goal=d>0?120:0,bx=goal-d*k.d;return{k,d,goal,bx,los:bx+d*7};}
+function kickWorld(){const k=M.kick,d=1,goal=d>0?120:0,bx=goal-d*k.d;return{k,d,goal,bx,los:bx+d*7};}
 function draw3DKick(){
  const now=performance.now(),dt=Math.min(0.1,(now-(V3.lt||now))/1000);V3.lt=now;
- const tk=L.user+'|'+M.op+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(L.user,M.op);}
+ const own0=netHost()?!M.kick.guest:netGuest()?!!M.kick.mine:true,offT=own0?L.user:M.op,defT=own0?M.op:L.user,tk=offT+'|'+defT+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(offT,defT);}
  const W=kickWorld(),k=W.k,d=W.d,mid=26.665;
  const own=netHost()?!k.guest:netGuest()?!!k.mine:true,kt=own?L.user:M.op,ku=own?M.uU:M.uO,dt2=own?M.op:L.user,du=own?M.uO:M.uU;
  const lkK=lookFor(k.K,kt,ku),lkH=lookFor(((own?M.dep:M.odep)||M.dep).QB[0],kt,ku),lkO=lookFor(null,kt,ku),lkD=lookFor(null,dt2,du);
