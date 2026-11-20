@@ -5108,6 +5108,7 @@ function aiCallPlay(){
  return{n:pick(run),k:'run',hurry};
 }
 function aiSnap(){
+ olmLive();
  const P0=M.aiPlay||{k:'pass'};
  if(!P0.hurry&&M.runoff>0){M.clock=Math.max(0,M.clock-M.runoff);M.runoff=0;}  // they use the play clock
  if(M.clock<=0){M.clock=0;return defCheck(defPre);}
@@ -5304,7 +5305,7 @@ function setupPlay(){
  queueWarm();
 }
 function snap(type){
- if(M.phase!=='pre')return;M.aimShake=0;
+ if(M.phase!=='pre')return;M.aimShake=0;olmLive();
  M.play=type;M.phase='live';M.pt=0;M.banT=0;M.thrown=false;M.ball=null;M.carrier=null;M.comp=null;M.passBullet=false;M.primary=null;M.handed=false;M.scramble=false;M.steer=null;M.plays++;M.went4=false;
  if(M.runoff>0){const used=(M.ro0||0)-M.runoff,extra=Math.max(0,Math.min(M.runoff,5-used));M.clock-=Math.min(extra,Math.max(0,M.clock-1));M.runoff=0;}   /* hurry-up: a quick snap only costs the ~5s to get set */
  sfx('whistle');recStart();M.leap=false;M.rp=null;
@@ -6220,7 +6221,7 @@ function upDead(dt){
 }
 
 /* ---------- kicking (FG / XP) ---------- */
-function startKick(kind,force){
+function startKick(kind,force){olmLive();
  if(kind==='fg'&&!force&&!canFG())return;
  M.kick={kind,d:kind==='xp'?33:fgDist(),st:'aim',sw:null,t:0,K:M.dep.K[0]};M.phase='kick';M.aim=null;
 }
@@ -8253,6 +8254,12 @@ function olmSave(act,who){
   m:{sc:M.sc,qtr:M.qtr,clock:M.clock,to:M.to,cp:M.cp,oto:M.oto,ocp:M.ocp,ps:M.ps,ts:M.ts,plays:M.plays,carries:M.carries,night:M.night,wx:M.wx,wind:M.wind,rival:M.rival,
    firstRecv:M.firstRecv,udir:M.udir,dcall:M.dcall,went4:!!M.went4,conv:!!M.conv,ballOn:M.ballOn,ballY:M.ballY,down:M.down,fdX:M.fdX,uU:M.uU,uO:M.uO}};
  try{localStorage.setItem(OLM_KEY,JSON.stringify(c));}catch(e){}}
+/* REFRESH EXPLOIT FIX: the checkpoint is taken before each play, so refreshing mid-play used to undo the play
+   (re-roll the computer's drive until it threw a pick-six). Now the checkpoint is flagged the moment the ball is
+   snapped; reopening a game with a flagged play counts that play as lost: on defense the computer gets a first
+   down and more, on offense it's an incompletion (a turnover on 4th down), a 2-point try fails, a kick misses. */
+function olmLive(){const c=olmGet();if(!c||!M||!OL||c.code!==OL.code||c.team!==L.user||c.gk!==olGameKey(M.g))return;
+ c.live={def:!!M.def,conv:!!M.conv,t:Date.now()};try{localStorage.setItem(OLM_KEY,JSON.stringify(c));}catch(e){}}
 /* the saved game for this matchup, if there is one */
 function olmFor(g){const c=olmGet();if(!c||!OL||c.code!==OL.code||c.team!==L.user)return null;if(!g||olH2H(g)||c.gk!==olGameKey(g)){olmClear();return null;}return c;}
 function olmTry(){const g=userGame(),c=g&&olmFor(g);if(!c){if(!g)olmClear();return false;}UI.modal=null;return olmResumeGame(c);}
@@ -8262,6 +8269,13 @@ function olmResumeGame(c){const g=userGame(),m=c.m;if(!g)return false;
   firstRecv:m.firstRecv,udir:m.udir,dcall:m.dcall,went4:m.went4,conv:m.conv,ballOn:m.ballOn,ballY:m.ballY,down:m.down,fdX:m.fdX,runoff:0});
  M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  M.ov=null;M.O=[];M.D=[];M.def=c.act==='def';syncDir();
+ if(c.live&&(c.act==='def'||c.act==='off')){const lv=c.live;
+  if(lv.conv){if(lv.def){M.sc[1]+=2;}M.conv=false;banner('PLAY LOST','THE GAME WAS CLOSED MID-PLAY','#ff5c5c',2.6);kickoffTo(lv.def?'us':'them');return true;}
+  if(c.act==='def'){const g=Math.max(ri(6,14),M.fdX-M.ballOn+ri(0,4));M.ballOn=Math.min(109,M.ballOn+g);M.down=1;M.fdX=Math.min(M.ballOn+10,110);M.clock=Math.max(0,M.clock-35);
+   banner('PLAY LOST',abbr(M.op)+' GAINED '+g+' YARDS · THE GAME WAS CLOSED MID-PLAY','#ff5c5c',2.8);defPre();return true;}
+  M.down++;M.clock=Math.max(0,M.clock-8);banner('PLAY LOST','INCOMPLETE · THE GAME WAS CLOSED MID-PLAY','#ff5c5c',2.8);
+  if(M.down>4){oppDrive(clamp(Math.round(110-M.ballOn),1,99),['TURNOVER ON DOWNS']);return true;}
+  toPre();return true;}
  if(c.act==='def')defPre();
  else if(c.act==='ko')kickoffTo(c.who);
  else if(c.act==='half')halftime();
@@ -9021,6 +9035,12 @@ ACT.acctOut=async()=>{const st=syncGet();if(st&&st.acct){if(st.dirty){try{await 
 
 /* ===== BANS: a banned player can't play at all. Matched by the device that held a banned league seat, or by coach name.
    Once a device is caught it stays banned (rf_bn). Add tokens (seat tkh) or names below. ===== */
+/* ADMIN COIN SET: a device that holds one of these league seats gets its coins set once (id = applied marker) */
+const COINSET=[{id:'eyan-2026-11-20',code:'ZVTADK',tkh:['4e0e07030f772ae172f4cde7','5bfe716dd3a07a61f339643b','344d45d851d6ca98b2e517a4'],n:1000}];
+async function coinSetCheck(){for(const cs of COINSET){try{if(localStorage.getItem('rf_cs_'+cs.id))continue;}catch(e){continue;}
+ for(const x of olMine()){if(x.code!==cs.code||!x.tk)continue;let h='';try{h=await olHash(x.code+':'+x.tk);}catch(e){}
+  if(cs.tkh.includes(h)){try{localStorage.setItem(TOK_KEY,String(cs.n));localStorage.setItem('rf_cs_'+cs.id,'1');}catch(e){}if(UI.scr!=='game')render();break;}}}}
+setTimeout(coinSetCheck,1500);
 const BAN={lift:true,tkh:{},name:/^\b$/};   /* nobody banned right now. e.g. tkh:{CODE:['seat tkh']}, name:/(^|[^A-Z])NAME([^A-Z]|$)/ */
 function banNow(){try{localStorage.setItem('rf_bn','1');}catch(e){}
  document.body.innerHTML='<div style="position:fixed;inset:0;background:#000;color:#ff4a3d;display:flex;align-items:center;justify-content:center;text-align:center;font-family:\'Press Start 2P\',monospace;font-size:14px;line-height:2;padding:20px;z-index:99999">YOU HAVE BEEN BANNED<br>FROM RETRO FOOTBALL</div>';
