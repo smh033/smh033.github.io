@@ -33,7 +33,7 @@ function fieldCanvas(home,away){
  const ez=(x0,t)=>{const tc=teamCol(t);g.fillStyle=tc.c1;g.fillRect(x0*P,0,10*P,H);
   g.save();g.translate((x0+5)*P,H/2);g.rotate(x0<60?-Math.PI/2:Math.PI/2);g.font=`bold ${Math.round(5.2*P)}px "Press Start 2P",monospace`;g.textAlign='center';g.textBaseline='middle';
   g.lineWidth=P*0.6;g.strokeStyle='#0b0b14';g.fillStyle=tc.c2;const nm=(T(t).nickname||T(t).abbr).toUpperCase();g.strokeText(nm,0,0);g.fillText(nm,0,0);g.restore();};
- ez(0,home);ez(110,away);
+ ez(0,home);ez(110,home);
  g.fillStyle='#fff';
  for(let x=10;x<=110;x+=5)g.fillRect(x*P-2,0,4,H);                       // yard lines
  for(let x=11;x<110;x++){if(x%5===0)continue;for(const y of[1,22.9,30.4,52.3])g.fillRect(x*P-1,y*P,2,P*0.7);} // hashes
@@ -70,7 +70,7 @@ function buildStadium(home,away){
  const apron=new THREE.Mesh(new THREE.PlaneGeometry(170,100),new THREE.MeshBasicMaterial({color:M&&M.night?0x1f4a26:0x2f6f30}));apron.rotation.x=-Math.PI/2;apron.position.set(60,-0.02,26.665);stadium.add(apron);
  /* sideline wall with team banners */
  const banH=canvasTex(bannerCanvas(home));banH.wrapS=THREE.RepeatWrapping;banH.repeat.set(6,1);
- const banA=canvasTex(bannerCanvas(away));banA.wrapS=THREE.RepeatWrapping;banA.repeat.set(3,1);
+ const banA=canvasTex(bannerCanvas(home));banA.wrapS=THREE.RepeatWrapping;banA.repeat.set(3,1);
  const wallM=new THREE.MeshBasicMaterial({map:banH}),wallA=new THREE.MeshBasicMaterial({map:banA});
  stadium.add(box(150,1.4,0.4,wallM,60,0.7,-6));stadium.add(box(150,1.4,0.4,wallM,60,0.7,59.3));
  stadium.add(box(0.4,1.4,66,wallA,-16,0.7,26.665));stadium.add(box(0.4,1.4,66,wallA,136,0.7,26.665));
@@ -101,6 +101,7 @@ function buildStadium(home,away){
  /* stadium lights */
  const lightM=new THREE.MeshBasicMaterial({color:0xfff6d8}),poleM=new THREE.MeshBasicMaterial({color:0x3a3a44});
  for(const[x,z]of[[-8,-24],[128,-24],[-8,77],[128,77]]){stadium.add(box(0.6,26,0.6,poleM,x,13,z));stadium.add(box(5,2.4,0.6,lightM,x,26,z));}
+ buildCheer(home);
  scene.background=canvasTex(skyCanvas());scene.fog=new THREE.Fog(M&&M.night?0x0a1024:0xc8a0a0,90,260);}
 
 
@@ -193,6 +194,34 @@ function spr3Down(lk,num,fl,key){
  return finish3(a,W,H,fl,key);}
 
 
+/* ---------------- cheerleaders ----------------
+   The home team's squad on both sidelines near the end zones: pom-poms up and down, kicks, and big jumps
+   after a score. 18x34 pixels, home colours. */
+function spr3Cheer(c1,c2,fr){const key='ch|'+c1+'|'+c2+'|'+fr;let out=S3.get(key);if(out)return out;
+ const W=18,H=34,a=canvas(W,H),g=a.getContext('2d'),P=(x,y,w,h,c)=>{if(w>0&&h>0){g.fillStyle=c;g.fillRect(x,y,w,h);}};
+ const sk='#e9b48a',hair=['#f2d36b','#6a3a1a','#1c1410','#b8562a'][fr>>2&3],up=fr%4===1||fr%4===3,kick=fr%4===2;
+ /* legs + boots */
+ P(7,22,2,8,sk);P(9,22,2,kick?4:8,sk);if(kick){P(11,21,5,2,sk);P(15,20,2,2,'#fff');}else P(9,30,2,2,'#fff');P(7,30,2,2,'#fff');
+ /* skirt + top */
+ P(5,19,8,4,c2);P(5,19,8,1,shadeC(c2,0.25));P(6,12,6,7,c1);P(6,12,6,1,shadeC(c1,0.3));P(8,14,2,2,c2);
+ /* head */
+ P(6,5,6,6,sk);P(5,3,8,3,hair);P(5,5,2,5,hair);P(11,5,2,5,hair);P(7,7,1,1,'#222');P(10,7,1,1,'#222');P(8,9,2,1,'#c8564a');
+ /* arms + pom-poms */
+ const pom=(x,y)=>{P(x-1,y-1,4,4,c2);P(x,y-2,2,1,'#fff');P(x-2,y,1,2,'#fff');P(x+3,y,1,2,'#fff');P(x,y+3,2,1,'#fff');};
+ if(up){P(4,6,2,7,sk);P(12,6,2,7,sk);pom(3,3);pom(12,3);}else{P(4,13,2,6,sk);P(12,13,2,6,sk);pom(3,19);pom(12,19);}
+ return finish3(a,W,H,{},key);}
+let cheer=[];
+function buildCheer(home){for(const c of cheer){root.remove(c);if(c.userData.sh)root.remove(c.userData.sh);}cheer=[];const tc=teamCol(home);
+ for(const side of[-1,1])for(const xs of[[3,8,13,18,23],[97,102,107,112,117]])for(const x of xs){
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,alphaTest:0.35}));s.center.set(0.5,2/34);root.add(s);
+  const sh=new THREE.Mesh(new THREE.CircleGeometry(0.4,10),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.3,depthWrite:false}));sh.rotation.x=-Math.PI/2;root.add(sh);
+  s.userData={sh,x,z:side<0?-2.6:55.9,ph:Math.random()*4,c1:tc.c1,c2:tc.c2,hair:(x*7)%4};cheer.push(s);}}
+function drawCheer(){const t=performance.now()/1000,hype=M&&M.hype>0;
+ for(const s of cheer){const u=s.userData,sp=hype?7:2.4,k=Math.floor(t*sp+u.ph)%4,fr=k+u.hair*4,c=spr3Cheer(u.c1,u.c2,fr),tx=texFor(c);
+  if(s.material.map!==tx){s.material.map=tx;s.material.needsUpdate=true;}
+  const jump=hype?Math.max(0,Math.sin((t*sp+u.ph)*Math.PI/2))*0.9:(k===1?0.12:0);
+  s.scale.set(c.width*0.05,c.height*0.05,1);s.position.set(u.x,jump,u.z);u.sh.position.set(u.x,0.015,u.z);}}
+
 /* ---------------- setup ---------------- */
 function init(){
  cv3=document.createElement('canvas');cv3.id='cv3';cv3.width=1280;cv3.height=720;
@@ -239,9 +268,9 @@ function frameCam(dt){
 
 function draw3D(){
  const now=performance.now(),dt=Math.min(0.1,(now-(V3.lt||now))/1000);V3.lt=now;
- /* the end zone behind the offense (x<10) is theirs, the one they attack (x>110) is the defense's */
- const offT=M.def?M.op:L.user,defT=M.def?L.user:M.op,tk=offT+'|'+defT+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(offT,defT);V3.cam=null;}
- frameCam(dt);
+ /* both end zones are the home team's (like a real stadium); the crowd and banners mix both teams */
+ const hT=M.g.h,aT=M.g.a,tk=hT+'|'+aT+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(hT,aT);V3.cam=null;}
+ frameCam(dt);drawCheer();
  /* players */
  const all=[...M.O,...M.D],holder=curHolder();let i=0;
  const cf={x:V3.look.x-V3.cam.x,z:V3.look.z-V3.cam.z};{const n=Math.hypot(cf.x,cf.z)||1;cf.x/=n;cf.z/=n;}
@@ -284,7 +313,7 @@ function lineup(list){let i=0;for(const it of list){const s=spriteFor(i++),c=it.
 function kickWorld(){const k=M.kick,d=1,goal=d>0?120:0,bx=goal-d*k.d;return{k,d,goal,bx,los:bx+d*7};}
 function draw3DKick(){
  const now=performance.now(),dt=Math.min(0.1,(now-(V3.lt||now))/1000);V3.lt=now;
- const own0=netHost()?!M.kick.guest:netGuest()?!!M.kick.mine:true,offT=own0?L.user:M.op,defT=own0?M.op:L.user,tk=offT+'|'+defT+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(offT,defT);}
+ const tk=M.g.h+'|'+M.g.a+'|'+(M.night?1:0);if(tk!==lastTeams){lastTeams=tk;buildStadium(M.g.h,M.g.a);}
  const W=kickWorld(),k=W.k,d=W.d,mid=26.665;
  const own=netHost()?!k.guest:netGuest()?!!k.mine:true,kt=own?L.user:M.op,ku=own?M.uU:M.uO,dt2=own?M.op:L.user,du=own?M.uO:M.uU;
  const lkK=lookFor(k.K,kt,ku),lkH=lookFor(((own?M.dep:M.odep)||M.dep).QB[0],kt,ku),lkO=lookFor(null,kt,ku),lkD=lookFor(null,dt2,du);
@@ -302,7 +331,7 @@ function draw3DKick(){
  if(k.st==='aim')bp={x:W.bx,y:0.3,z:mid};
  else if(fly){const u=clamp(k.t/1.4,0,1),z=u*k.zEnd,rz=z/k.d,lat=(k.latG-k.drift)*rz+k.drift*rz*rz;let h=k.hAt(z);if(k.t>1.4)h=Math.max(0,h-(k.t-1.4)*9);bp={x:W.bx+d*z,y:Math.max(0.2,h),z:mid+lat*d};}
  if(bp){const A=ballArt(curBall()),t=texFor(Math.floor(performance.now()/60)%2?A.side:A.end);if(ballSpr.material.map!==t){ballSpr.material.map=t;ballSpr.material.needsUpdate=true;}ballSpr.position.set(bp.x,bp.y,bp.z);ballSpr.visible=true;}else ballSpr.visible=false;
- losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;
+ losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;drawCheer();
  /* camera: low behind the holder; follows the ball up once it's kicked */
  const want={x:W.bx-d*(fly?13-Math.min(6,k.t*5):13.5),y:fly?3.6+Math.min(3,k.t*2):3.4,z:mid+1.2},look={x:W.goal,y:fly&&bp?Math.min(6,bp.y*0.6+2):4.2,z:mid};
  if(!V3.kcam||V3.kcam.id!==k){V3.kcam={id:k,c:Object.assign({},want),l:Object.assign({},look)};}
@@ -353,7 +382,7 @@ function draw3DReplay(){
   const c=spr3(p.lk,view,fr,{ball:p.o&&p.o.ball,throw:p.o&&p.o.throw,down:dn},0);return{c,x:p.x,z:p.y,h:(p.jy||0)/14,flip:dn?acr<0:view==='side'&&acr<0};});
  lineup(items);
  if(bp){const A=ballArt(curBall()),t=texFor(Math.floor(M.rp.t*14)%2?A.side:A.end);if(ballSpr.material.map!==t){ballSpr.material.map=t;ballSpr.material.needsUpdate=true;}ballSpr.position.set(bp.x,0.25+(bp.z||0)*0.7,bp.y);ballSpr.visible=true;}else ballSpr.visible=false;
- losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;
+ losMesh.visible=false;fdMesh.visible=false;ringMesh.visible=false;overMesh.visible=false;drawCheer();
  R.render(scene,camera);overMesh.visible=true;V3.cam=null;}
 function replayUI(){const by=58;rect(0,by,CW,24,'rgba(0,0,0,.82)');
  if(Math.floor(M.tt*2)%2===0){cx.fillStyle='#e8423a';cx.beginPath();cx.arc(14,by+12,5,0,Math.PI*2);cx.fill();}

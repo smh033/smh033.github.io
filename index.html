@@ -197,6 +197,37 @@ body.tg .tgk{display:inline-block;image-rendering:pixelated;vertical-align:middl
 @keyframes tgfall{to{transform:translateY(400px)}}
 @keyframes tgsway{from{transform:translateX(-14px) rotate(-35deg)}to{transform:translateX(14px) rotate(35deg)}}
 /* ===================== END THANKSGIVING ===================== */
+/* ===================== CHRISTMAS (body.xm) =====================
+   Forced winter look while XMAS is on: icy blue panels, snow falling on every menu, a string of blinking lights along
+   the top, a pixel tree by the title. Gameplay: outdoor games are snowy, touchdowns say HO HO HO. */
+body.xm{--bl:#1d3d63;--bl2:#26507e;--bl3:#152f4e;--nv:#0a1a2e;--yl:#ffd65a;--yl2:#fff3b0;--dim:#bcd3ee;--cy:#bfe6ff;--rd:#ff5a4e;--gr:#4ee08a}
+body.xm .screen{background:var(--bl);background-image:radial-gradient(ellipse at 50% 115%,rgba(255,255,255,.22),transparent 60%),repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+body.xm .tst i.r{background:#e8423a}body.xm .tst i.w{background:#fff}body.xm .tst i.n{background:#2e9e54}
+body.xm .bt.y,body.xm .chip.on{text-shadow:1px 1px 0 #7a5a00}
+body.xm .box{box-shadow:inset 0 2px 0 rgba(255,255,255,.55)}
+body.xm .segs i{background:#10263f}body.xm .stars i:not(.f):not(.h),body.xm .pips i:not(.on){background:#10263f}
+body.xm .modal{background:rgba(5,15,30,.62)}
+#xml{position:absolute;inset:0;pointer-events:none;z-index:90;overflow:hidden;display:none}body.xm #xml{display:block}body.xm.ingame #xml{display:none}
+#xml i{position:absolute;top:-8px;border-radius:50%;background:#fff;animation:xmfall linear infinite}
+@keyframes xmfall{to{transform:translate3d(24px,380px,0)}}
+#xmli{position:absolute;left:0;right:0;top:0;height:12px;pointer-events:none;z-index:91;display:none}body.xm #xmli{display:block}body.xm.ingame #xmli{display:none}
+#xmli:before{content:'';position:absolute;left:0;right:0;top:3px;height:1px;background:#1b2b1b}
+#xmli b{position:absolute;top:3px;width:4px;height:6px;border-radius:0 0 2px 2px;animation:xmblink 1.6s steps(1) infinite}
+@keyframes xmblink{50%{opacity:.25}}
+body.xm .xmk{display:inline-block;image-rendering:pixelated;vertical-align:middle}
+/* the gift calendar */
+.xmgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:100%}
+.xmg{position:relative;height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:6px;border:2px solid #000;cursor:default;background:#173250}
+.xmg .n{position:absolute;left:3px;top:2px;font-size:6px;color:#bcd3ee}
+.xmg.open{background:#0e2238;color:#9fb6d0}
+.xmg.ready{cursor:pointer;background:linear-gradient(#e8423a,#b52c26);animation:xmglow 1s ease-in-out infinite alternate}
+.xmg.ready:after{content:'';position:absolute;left:50%;top:0;bottom:0;width:5px;margin-left:-2px;background:#ffd65a}
+.xmg.ready:before{content:'';position:absolute;left:0;right:0;top:50%;height:5px;margin-top:-2px;background:#ffd65a}
+.xmg.lock{background:repeating-linear-gradient(45deg,#163049 0 6px,#12283f 6px 12px);color:#6f8aa8}
+.xmg.big{grid-column:span 5;height:28px}.xmg.big.ready{background:linear-gradient(#ffd65a,#e0a400)}.xmg.big.ready:before,.xmg.big.ready:after{background:#e8423a}
+@keyframes xmglow{to{box-shadow:0 0 10px 2px rgba(255,214,90,.7)}}
+.xmopen{animation:xmshake .5s steps(2) 2}@keyframes xmshake{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+/* ===================== END CHRISTMAS ===================== */
 /* spectating: a glass cover over the game takes every tap; only LEAVE works */
 #specov{position:absolute;inset:0;z-index:300;display:none}body.spec #specov{display:block}
 #specov .specbar{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.72);padding:4px 6px 4px 10px;font-size:8px;white-space:nowrap}
@@ -577,7 +608,11 @@ const SHOP_ON=TEST_SITE||(()=>{try{return localStorage.getItem('rf_rel')==='1';}
   if(rel){const go=()=>{if(typeof UI!=='undefined'&&UI.scr==='title'&&!document.querySelector('.modal'))location.reload();else setTimeout(go,15000);};go();}});
  setTimeout(chk,300);setInterval(()=>{if(document.visibilityState!=='hidden')chk();},60000);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')chk();});})();
 const HALLOWEEN=(()=>{const q=(location.search.match(/[?&]halloween=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===9;})();if(HALLOWEEN)document.body.classList.add('hw');
-const THANKS=(()=>{const q=(location.search.match(/[?&]thanksgiving=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===10;})();
+/* CHRISTMAS: XMAS_LIVE=true turns it on for everyone in December. Until then it only runs on the owner's test site
+   (xmas.html → ?xmas=1), where the day can be picked by hand to try the gift calendar. */
+const XMAS_LIVE=false,XMAS_TEST=/[?&]xmas=1\b/.test(location.search);
+const XMAS=XMAS_TEST||(XMAS_LIVE&&new Date().getMonth()===11);
+const THANKS=!XMAS&&(()=>{const q=(location.search.match(/[?&]thanksgiving=([01])/)||[])[1];return q?q==='1':new Date().getMonth()===10;})();
 const TG_COL=['#e2462a','#f5a623','#c8641c','#8a2a12','#e0b84a'];
 /* one pixel maple leaf as an SVG data url, in color c */
 function tgLeafSvg(c){const P=['...x...','.x.x.x.','xxxxxxx','.xxxxx.','xxxxxxx','...x...','...x...'];let r='';P.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch==='x')r+=`<rect x='${x}' y='${y}' width='1' height='1' fill='${c}'/>`;}));
@@ -2321,7 +2356,7 @@ function bpTok(){try{return +localStorage.getItem(TOK_KEY)||0;}catch(e){return 0
 /* 2X COINS WEEK (it was 2X COINS for Halloween): coins earned from playing (games, daily login, first win, challenges,
    weekly quests, achievements) is doubled until Sunday night. Battle pass tier rewards stay as listed. */
 const CC2_FROM=Date.parse('2026-10-28T00:00:00-04:00'),CC2_TO=Date.parse('2026-11-02T00:00:00-05:00');
-const cc2On=()=>{const t=NOW();return t>=CC2_FROM&&t<CC2_TO;},ccx=n=>cc2On()?n*2:n;
+const cc2On=()=>{const t=NOW();return (t>=CC2_FROM&&t<CC2_TO)||(typeof xmC2==='function'&&xmC2());},ccx=n=>cc2On()?n*2:n;
 function bpTokAdd(n){try{localStorage.setItem(TOK_KEY,String(Math.max(0,bpTok()+n)));}catch(e){}}
 function bpGet(){let b=null;try{b=JSON.parse(localStorage.getItem(BP_KEY)||'null');}catch(e){}if(!b||b.id!==BPASS.id)b={id:BPASS.id,xp:0,prem:false,cl:{},last:''};return b;}
 function bpPut(b){try{localStorage.setItem(BP_KEY,JSON.stringify(b));}catch(e){}}
@@ -2330,10 +2365,11 @@ function bpAfterGame(my,op,tds,g,simmed,ex){if(!PASS_ON||my==null||op==null)retu
  const sig=[g&&g.h,g&&g.a,L&&L.season,L&&L.week,my,op].join('|');if(b.last===sig)return;b.last=sig;   /* never pay the same game twice (resume, replays of the final screen) */
  const td=tds!=null?tds:Math.floor(my/7),win=my>op,k=simmed?(ex.played!=null?ex.played:1/3):1;   /* sim the rest of a game: paid for the share you played */
  const ql=+((L&&L.settings&&L.settings.qlen)||(g&&g.qlen)||180),f=clamp(ql/180,0.67,1.67);   /* longer quarters pay more, short ones less (no farming 2-minute games) */
- const tok=ccx(SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k)),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
+ const tok=ccx(SHOP_ON?Math.round(Math.min(150*f,(50+(win?35:0)+6*Math.min(td,8)+(ex.online?15:0))*f)*k):Math.round(Math.min(60,20+(win?15:0)+3*td)*k)),xp=Math.round(Math.min(150*f,(60+(win?40:0)+5*Math.min(td,6))*f)*k)*(typeof xmXP==='function'&&xmXP()?2:1),t0=bpTier(b);   /* ~95 XP a game at 3:00 quarters: the whole pass (4,050 XP) is about 42 games, ~7 hours */
  b.xp=Math.min(BPASS.tiers*BPASS.xp,b.xp+xp);bpPut(b);bpTokAdd(tok);const t1=bpTier(b);
  setTimeout(()=>toast(BP_HIDDEN?'+'+tok+' COINS':'+'+tok+' COINS · +'+xp+' PASS XP'+(t1>t0?' · TIER '+t1+'!':'')),900);
- if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}}
+ if(SHOP_ON&&!simmed){const G={my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd};try{dailyAfterGame(G);}catch(e){console.warn('daily',e);}try{weeklyAfterGame(G);}catch(e){console.warn('weekly',e);}}
+ if(!simmed){try{xmAfterGame({my,op,td,win,online:!!ex.online,pyd:ex.pyd,ryd:ex.ryd});}catch(e){console.warn('xmas',e);}}}
 function bpCanClaim(b,r){return bpTier(b)>=r.t&&!b.cl[r.tr+r.t]&&(r.tr==='f'||b.prem);}
 function bpClaim(b,r){if(!bpCanClaim(b,r))return false;b.cl[r.tr+r.t]=1;if(r.tok)bpTokAdd(r.tok);if(r.skin)unlockSkin(r.skin);return true;}
 /* mouse: drag the row sideways (touch scrolls natively) */
@@ -2785,12 +2821,12 @@ SCR.title=()=>{
  const sv=hasSave()?loadSave():null;
  const show=[0,13,22,30,17,4].map((t,i)=>{const lk={helm:TEAMS[t].c1,stripe:TEAMS[t].c2,jersey:TEAMS[t].c1,trim:TEAMS[t].c2,pants:'#e2e2e2',socks:TEAMS[t].c1,skin:SKIN[i%6],key:'t'+t+i};const cc=document.createElement('canvas');cc.width=40;cc.height=40;const g=cc.getContext('2d');g.drawImage(sprite(lk,{u:2,face:i<3?1:-1}),-28,-32);return`<img class="ava" src="${cc.toDataURL()}" width="40" height="40">`;}).join('');
  return`<div class="screen" style="align-items:center;justify-content:center;gap:12px" data-a="egg4">
-  <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):THANKS?tgTurkey(3):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):THANKS?tgTurkey(3,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':THANKS?'<div class="s7 yl">HAPPY THANKSGIVING</div>':''}
+  <div data-a="egg2" style="cursor:default">${ttl('RETRO',true)}</div><div class="row" style="gap:14px">${HALLOWEEN?hwPumpkin(4,1):XMAS?xmTree(3):THANKS?tgTurkey(3):''}<div style="font-size:32px;text-shadow:3px 3px 0 var(--nv);line-height:1;cursor:default" data-a="egg">FOOTBALL</div>${HALLOWEEN?hwPumpkin(4,1):XMAS?xmTree(3):THANKS?tgTurkey(3,1):''}</div>${HALLOWEEN?'<div class="s7 yl">HAPPY HALLOWEEN</div>':XMAS?'<div class="s7 yl">MERRY CHRISTMAS</div>':THANKS?'<div class="s7 yl">HAPPY THANKSGIVING</div>':''}
   <div class="row" style="gap:10px;cursor:default" data-a="egg3">${show}</div>
   <div class="col" style="align-items:center;gap:8px">
    ${sv?`<button class="bt y big" data-a="cont">CONTINUE · SLOT ${SLOT} · ${esc(saveTeamName(sv.user,sv.cfbTeams).toUpperCase())} Y${sv.season}</button>`:''}
    <div class="row" style="gap:8px"><button class="bt big" data-a="newg">NEW GAME</button><button class="bt big" data-a="h2h">HEAD TO HEAD</button><button class="bt big" data-a="online">ONLINE</button><button class="bt big" data-a="go" data-s="slots">SAVE SLOTS</button><button class="bt big" data-a="codes">CODES</button></div>
-   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?(BP_HIDDEN?'ITEM SHOP':'ITEM SHOP · PASS'):'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
+   <div class="row" style="gap:8px">${PASS_ON?`<button class="bt bpbtn" data-a="${SHOP_ON?'shop':'bp'}">${CUR(2)} ${SHOP_ON?(BP_HIDDEN?'ITEM SHOP':'ITEM SHOP · PASS'):'BATTLE PASS'} <span class="yl">${bpTok()}</span></button>`:''}${XMAS?`<button class="bt ${xmReady()?'y':''}" data-a="xmGifts">🎁 GIFTS${xmReady()?' <span class="rdt">'+xmReady()+'</span>':''}</button><button class="bt" data-a="xmCh">❄ CHALLENGES</button>`:''}${XMAS_TEST?'<span class="s7 rdt blink">CHRISTMAS TEST</span>':''}${TEST_SITE?'<span class="s7 rdt blink">TEST SITE</span>':''}${netsGet()?'<button class="bt y" data-a="netsAsk">RESUME ONLINE GAME</button>':''}${SHOP_ON?(()=>{const a=syncGet();if(!(a&&a.acct)&&!(window.ACC&&ACC.on))return`<button class="bt" data-a="sync">${a?'✓ ':''}SYNC DEVICES</button>`;return`<button class="bt" data-a="acct">${a&&a.acct?'👤 '+esc(a.u.toUpperCase()):'👤 LOG IN · SIGN UP'}</button>`;})():''}<button class="bt" data-a="go" data-s="ach">🏆 ACHIEVEMENTS ${(()=>{const a=achGet();return ACH.filter(x=>a.u[x.id]).length;})()}/${ACH.length}</button></div>
    ${IS_MOBILE?'<button class="bt" data-a="fs">FULL SCREEN</button>':''}${window.V3?`<button class="bt" data-a="v3Toggle">${V3.on?'CLASSIC CAMERA':'BROADCAST CAMERA'}</button>`:''}${window.LQ&&LQ.ok?`<button class="bt" data-a="lqTheme" data-v="${lqOn()?0:1}">${lqOn()?'CLASSIC THEME':'LIQUID GLASS'}</button>`:''}
   </div></div>`;
 };
@@ -3121,7 +3157,7 @@ BALLS.push({n:'TURKEY TAIL',tg:1,l:'#fff6e0',px:(x,y)=>{const c=['#d8432a','#f08
   return y<=1?{'#d8432a':'#ff6a4a','#f08a24':'#ffae5a','#f2c14a':'#ffe08a','#7a3d14':'#a8602a'}[c]:y>=7?{'#d8432a':'#a52e1c','#f08a24':'#c0661a','#f2c14a':'#c99a2a','#7a3d14':'#55280c'}[c]:c;}},
  {n:'HARVEST',tg:1,l:'#f4ead2',px:(x,y)=>x===3||x===13?(y>2?'#f2c14a':'#ffe08a'):x===4||x===12?(y<6?'#d8432a':'#a52e1c'):x===2||x===14?'#f08a24':y<=2?'#a8602a':y>=6?'#55280c':'#7a3d14'},
  {n:'PUMPKIN PIE',tg:1,l:'#fffaf0',px:(x,y)=>x<=3||x>=13?(y>1?'#d9a050':'#f0c477'):y<=1?'#f0a050':y>=7?'#b8561c':'#e07a2a'});
-const ballOK=i=>!!BALLS[i]&&(!BALLS[i].tg||THANKS);
+const ballOK=i=>!!BALLS[i]&&(!BALLS[i].tg||THANKS)&&(!BALLS[i].xm||(typeof xmGet==='function'&&xmGet().balls.includes(i)));
 function curBall(){const st=L&&L.settings;if(st&&THANKS&&!st.tgB){st.tgB=1;st.ball=TG_BALL0;}
  const i=((st&&st.ball)||0)%BALLS.length;return BALLS[ballOK(i)?i:0];}
 /* every ball is 17x9 pixel art (side view) plus a 9x9 end-over-end frame cut from its middle */
@@ -4018,6 +4054,7 @@ const SNOWBELT=['BUF','GB','CLE','PIT','CHI','DEN','NE'],MIDCOLD=['CIN','KC','NY
 function pickWeather(home){
  {const a=arc();if(a&&a.wx!=='auto')return a.wx;}
  const ab=abbr(home);if(DOME.includes(ab)&&!T(home).college)return'dome';
+ if(XMAS)return'snow';   /* CHRISTMAS: every outdoor game is a snow game */
  const wk=L.phase==='PO'?19+(L.po?L.po.cur:0):myWk(),late=clamp((wk-9)/9,0,1);   // 0 until week 9, 1 by the playoffs
  const snowP=SNOWBELT.includes(ab)?(late>0?0.08+0.5*late:0):MIDCOLD.includes(ab)?0.03+0.3*late:(ab==='SEA'||ab==='TEN')?0.08*late:0;
  const rainP=ab==='SEA'?0.32:COLD.includes(ab)?0.14+0.08*late:['MIA','TB','JAX','CAR'].includes(ab)?0.16:0.1;
@@ -4630,7 +4667,7 @@ function startMatch(g,uAway){applyCustomTeam();
   /* the end-zone stands are only seen near the goal lines: build them a moment after kickoff instead of during the load */
   if(!SC.ez){const gm=M;setTimeout(()=>{if(M!==gm||SC.ez)return;const a=buildEzStands(0)[0];SC.ez=[a,a];M.ezStands=SC.ez;
    setTimeout(()=>{if(M!==gm)return;SC.ez[1]=buildEzStands(1)[1];},500);},700);}}
- if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
+ if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?(XMAS?150:90):70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  UI.scr='game';UI.modal=null;render();setLayer();
  const weRecv=Math.random()<0.5;M.firstRecv=weRecv?'us':'them';
  const lab=L.college?'COLLEGE FOOTBALL':L.exh?'HEAD TO HEAD':L.phase==='REG'?'WEEK '+myWk():(g.conf==='SB'?champName():ROUNDS[L.po.cur]);
@@ -4657,7 +4694,7 @@ function pop(t,x,y,col){
  for(const p of near)p.a=Math.max(p.a,0.9);   // older text clears out fast
  const used=new Set(near.map(p=>p.row||0));let row=0;while(used.has(row))row++;
  M.pops.push({t,x,y,col:col||'#fff',a:0,row});}
-function boom(){sfx('td');crowd(2.4,.13);M.hype=3;M.shake=3;const cols=(THANKS?TG_COL.concat(['#ffd27a']):['#ffe94a','#ff5c7a','#58aaff','#38d27a','#ffffff']).concat([teamCol(L.user).c1,teamCol(L.user).c2]);for(let i=0;i<130;i++)M.conf.push({x:rnd(0,CW),y:rnd(-80,0),vx:rnd(-40,40),vy:rnd(30,120),c:pick(cols),l:rnd(2,3.5)});}
+function boom(){sfx('td');crowd(2.4,.13);M.hype=3;M.shake=3;const cols=(XMAS?['#e8423a','#2e9e54','#ffffff','#ffd65a','#e8423a','#ffffff']:THANKS?TG_COL.concat(['#ffd27a']):['#ffe94a','#ff5c7a','#58aaff','#38d27a','#ffffff']).concat([teamCol(L.user).c1,teamCol(L.user).c2]);for(let i=0;i<130;i++)M.conf.push({x:rnd(0,CW),y:rnd(-80,0),vx:rnd(-40,40),vy:rnd(30,120),c:pick(cols),l:rnd(2,3.5)});}
 function ovMsg(title,body,btns){M.phase='ov';M.ov={html:()=>`<div class="mp" style="align-items:center;text-align:center">${ttl(title,true)}<div style="line-height:2">${body}</div><div class="row ctr" style="gap:8px;margin-top:4px;flex-wrap:wrap">${btns.map((b,i)=>`<button class="bt ${b[2]||''} big" data-a="gAct" data-i="${i}">${b[0]}</button>`).join('')}</div></div>`,acts:btns.map(b=>b[1])};}
 const qLbl=()=>M.qtr<=4?['1st','2nd','3rd','4th'][M.qtr-1]+' Qtr':M.qtr===5?'OT':(M.qtr-4)+'OT';
 const clockTxt=()=>{const c=Math.max(0,Math.ceil(M.clock));return Math.floor(c/60)+':'+String(c%60).padStart(2,'0');};
@@ -6102,7 +6139,7 @@ function endPlay(kind,x,y,label){
  else if(M.def&&kind==='pick6'){t='PICK SIX!';sub=M.intBy?nm(M.intBy)+' TAKES IT TO THE HOUSE':'';boom();}
  else if(M.def&&kind==='sack'){t='SACKED!';sub=gt(gain);sfx('first');crowd(1.2,.1);M.hype=1;}
  else if(M.def&&(kind==='fumble'||kind==='fumtd')){t=kind==='fumtd'?'FUMBLE RETURN TD!':'FUMBLE RECOVERED!';sub=abbr(L.user)+' BALL';if(kind==='fumtd')boom();else{sfx('first');crowd(1.2,.1);}}
- else if(kind==='td'){t=M.conv?'2-POINT GOOD!':M.play==='ret'?'RETURN TOUCHDOWN!':'TOUCHDOWN!';boom();if(THANKS&&!M.conv)sub='GOBBLE GOBBLE!';if(!M.conv&&M.carrier){M.carrier.down=0;M.carrier.dive=0;startCeleb(M.carrier);}}
+ else if(kind==='td'){t=M.conv?'2-POINT GOOD!':M.play==='ret'?'RETURN TOUCHDOWN!':'TOUCHDOWN!';boom();if(THANKS&&!M.conv)sub='GOBBLE GOBBLE!';if(XMAS&&!M.conv)sub='HO HO HO!';if(!M.conv&&M.carrier){M.carrier.down=0;M.carrier.dive=0;startCeleb(M.carrier);}}
  else if(kind==='inc'){t=label||'INCOMPLETE';sfx('bad');}
  else if(kind==='int'){t='INTERCEPTED!';sub=M.intBy?'BY '+nm(M.intBy):'';sfx('bad');}
  else if(kind==='sack'){t='SACKED!';sub=gt(gain);}
@@ -6283,7 +6320,7 @@ function step(dt){
  M.runoff-=d;M.clock-=d;if(M.clock<=0){M.clock=0;M.runoff=0;M.aim=null;M.input=null;clockCheck(toPre);return;}}
  if(M.phase==='replay'){upReplay(dt);if(M)upCam(dt);return;}
  if(M.loose)upLoose(dt);if(M.helmets)upHelmets(dt);
- if(M.phase==='live')upLive(dt);
+ if(M.phase==='live'){upLive(dt);if(M&&M.O)for(const f of M.O.concat(M.D))f.x=clamp(f.x,-0.5,120.5);}   /* nobody runs out the back of an end zone */
  else if(M.phase==='dead')upDead(dt);
  if(M&&(M.phase==='live'||M.phase==='dead'))recFrame(dt);
  else if(M.phase==='kick')upKick(dt);
@@ -9073,7 +9110,7 @@ function sbcBuild(){if(document.getElementById('sbc'))return;const st=document.g
   h+=`<i style="left:${(i*41+7)%640}px;width:${w}px;height:${w*2}px;background:${c};animation-duration:${dur}s;animation-delay:${del}s;opacity:${.55+(i%4)*.12}"></i>`;}
  d.innerHTML=h;st.appendChild(d);}
 function lqKey(el){const d=el.dataset||{};return [d.a,d.k,d.v,d.s,d.t,d.i,d.n].join('|');}
-function lqApply(){const on=lqOn(),sb=sbwOn(),pt=!on&&!sb&&thPick()==='prime',md=!on&&!sb&&thPick()==='mdn';document.body.classList.toggle('mdn',md);
+function lqApply(){if(XMAS){['lq','pt','mdn','thsb'].forEach(c=>document.body.classList.remove(c));return;}const on=lqOn(),sb=sbwOn(),pt=!on&&!sb&&thPick()==='prime',md=!on&&!sb&&thPick()==='mdn';document.body.classList.toggle('mdn',md);
  if(md&&!LQ.font3){LQ.font3=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;1,700&display=swap';document.head.appendChild(l);}document.body.classList.toggle('lq',on);document.body.classList.toggle('thsb',sb);document.body.classList.toggle('pt',pt);
  if(sb)sbcBuild();
  if((pt||sb)&&!LQ.font2){LQ.font2=true;const l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap';document.head.appendChild(l);}
@@ -9093,12 +9130,105 @@ ACT.theme=d=>{themeSet(d.v);lqApply();LQ.scr=null;if(UI.modal&&L)modal(settingsH
 function lqRow(){if(!LQ.ok)return '';const t=themeGet(),c=(v,l)=>`<span class="chip ${t===v||(v==='classic'&&!['prime','lq','mdn'].includes(t))?'on':''}" data-a="theme" data-v="${v}">${l}</span>`;
  return`<div class="row"><span style="width:130px">THEME</span>${c('classic','CLASSIC')}${c('prime','PRIME TIME')}${c('mdn','FRANCHISE')}${c('lq','LIQUID GLASS')}<span class="s7 dim">ONLY YOU CAN SEE THIS</span></div>`;}
 /* LAB: lab.html is a private test copy of the game (same code) that adds the broadcast camera. Owner only. */
-const LAB=/\/lab(\.html)?$/.test(location.pathname)||/[?&]lab=1\b/.test(location.search);
+const LAB3D=/\/lab(\.html)?$/.test(location.pathname)||/[?&]lab=1\b/.test(location.search),LAB=LAB3D||XMAS_TEST;
 function labGate(){if(!LAB||LQ.labDone)return;LQ.labDone=true;
  if(!LQ.ok){document.body.innerHTML='<div style="position:fixed;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;gap:16px;align-items:center;justify-content:center;text-align:center;font-family:\'Press Start 2P\',monospace;font-size:12px;line-height:2;padding:20px">PRIVATE TEST BUILD<br><a href="./" style="color:#ffe94a;font-size:10px">PLAY RETRO FOOTBALL</a></div>';window.onerror=()=>true;return;}
+if(!LAB3D){document.title='Retro Football · CHRISTMAS TEST';return;}
  document.title='Retro Football LAB';const add=(src,cb)=>{const e=document.createElement('script');e.src=src+'?v='+Date.now();e.onload=cb;document.head.appendChild(e);};
  add('lab/three.min.js',()=>add('lab/v3.js',()=>{toast('LAB: BROADCAST CAMERA');if(UI.scr==='title')render();}));}
 lqCheck();setInterval(lqCheck,30000);
+
+/* ===================== CHRISTMAS: theme + 25 days of gifts + boosts + holiday challenges ===================== */
+const XM_KEY='rf_xmas';
+function xmGet(){let x=null;try{x=JSON.parse(localStorage.getItem(XM_KEY)||'null');}catch(e){}if(!x||x.y!==2026)x={y:2026,op:{},balls:[],c2:0,xp:0,pend:0,ch:{}};x.op=x.op||{};x.balls=x.balls||[];x.ch=x.ch||{};return x;}
+function xmPut(x){try{localStorage.setItem(XM_KEY,JSON.stringify(x));}catch(e){}}
+/* which December day it is (1-25+); on the test site it's whatever day is picked */
+function xmDay(){if(XMAS_TEST){try{const d=+localStorage.getItem('rf_xm_day');if(d)return d;}catch(e){}return 1;}const t=new Date(NOW());return t.getMonth()===11?t.getDate():0;}
+const xmC2=()=>XMAS&&xmGet().c2>NOW(),xmXP=()=>XMAS&&xmGet().xp>NOW();
+/* the Christmas balls (unlocked from gifts and challenges; you keep them after December) */
+const XM_BALL0=BALLS.length;
+BALLS.push({n:'CANDY CANE',xm:1,l:'#ffffff',px:(x,y)=>((x+y)>>1)%2?(y<=2?'#ff6a60':y>=6?'#b51f1a':'#e8312a'):(y<=2?'#ffffff':y>=6?'#cfd6dd':'#f4f6f8')},
+ {n:'ORNAMENT',xm:1,l:'#ffd65a',px:(x,y)=>x<=2||x>=14?(y<=3?'#ffe9a0':'#c99a2a'):(Math.hypot(x-6,y-2)<2?'#ff9a90':y<=2?'#ff4a3e':y>=6?'#8a1410':'#d8231c')},
+ {n:'GINGERBREAD',xm:1,l:'#fffaf0',px:(x,y)=>(x===4||x===12)&&y%2?'#fffaf0':(y===1&&x%3===0)?'#ff5a4e':y<=1?'#d08a4a':y>=7?'#7a4418':'#a8642a'},
+ {n:'UGLY SWEATER',xm:1,l:'#ffffff',px:(x,y)=>y===1||y===7?'#e8423a':(y===2||y===6)?((x%2)?'#ffffff':'#1d7a3a'):((x+y)%4===0?'#ffffff':(x%6===3&&y===4)?'#ffd65a':'#1d7a3a')});
+/* the 25 gifts. t: coins | c2 (2x coins, hours) | xp (2x XP, hours) | ball (index into the Christmas balls) | skin (a character skin) */
+const XM_GIFTS=[
+ {t:'coins',n:100},{t:'ball',n:0},{t:'coins',n:150},{t:'c2',n:24},{t:'coins',n:200},
+ {t:'xp',n:24},{t:'skin'},{t:'coins',n:250},{t:'ball',n:1},{t:'c2',n:24},
+ {t:'coins',n:300},{t:'xp',n:48},{t:'skin'},{t:'coins',n:350},{t:'ball',n:2},
+ {t:'c2',n:48},{t:'coins',n:400},{t:'skin'},{t:'xp',n:48},{t:'coins',n:500},
+ {t:'ball',n:3},{t:'c2',n:72},{t:'coins',n:750},{t:'skin'},
+ {t:'big',n:2500}];
+/* character skins for the gift days: Christmas skins added later in the fitter get ids listed here (or any skin
+   whose name starts with XMAS). Until there are enough, a skin gift waits and is handed over when one exists. */
+const XM_SKIN_IDS=[];
+function xmSkinPool(){const ids=XM_SKIN_IDS.slice();try{for(const k of SKINS.list||[])if(/^(XMAS|CHRISTMAS)/i.test(k.name||'')&&!ids.includes(k.id))ids.push(k.id);}catch(e){}return ids.filter(id=>(SKINS.list||[]).some(k=>k.id===id));}
+function xmGiveSkin(x){const own=skinsUnlocked(),free=xmSkinPool().filter(id=>!own.includes(id));if(!free.length){x.pend=(x.pend||0)+1;return null;}const id=free[0];unlockSkin(id);return id;}
+function xmPendCheck(){if(!XMAS)return;const x=xmGet();let got=[];while(x.pend>0){const id=xmGiveSkin(Object.assign({},x,{pend:0}));if(!id)break;x.pend--;got.push(id);}if(got.length){xmPut(x);toast('GIFT SKIN UNLOCKED: '+got.map(id=>((SKINS.list.find(k=>k.id===id)||{}).name||id).toUpperCase()).join(', '));}}
+function xmGiftTxt(g){return g.t==='coins'?g.n+' COINS':g.t==='c2'?'2X COINS · '+g.n+'H':g.t==='xp'?'2X XP · '+g.n+'H':g.t==='ball'?BALLS[XM_BALL0+g.n].n+' BALL':g.t==='skin'?'PLAYER SKIN':'THE BIG ONE';}
+function xmOpen(day){const x=xmGet(),g=XM_GIFTS[day-1];if(!g||x.op[day]||day>xmDay())return null;const H=3600e3,now=NOW(),out=[];
+ const boost=(k,h)=>{x[k]=Math.max(x[k]||0,now)+h*H;};
+ if(g.t==='coins'){bpTokAdd(g.n);out.push('+'+g.n+' COINS');}
+ else if(g.t==='c2'){boost('c2',g.n);out.push('2X COINS FOR '+g.n+' HOURS');}
+ else if(g.t==='xp'){boost('xp',g.n);out.push('2X XP FOR '+g.n+' HOURS');}
+ else if(g.t==='ball'){const i=XM_BALL0+g.n;if(!x.balls.includes(i))x.balls.push(i);out.push(BALLS[i].n+' BALL');}
+ else if(g.t==='skin'){const id=xmGiveSkin(x);out.push(id?'SKIN: '+((SKINS.list.find(k=>k.id===id)||{}).name||id).toUpperCase():'PLAYER SKIN (COMING SOON)');}
+ else if(g.t==='big'){bpTokAdd(g.n);boost('c2',24*7);boost('xp',24*7);for(let i=0;i<4;i++)if(!x.balls.includes(XM_BALL0+i))x.balls.push(XM_BALL0+i);const id=xmGiveSkin(x);
+  out.push('+'+g.n+' COINS','2X COINS + 2X XP FOR A WEEK','EVERY CHRISTMAS BALL',id?'SKIN: '+((SKINS.list.find(k=>k.id===id)||{}).name||id).toUpperCase():'A LEGENDARY SKIN · ARRIVES WHEN THE CHRISTMAS SKINS DROP');}
+ x.op[day]=out;xmPut(x);return out;}
+function xmReady(){if(!XMAS)return 0;const x=xmGet(),d=Math.min(25,xmDay());let n=0;for(let i=1;i<=d;i++)if(!x.op[i])n++;return n;}
+/* pixel Christmas tree for the title and the gift screen */
+function xmTree(u){const W=15,H=19;let r='';const px=(x,y,c)=>{r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`;};
+ const B=['#ff4a3e','#ffd65a','#5ab4ff','#ff8ad8','#ffffff'];
+ for(let y=1;y<16;y++){const half=Math.floor((y%5+y/1.6)/1.15)+(y>10?1:0);for(let x=7-half;x<=7+half;x++){if(x<0||x>14)continue;const edge=x===7-half||x===7+half;px(x,y,edge?'#0e5a2a':((x+y)%2?'#1d8a3e':'#177a35'));if(!edge&&(x*7+y*5)%11===0)px(x,y,B[(x+y)%5]);}}
+ px(7,0,'#ffd65a');px(6,1,'#ffd65a');px(8,1,'#ffd65a');for(let y=16;y<19;y++){px(6,y,'#6a3a1a');px(7,y,'#7a4422');px(8,y,'#6a3a1a');}
+ return`<svg class="xmk" width="${W*u}" height="${H*u}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">${r}</svg>`;}
+function xmGiftSvg(u,c,rib){return`<svg class="xmk" width="${9*u}" height="${8*u}" viewBox="0 0 9 8" shape-rendering="crispEdges"><rect x="0" y="2" width="9" height="6" fill="${c}"/><rect x="0" y="2" width="9" height="1" fill="rgba(255,255,255,.35)"/><rect x="4" y="2" width="1" height="6" fill="${rib}"/><rect x="0" y="4" width="9" height="1" fill="${rib}"/><rect x="2" y="0" width="2" height="2" fill="${rib}"/><rect x="5" y="0" width="2" height="2" fill="${rib}"/></svg>`;}
+/* the gift screen */
+function xmGiftsHTML(sel){const x=xmGet(),d=xmDay();let h='';
+ for(let i=1;i<=25;i++){const op=x.op[i],ready=!op&&i<=d,big=i===25;
+  const inner=op?`<span style="text-align:center;padding:0 4px">${esc(op[0])}</span>`:ready?'':`<span>DEC ${i}</span>`;
+  h+=`<div class="xmg ${op?'open':ready?'ready':'lock'} ${big?'big':''} ${sel===i?'xmopen':''}" ${ready?`data-a="xmOpen" data-v="${i}"`:''}><span class="n">${i}</span>${big&&!op?`<span style="font-size:8px;color:${ready?'#3a1a00':'#9fb6d0'};position:relative;z-index:1">CHRISTMAS DAY · THE BIG ONE</span>`:inner}</div>`;}
+ const now=NOW(),bo=[];if(x.c2>now)bo.push('2X COINS · '+Math.ceil((x.c2-now)/3600e3)+'H LEFT');if(x.xp>now)bo.push('2X XP · '+Math.ceil((x.xp-now)/3600e3)+'H LEFT');
+ const test=XMAS_TEST?`<div class="row" style="gap:6px;justify-content:center"><span class="s7 rdt">TEST DAY</span><button class="bt" data-a="xmDay" data-v="-1">◀</button><span class="s10" style="width:60px;text-align:center">DEC ${d}</span><button class="bt" data-a="xmDay" data-v="1">▶</button><button class="bt" data-a="xmReset">RESET GIFTS</button></div>`:'';
+ return`<div class="mp" style="width:560px;gap:6px"><div class="row" style="justify-content:space-between;align-items:center">${xmTree(2)}<div class="col" style="align-items:center;gap:4px">${ttl('25 DAYS OF GIFTS',true)}<span class="s7 dim">ONE GIFT A DAY · MISSED DAYS WAIT FOR YOU · THE BIG ONE OPENS DEC 25</span>${bo.length?`<span class="s7 grt">${bo.join(' · ')}</span>`:''}</div>${xmTree(2)}</div>
+  <div class="xmgrid">${h}</div>${test}<div class="row" style="justify-content:center"><button class="bt" data-a="closeM">CLOSE</button></div></div>`;}
+ACT.xmGifts=()=>{xmPendCheck();modal(xmGiftsHTML());};
+ACT.xmOpen=d=>{const day=+d.v;modal(xmGiftsHTML(day));sfx('tick');setTimeout(()=>{const out=xmOpen(day);if(!out)return modal(xmGiftsHTML());sfx('td');
+ modal(`<div class="mp" style="width:360px;align-items:center;text-align:center;gap:8px">${xmGiftSvg(5,day===25?'#ffd65a':'#e8423a',day===25?'#e8423a':'#ffd65a')}${ttl(day===25?'MERRY CHRISTMAS!':'DAY '+day+' GIFT',true)}${out.map(t=>`<div class="s10 yl">${esc(t)}</div>`).join('')}<button class="bt y big" data-a="xmGifts">NICE!</button></div>`);
+ if(day===25&&M==null){M0conf();}},700);};
+function M0conf(){}
+ACT.xmDay=d=>{if(!XMAS_TEST)return;try{localStorage.setItem('rf_xm_day',String(clamp(xmDay()+(+d.v),1,31)));}catch(e){}modal(xmGiftsHTML());};
+ACT.xmReset=()=>{if(!XMAS_TEST)return;try{localStorage.removeItem(XM_KEY);}catch(e){}modal(xmGiftsHTML());toast('GIFTS RESET');};
+
+/* holiday challenges: last all of December, progress adds up over games */
+const XM_CH=[
+ {id:'snowtd',txt:'SCORE 10 TOUCHDOWNS IN THE SNOW',need:10,add:g=>g.snow?g.td:0,rw:{coins:300}},
+ {id:'win10',txt:'WIN 10 GAMES',need:10,add:g=>g.win?1:0,rw:{coins:400}},
+ {id:'shut',txt:'HOLD A TEAM TO 7 POINTS OR LESS',need:1,add:g=>g.op<=7?1:0,rw:{ball:0}},
+ {id:'pts40',txt:'SCORE 40+ POINTS IN A GAME',need:1,add:g=>g.my>=40?1:0,rw:{c2:24}},
+ {id:'pyd2k',txt:'THROW FOR 2,000 YARDS',need:2000,add:g=>g.pyd||0,rw:{coins:350}},
+ {id:'ryd1k',txt:'RUN FOR 1,000 YARDS',need:1000,add:g=>g.ryd||0,rw:{xp:48}},
+ {id:'ol5',txt:'PLAY 5 ONLINE GAMES',need:5,add:g=>g.online?1:0,rw:{coins:400}},
+ {id:'blow5',txt:'WIN 5 GAMES BY 21+',need:5,add:g=>g.my-g.op>=21?1:0,rw:{ball:1}},
+ {id:'play25',txt:'PLAY 25 GAMES',need:25,add:()=>1,rw:{skin:1}}];
+function xmRwTxt(r){return r.coins?r.coins+' COINS':r.c2?'2X COINS '+r.c2+'H':r.xp?'2X XP '+r.xp+'H':r.ball!=null?BALLS[XM_BALL0+r.ball].n+' BALL':r.skin?'PLAYER SKIN':'';}
+function xmAfterGame(g){if(!XMAS)return;const x=xmGet(),msgs=[],H=3600e3,now=NOW();g=Object.assign({snow:!!(M&&M.wx==='snow')},g);
+ for(const c of XM_CH){const st=x.ch[c.id]||(x.ch[c.id]={n:0,done:false});if(st.done)continue;st.n+=Math.max(0,Math.round(c.add(g)||0));
+  if(st.n>=c.need){st.n=c.need;st.done=true;const r=c.rw;if(r.coins)bpTokAdd(r.coins);if(r.c2)x.c2=Math.max(x.c2||0,now)+r.c2*H;if(r.xp)x.xp=Math.max(x.xp||0,now)+r.xp*H;
+   if(r.ball!=null&&!x.balls.includes(XM_BALL0+r.ball))x.balls.push(XM_BALL0+r.ball);if(r.skin)xmGiveSkin(x);msgs.push('HOLIDAY CHALLENGE DONE: '+c.txt+' · '+xmRwTxt(r));}}
+ xmPut(x);msgs.forEach((m,i)=>setTimeout(()=>toast(m),6000+i*2400));}
+function xmChHTML(){const x=xmGet();return`<div class="mp" style="width:520px;gap:6px">${ttl('HOLIDAY CHALLENGES',true)}<div class="s7 dim" style="text-align:center">ALL DECEMBER · PROGRESS ADDS UP OVER YOUR GAMES</div>
+ ${XM_CH.map(c=>{const st=x.ch[c.id]||{n:0},p=Math.min(1,st.n/c.need);return`<div class="row" style="gap:8px;align-items:center"><span style="width:250px" class="s7 ${st.done?'grt':''}">${st.done?'✓ ':''}${c.txt}</span><div class="bar" style="flex:1"><i style="width:${p*100}%"></i></div><span class="s6 dim" style="width:60px;text-align:right">${c.need>1?Math.floor(st.n).toLocaleString()+'/'+c.need.toLocaleString():''}</span><span class="s6 yl" style="width:100px;text-align:right">${xmRwTxt(c.rw)}</span></div>`;}).join('')}
+ <div class="row" style="justify-content:center"><button class="bt" data-a="closeM">CLOSE</button></div></div>`;}
+ACT.xmCh=()=>modal(xmChHTML());
+
+/* the forced winter look: falling snow and a string of lights on every menu */
+if(XMAS){document.body.classList.add('xm');document.body.classList.remove('tg');const st=document.getElementById('stage');
+ const sn=document.createElement('div');sn.id='xml';let h='';for(let i=0;i<46;i++){const sz=1+(i%3),dur=6+(i*37)%7,del=-((i*53)%13);h+=`<i style="left:${(i*41+11)%640}px;width:${sz*2}px;height:${sz*2}px;opacity:${.5+(i%4)*.12};animation-duration:${dur}s;animation-delay:${del}s"></i>`;}sn.innerHTML=h;st.appendChild(sn);
+ const li=document.createElement('div');li.id='xmli';let b='';const C=['#ff4a3e','#4ee08a','#ffd65a','#5ab4ff','#ff8ad8'];for(let i=0;i<40;i++)b+=`<b style="left:${8+i*16}px;background:${C[i%5]};animation-delay:${-(i%3)*0.55}s"></b>`;li.innerHTML=b;st.appendChild(li);
+ const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content','#1d3d63');
+ setTimeout(xmPendCheck,3000);}
 
 olmBoot();
 setTimeout(()=>{srvSync().finally(()=>{try{dailyLogin();}catch(e){}});},800);   /* daily bonus by the website's date */
