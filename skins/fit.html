@@ -372,7 +372,31 @@ function bgMask(p,W,H){
   const push=i=>{if(m[i]&&isBg(i)){m[i]=0;st.push(i)}};
   for(let x=0;x<W;x++){push(x);push((H-1)*W+x)}for(let y=0;y<H;y++){push(y*W);push(y*W+W-1)}
   while(st.length){const i=st.pop(),x=i%W;if(x>0)push(i-1);if(x<W-1)push(i+1);if(i>=W)push(i-W);if(i<W*(H-1))push(i+W)}
+  cleanBg(p,W,H,m,br,bg,bb,tol);
   return m;
+}
+/* 1) background pockets the edge flood can't reach (the gap between an arm and the body, between the legs):
+      a closed patch of pure background colour that's bigger than an eye is background too.
+   2) the soft edge AI images leave between the character and the background: pixels next to the background that
+      are still close to the background colour (a pale blend) are peeled off, layer by layer, until a real colour
+      or the dark outline is reached. White clothes behind an outline are safe; choose "Remove from edges only"
+      with a low tolerance or "keep all white" for a white character with no outline. */
+function cleanBg(p,W,H,m,br,bg,bb,tol){
+  const dist=i=>Math.abs(p[i*4]-br)+Math.abs(p[i*4+1]-bg)+Math.abs(p[i*4+2]-bb);
+  const pure=Math.max(18,tol),minPocket=Math.max(200,Math.round(W*H*0.0002));
+  const seen=new Uint8Array(W*H),q=[];
+  for(let i0=0;i0<W*H;i0++){if(!m[i0]||seen[i0]||dist(i0)>pure)continue;
+    const comp=[];q.length=0;q.push(i0);seen[i0]=1;
+    while(q.length){const i=q.pop();comp.push(i);const x=i%W;
+      for(const j of[x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=W*H||seen[j]||!m[j]||dist(j)>pure)continue;seen[j]=1;q.push(j);}}
+    if(comp.length>=minPocket)for(const i of comp)m[i]=0;}
+  /* peel the pale fringe: up to 4 layers, each only where the pixel is a light blend toward the background */
+  const halo=Math.max(tol*3,120);
+  for(let pass=0;pass<4;pass++){const kill=[];
+    for(let i=0;i<W*H;i++){if(!m[i])continue;const x=i%W;
+      const nearBg=(x>0&&!m[i-1])||(x<W-1&&!m[i+1])||(i>=W&&!m[i-W])||(i<W*(H-1)&&!m[i+W]);
+      if(nearBg&&dist(i)<=halo)kill.push(i);}
+    if(!kill.length)break;for(const i of kill)m[i]=0;}
 }
 // tight vertical box of character pixels inside columns [x0,x1)
 function tight(mask,W,H,x0,x1){
