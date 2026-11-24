@@ -8312,14 +8312,14 @@ function olmResumeGame(c){const g=userGame(),m=c.m;if(!g)return false;
  M.parts=[];if(M.wx==='snow'||M.wx==='rain')for(let i=0;i<(M.wx==='snow'?90:70);i++)M.parts.push({x:rnd(0,CW),y:rnd(0,CH),s:rnd(0.6,1.4)});
  M.ov=null;M.O=[];M.D=[];M.def=c.act==='def';syncDir();
  if(c.live&&c.live.next){const nx=c.live.next;M.sc=nx.sc;M.clock=nx.clock;M.qtr=nx.qtr;
-  if(nx.opp!=null&&(nx.pre||[]).some(t=>/INTERCEPT/i.test(String(t)))){M.sc[1]+=3;banner('REFRESH PENALTY',abbr(M.op)+' AWARDED 3 POINTS','#ff5c5c',2.8);}else banner('GAME RESUMED','','#ffe94a',1.6);
+  if(nx.opp!=null&&(nx.pre||[]).some(t=>/INTERCEPT|FUMBLE|ON DOWNS/i.test(String(t)))){M.sc[1]+=3;banner('REFRESH PENALTY',abbr(M.op)+' AWARDED 3 POINTS','#ff5c5c',2.8);}else banner('GAME RESUMED','','#ffe94a',1.6);
   if(nx.opp!=null){oppDrive(nx.opp,nx.pre);return true;}if(nx.ko){kickoffTo(nx.ko);return true;}}
  if(c.live&&(c.act==='def'||c.act==='off')){const lv=c.live;
   if(lv.conv){if(lv.def){M.sc[1]+=2;}M.conv=false;banner('PLAY LOST','THE GAME WAS CLOSED MID-PLAY','#ff5c5c',2.6);kickoffTo(lv.def?'us':'them');return true;}
   if(c.act==='def'){const g=Math.max(ri(6,14),M.fdX-M.ballOn+ri(0,4));M.ballOn=Math.min(109,M.ballOn+g);M.down=1;M.fdX=Math.min(M.ballOn+10,110);M.clock=Math.max(0,M.clock-35);M.sc[1]+=3;
    banner('REFRESH PENALTY',abbr(M.op)+' GAINED '+g+' YARDS AND ARE AWARDED 3 POINTS','#ff5c5c',2.8);defPre();return true;}
   M.down++;M.clock=Math.max(0,M.clock-8);banner('PLAY LOST','INCOMPLETE · THE GAME WAS CLOSED MID-PLAY','#ff5c5c',2.8);
-  if(M.down>4){oppDrive(clamp(Math.round(110-M.ballOn),1,99),['TURNOVER ON DOWNS']);return true;}
+  if(M.down>4){M.sc[1]+=3;banner('REFRESH PENALTY',abbr(M.op)+' AWARDED 3 POINTS','#ff5c5c',2.8);oppDrive(clamp(Math.round(110-M.ballOn),1,99),['TURNOVER ON DOWNS']);return true;}
   toPre();return true;}
  if(c.act==='def')defPre();
  else if(c.act==='ko')kickoffTo(c.who);
